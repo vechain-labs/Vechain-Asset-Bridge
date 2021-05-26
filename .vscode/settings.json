@@ -1,0 +1,4 @@
+{
+    "mocha.enabled": true,
+    "mocha.files.glob": "../test/**/**/*.ts"
+}

@@ -1,0 +1,1 @@
+require('./vechainthor/v2eBridge.test');
