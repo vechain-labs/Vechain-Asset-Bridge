@@ -8,117 +8,139 @@ import { Contract } from 'myvetools';
 import { getReceipt } from 'myvetools/dist/connexUtils';
 import fs from 'fs';
 
-describe('VVet Contract test',() =>{
+export class VVETTestCase{
+    public connex!: Framework;
+	public driver!: Driver;
+    public wallet = new SimpleWallet();
+    public contract!:Contract;
 
-    let connex: Framework;
-	let driver: Driver;
-    let wallet = new SimpleWallet();
-    let contract:Contract;
+    public configPath = path.join(__dirname,'./test.config.json');
+    public config:any = {};
 
-    let configPath = path.join(__dirname,'./test.config.json');
-    let config:any = {};
-    
-    before( async () => {
-        if(fs.existsSync(configPath)){
-            config = require(configPath);
+    public async init(){
+        if(fs.existsSync(this.configPath)){
+            this.config = require(this.configPath);
 
-            let masterNode = Devkit.HDNode.fromMnemonic((config.mnemonic as string).split(' '));
+            let masterNode = Devkit.HDNode.fromMnemonic((this.config.mnemonic as string).split(' '));
             for(let index = 0; index < 10; index++){
                 let account = masterNode.derive(index);
-                wallet.import(account.privateKey!.toString('hex'));
+                this.wallet.import(account.privateKey!.toString('hex'));
             }
 
             try {
-                driver = await Driver.connect(new SimpleNet(config.nodeHost as string),wallet);
-                connex = new Framework(driver);
+                this.driver = await Driver.connect(new SimpleNet(this.config.nodeHost as string),this.wallet);
+                this.connex = new Framework(this.driver);
 
-                const filePath = path.join(__dirname,"../../src/SmartContracts/contracts/vechainthor/Contract_vVet.sol");
+                const filePath = path.join(__dirname,"../../../src/SmartContracts/contracts/vechainthor/Contract_vVet.sol");
                 const abi = JSON.parse(compileContract(filePath, 'VVET', 'abi'));
                 const bin = compileContract(filePath, 'VVET', 'bytecode');
 
-                contract = new Contract({ abi: abi, connex: connex, bytecode: bin });
+                this.contract = new Contract({ abi: abi, connex: this.connex, bytecode: bin });
             } catch (error) {
                 assert.fail('Failed to connect: ' + error);
             }
         } else {
-            assert.fail(`can't load ${configPath}`);
+            assert.fail(`can't load ${this.configPath}`);
         }
-    });
+    }
 
-    it("deploy VVet contract", async() => {
-        if(config.contracts.vVetAddr != undefined && config.contracts.vVetAddr.length == 42){
-            contract.at(config.contracts.vVetAddr);
+    public async deploy():Promise<string>{
+        if(this.config.contracts.vVetAddr != undefined && this.config.contracts.vVetAddr.length == 42){
+            this.contract.at(this.config.contracts.vVetAddr);
         } else {
-            const clause1 = contract.deploy(0);
+            const clause1 = this.contract.deploy(0);
 
-            const txRep: Connex.Vendor.TxResponse = await connex.vendor.sign('tx', [clause1])
-            .signer(wallet.list[0].address)
+            const txRep: Connex.Vendor.TxResponse = await this.connex.vendor.sign('tx', [clause1])
+            .signer(this.wallet.list[0].address)
             .request();
 
-            const receipt = await getReceipt(connex, 5, txRep.txid);
-            if (receipt != null && receipt.outputs[0].contractAddress !== null) {
-                contract.at(receipt.outputs[0].contractAddress);
-                config.contracts.vVetAddr = receipt.outputs[0].contractAddress;
-
-                try {
-                    fs.writeFileSync(configPath,JSON.stringify(config));
-                } catch (error) {
-                    assert.fail("save config faild");
-                }
-            } else {
+            const receipt = await getReceipt(this.connex, 5, txRep.txid);
+            if(receipt == null || receipt.reverted){
                 assert.fail("vVET deploy faild");
             }
-        }
-    });
 
-    it("deposit VVet", async() => {
+            this.contract.at(receipt.outputs[0]!.contractAddress!);
+            this.config.contracts.vVetAddr = receipt.outputs[0].contractAddress;
+
+            try {
+                fs.writeFileSync(this.configPath,JSON.stringify(this.config));
+            } catch (error) {
+                assert.fail("save config faild");
+            }
+        }
+        return this.config.contracts.vVetAddr;
+    }
+
+    public async deposit(){
         const amount = 100000;
 
         // get balance before deposit
-        const call1 = await contract.call('balanceOf',wallet.list[1].address);
+        const call1 = await this.contract.call('balanceOf',this.wallet.list[1].address);
         const beforeTokenBalance = BigInt(call1.decoded[0]);
-        const beforeVetBalance = (await connex.thor.account(wallet.list[1].address).get()).balance;
+        const beforeVetBalance = (await this.connex.thor.account(this.wallet.list[1].address).get()).balance;
 
 
-        const clause1 = await contract.send('deposit',amount);
-        const txRep1 = await connex.vendor.sign('tx', [clause1])
-                .signer(wallet.list[1].address)
+        const clause1 = await this.contract.send('deposit',amount);
+        const txRep1 = await this.connex.vendor.sign('tx', [clause1])
+                .signer(this.wallet.list[1].address)
                 .request();
 
-        const receipt1 = await getReceipt(connex, 5, txRep1.txid);
+        const receipt1 = await getReceipt(this.connex, 5, txRep1.txid);
         if(receipt1 != null && receipt1.reverted == false){
-            const call2 = await contract.call('balanceOf',wallet.list[1].address);
+            const call2 = await this.contract.call('balanceOf',this.wallet.list[1].address);
             const afterTokenBalance = BigInt(call2.decoded[0]);
-            const afterVETBalance = (await connex.thor.account(wallet.list[1].address).get()).balance;
+            const afterVETBalance = (await this.connex.thor.account(this.wallet.list[1].address).get()).balance;
 
             assert.strictEqual(afterTokenBalance - beforeTokenBalance,BigInt(amount));
             assert.strictEqual(BigInt(beforeVetBalance) - BigInt(afterVETBalance),BigInt(amount));
         }
+    }
+
+    public async withdraw(){
+        const amount = 100;
+
+        const call1 = await this.contract.call('balanceOf',this.wallet.list[1].address);
+        const beforeTokenBalance = BigInt(call1.decoded[0]);
+        const beforeVetBalance = (await this.connex.thor.account(this.wallet.list[1].address).get()).balance;
+
+        const clause1 = await this.contract.send('withdraw',0,amount);
+        const txRep1 = await this.connex.vendor.sign('tx', [clause1])
+                .signer(this.wallet.list[1].address)
+                .request();
+        
+        const receipt1 = await getReceipt(this.connex, 5, txRep1.txid);
+
+        if(receipt1 == null || receipt1.reverted){
+            assert.fail("withdraw faild");
+        }
+
+        const call2 = await this.contract.call('balanceOf',this.wallet.list[1].address);
+        const afterTokenBalance = BigInt(call2.decoded[0]);
+        const afterVETBalance = (await this.connex.thor.account(this.wallet.list[1].address).get()).balance;
+
+        assert.strictEqual(beforeTokenBalance - afterTokenBalance,BigInt(amount));
+        assert.strictEqual(BigInt(afterVETBalance) - BigInt(beforeVetBalance),BigInt(amount));
+    }
+}
+
+describe('VVet Contract test',() =>{ 
+    
+    let testcase:VVETTestCase = new VVETTestCase();
+
+    before( async () => {
+        await testcase.init();
+    });
+
+    it("deploy VVet contract", async() => {
+        await testcase.deploy();
+    });
+
+    it("deposit VVet", async() => {
+        await testcase.deposit();
     });
 
     it("withdraw VVet", async() => {
-        const amount = 100;
-
-        const call1 = await contract.call('balanceOf',wallet.list[1].address);
-        const beforeTokenBalance = BigInt(call1.decoded[0]);
-        const beforeVetBalance = (await connex.thor.account(wallet.list[1].address).get()).balance;
-
-        const clause1 = await contract.send('withdraw',amount,amount);
-        const txRep1 = await connex.vendor.sign('tx', [clause1])
-                .signer(wallet.list[1].address)
-                .request();
-        
-        const receipt1 = await getReceipt(connex, 5, txRep1.txid);
-        if(receipt1 != null && receipt1.reverted == false){
-            const call2 = await contract.call('balanceOf',wallet.list[1].address);
-            const afterTokenBalance = BigInt(call2.decoded[0]);
-            const afterVETBalance = (await connex.thor.account(wallet.list[1].address).get()).balance;
-
-            assert.strictEqual(beforeTokenBalance - afterTokenBalance,BigInt(amount));
-            assert.strictEqual(BigInt(afterVETBalance) - BigInt(beforeVetBalance),BigInt(amount));
-        } else {
-            assert.fail("withdraw faild");
-        }
+        await testcase.withdraw();
     });
 })
 

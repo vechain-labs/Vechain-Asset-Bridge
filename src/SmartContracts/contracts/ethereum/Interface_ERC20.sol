@@ -1,6 +1,6 @@
 pragma solidity >=0.5.16 <0.6.0;
 
-interface IVIP180 {
+interface IERC20 {
     function name() public view returns(string);
     function symbol() public view returns(string);
     function decimals() public view returns(uint8);

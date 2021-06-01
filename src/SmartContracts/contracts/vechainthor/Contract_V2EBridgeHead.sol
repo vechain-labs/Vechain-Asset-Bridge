@@ -22,7 +22,7 @@ contract V2EBridgeHead is IBridgeHead {
     event Swap(address indexed _token,address indexed _from,address indexed _to,uint256 _amount);
     event Claim(address indexed _token, address indexed _to, uint256 _amount);
 
-    bool public locked = true;
+    bool public locked = false;
 
     constructor() public {
         governance = msg.sender;
@@ -47,7 +47,7 @@ contract V2EBridgeHead is IBridgeHead {
     }
 
     function updateMerkleRoot(bytes32 _root) external onlyVerifier {
-        require(locked != false, "the bridge isn't lock");
+        require(locked == true, "the bridge isn't lock");
         merkleRoot = _root;
         locked = false;
     }
