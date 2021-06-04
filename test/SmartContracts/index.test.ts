@@ -1,1 +1,1 @@
-require('./vechainthor/v2eBridge.test');
+require('./vechainthor/v2eBridgeVerifier.test');

@@ -21,6 +21,8 @@ contract V2EBridgeHead is IBridgeHead {
 
     event Swap(address indexed _token,address indexed _from,address indexed _to,uint256 _amount);
     event Claim(address indexed _token, address indexed _to, uint256 _amount);
+    event UpdateMerkleRoot(uint256 indexed _lastnum,bytes32 indexed _root);
+    event BridgeLockChange(bytes32 indexed _lastRoot,bool indexed _status);
 
     bool public locked = false;
 
@@ -46,10 +48,24 @@ contract V2EBridgeHead is IBridgeHead {
         tokens[_token] = _type;
     }
 
-    function updateMerkleRoot(bytes32 _root) external onlyVerifier {
+    function updateMerkleRoot(bytes32 _lastRoot,bytes32 _root) external onlyVerifier {
+        require(_lastRoot == merkleRoot,"last merkle root invalid");
         require(locked == true, "the bridge isn't lock");
         merkleRoot = _root;
         locked = false;
+        emit UpdateMerkleRoot(block.number,merkleRoot);
+    }
+
+    function lock(bytes32 _lastRoot) external onlyVerifier {
+        require(_lastRoot == merkleRoot,"last merkle root invalid");
+        locked = true;
+        emit BridgeLockChange(_lastRoot,true);
+    }
+
+    function unlock(bytes32 _lastRoot) external onlyVerifier {
+        require(_lastRoot == merkleRoot,"last merkle root invalid");
+        locked = false;
+        emit BridgeLockChange(_lastRoot,false);
     }
 
     // Bridge funtions
@@ -136,10 +152,6 @@ contract V2EBridgeHead is IBridgeHead {
         emit Claim(_token, _to, _balance);
 
         return true;
-    }
-
-    function lock() external onlyVerifier {
-        locked = true;
     }
 
     function isClaim(bytes32 _merkleroot, bytes32 nodehash)

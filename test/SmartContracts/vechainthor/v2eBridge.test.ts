@@ -10,6 +10,7 @@ import fs from 'fs';
 import { SwapTx } from '../../../src/ValidationNode/utils/types/swapTx';
 import BridgeMerkleTree from '../../../src/ValidationNode/utils/bridgeMerkleTree';
 import { keccak256 } from 'thor-devkit';
+import { SwapBatchInfo } from '../../../src/ValidationNode/utils/types/swapBatchInfo';
 
 export class BridgeTestCase {
     public connex!: Framework;
@@ -86,7 +87,6 @@ export class BridgeTestCase {
                 if (receipt2 == null || receipt2.reverted) {
                     assert.fail("set verifier & governance faild");
                 }
-
             } catch (error) {
                 assert.fail("save config faild");
             }
@@ -178,7 +178,22 @@ export class BridgeTestCase {
             balance: BigInt(1000)
         };
 
-        let tree = new BridgeMerkleTree();
+        let batchInfo:SwapBatchInfo = {
+            lastMerkleRoot:"0x535a20c29bd0ece3f1520e25a44508b53f9d2314a1fbdffef37cec8d48c9150b",
+            chains:[{
+                chainName:"vechain",
+                chainId: "0x6f",
+                fromBlockNum:10000,
+                endBlockNum:10100
+            },
+            {
+                chainName:"ethereum",
+                chainId: "3",
+                fromBlockNum:12560500,
+                endBlockNum:12560696
+            }]
+        }
+        let tree = new BridgeMerkleTree(batchInfo);
         tree.addSwapTx(swaptx);
 
         let leaf = '0x' + keccak256(BridgeMerkleTree.stxEncodePacked(swaptx.to, swaptx.token, swaptx.balance)).toString('hex');
@@ -188,7 +203,10 @@ export class BridgeTestCase {
         const call1 = await this.vEthContract.call('balanceOf', swaptx.to);
         const beforeBalance = BigInt(call1.decoded[0]);
 
-        const clause1 = await this.bridgeContract.send('lock', 0);
+        const call2 = await this.bridgeContract.call('merkleRoot');
+        const lastMerkleRoot = String(call2.decoded[0]);
+
+        const clause1 = await this.bridgeContract.send('lock', 0,lastMerkleRoot);
         const txRep1 = await this.connex.vendor.sign('tx', [clause1])
             .signer(this.wallet.list[1].address)
             .request();
@@ -218,8 +236,8 @@ export class BridgeTestCase {
             assert.fail('claim faild');
         }
 
-        const call2 = await this.vEthContract.call('balanceOf', swaptx.to);
-        const afterBalance = BigInt(call2.decoded[0]);
+        const call3 = await this.vEthContract.call('balanceOf', swaptx.to);
+        const afterBalance = BigInt(call3.decoded[0]);
 
         assert.strictEqual(afterBalance - beforeBalance, swaptx.balance);
     }
