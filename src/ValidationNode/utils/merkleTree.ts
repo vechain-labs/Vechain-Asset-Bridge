@@ -1,4 +1,4 @@
-import { abi, keccak256 } from "thor-devkit";
+import { keccak256 } from "thor-devkit";
 
 export default class MerkleTree {
 

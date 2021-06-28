@@ -1,1 +1,1 @@
-require('./bridgeMerkleTree.test');
+require('./vechainBridgeVerifier.test');

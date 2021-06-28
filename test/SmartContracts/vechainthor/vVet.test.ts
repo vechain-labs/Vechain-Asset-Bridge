@@ -28,7 +28,7 @@ export class VVETTestCase{
             }
 
             try {
-                this.driver = await Driver.connect(new SimpleNet(this.config.nodeHost as string),this.wallet);
+                this.driver = await Driver.connect(new SimpleNet(this.config.vechain.nodeHost as string),this.wallet);
                 this.connex = new Framework(this.driver);
 
                 const filePath = path.join(__dirname,"../../../src/SmartContracts/contracts/vechainthor/Contract_vVet.sol");
@@ -45,8 +45,8 @@ export class VVETTestCase{
     }
 
     public async deploy():Promise<string>{
-        if(this.config.contracts.vVetAddr != undefined && this.config.contracts.vVetAddr.length == 42){
-            this.contract.at(this.config.contracts.vVetAddr);
+        if(this.config.vechain.contracts.vVet != undefined && this.config.vechain.contracts.vVet.length == 42){
+            this.contract.at(this.config.vechain.contracts.vVet);
         } else {
             const clause1 = this.contract.deploy(0);
 
@@ -60,7 +60,7 @@ export class VVETTestCase{
             }
 
             this.contract.at(receipt.outputs[0]!.contractAddress!);
-            this.config.contracts.vVetAddr = receipt.outputs[0].contractAddress;
+            this.config.vechain.contracts.vVet = receipt.outputs[0].contractAddress;
 
             try {
                 fs.writeFileSync(this.configPath,JSON.stringify(this.config));
@@ -68,7 +68,7 @@ export class VVETTestCase{
                 assert.fail("save config faild");
             }
         }
-        return this.config.contracts.vVetAddr;
+        return this.config.vechain.contracts.vVet;
     }
 
     public async deposit(){

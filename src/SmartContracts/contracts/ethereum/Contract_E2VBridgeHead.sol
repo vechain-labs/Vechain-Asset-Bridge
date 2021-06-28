@@ -1,16 +1,19 @@
 pragma solidity >=0.5.16 <0.6.0;
 
-import "../common/Interface_BridgeHead.sol";
-import "../common/Interface_VIP180.sol";
-import "../common/Interface_VIP211.sol";
-import "../common/Library_SafeMath.sol";
-import "../common/Library_Merkle.sol";
-import "../common/Contract_MerkleData.sol";
-import "../common/Contract_TokenRegister.sol";
+import "./Interface_BridgeHead.sol";
+import "./Interface_ERC20.sol";
+import "./Interface_VIP211.sol";
+import "./Library_SafeMath.sol";
+import "./Library_Merkle.sol";
 
 contract E2VBridgeHead is IBridgeHead {
     address public verifier;
     address public governance;
+
+    string public chainname;
+    string public chainid;
+
+    uint private blockNumCache = 0;
 
     uint8 public constant FREEZE = 0;
     uint8 public constant NATIVETOKEN = 1;
@@ -23,14 +26,23 @@ contract E2VBridgeHead is IBridgeHead {
 
     event Swap(address indexed _token,address indexed _from,address indexed _to,uint256 _amount);
     event Claim(address indexed _token, address indexed _to, uint256 _amount);
+    event UpdateMerkleRoot(bytes32 indexed _root,uint indexed _from,bytes32 indexed _lastRoot);
+    event BridgeLockChange(bytes32 indexed _lastRoot,bool indexed _status);
 
-    bool public locked = true;
+    bool public locked = false;
 
-    function name() external view returns (string) {
+    constructor(string memory _chainname,string memory _chainid) public {
+        chainname = _chainname;
+        chainid = _chainid;
+        governance = msg.sender;
+        blockNumCache = block.number;
+    }
+
+    function name() external view returns (string memory) {
         return "Ethereum To VeChainThor bridge head";
     }
 
-    // management
+    // Management
 
     function setVerifier(address _addr) external onlyGovernance {
         verifier = _addr;
@@ -44,10 +56,26 @@ contract E2VBridgeHead is IBridgeHead {
         tokens[_token] = _type;
     }
 
-    function updateMerkleRoot(bytes32 _root) external onlyVerifier {
+    function updateMerkleRoot(bytes32 _lastRoot,bytes32 _root) external onlyVerifier {
+        require(_lastRoot == merkleRoot,"last merkle root invalid");
         require(locked != false, "the bridge isn't lock");
         merkleRoot = _root;
         locked = false;
+        emit UpdateMerkleRoot(merkleRoot,blockNumCache,_lastRoot);
+        emit BridgeLockChange(_lastRoot,false);
+        blockNumCache = block.number;
+    }
+
+    function lock(bytes32 _lastRoot) external onlyVerifier {
+        require(_lastRoot == merkleRoot,"last merkle root invalid");
+        locked = true;
+        emit BridgeLockChange(_lastRoot,true);
+    }
+
+     function unlock(bytes32 _lastRoot) external onlyGovernance {
+        require(_lastRoot == merkleRoot,"last merkle root invalid");
+        locked = false;
+        emit BridgeLockChange(_lastRoot,false);
     }
 
     // Bridge funtions
@@ -62,22 +90,22 @@ contract E2VBridgeHead is IBridgeHead {
             "token not register or freeze"
         );
 
-        IVIP180 token181 = IVIP180(_token);
+        IERC20 erc20 = IERC20(_token);
         require(
-            token181.balanceOf(msg.sender) >= _amount,
+            erc20.balanceOf(msg.sender) >= _amount,
             "insufficient balance"
         );
         require(
-            token181.allowance(msg.sender, address(this)) >= _amount,
+            erc20.allowance(msg.sender, address(this)) >= _amount,
             "insufficient allowance"
         );
 
-        uint256 beforeBlance = token181.balanceOf(address(this));
+        uint256 beforeBlance = erc20.balanceOf(address(this));
         require(
-            token181.transferFrom(msg.sender, address(this), _amount),
+            erc20.transferFrom(msg.sender, address(this), _amount),
             "transfer faild"
         );
-        uint256 afterBalance = token181.balanceOf(address(this));
+        uint256 afterBalance = erc20.balanceOf(address(this));
         require(
             SafeMath.sub(afterBalance, beforeBlance) == _amount,
             "balance check faild"
@@ -91,27 +119,27 @@ contract E2VBridgeHead is IBridgeHead {
             );
         }
 
-        emit Swap(_token, msg.send, _to, _amount);
+        emit Swap(_token, msg.sender, _to, _amount);
         return true;
     }
 
     function claim(
         address _token,
-        address _to,
+        address _owner,
         uint256 _balance,
         bytes32[] calldata _merkleProof
     ) external isLock returns (bool) {
         require(
-            tokenRegister[_token] == 1 || tokenRegister[_token] == 2,
+            tokens[_token] == 1 || tokens[_token] == 2,
             "token not register or freeze"
         );
 
-        bytes32 nodehash = keccak256(abi.encodePacked(_to, _token, _balance));
-        require(MerkleProof.verify(_merkleProof, root, leaf), "invalid proof");
+        bytes32 nodehash = keccak256(abi.encodePacked(chainname,chainid,_owner, _token, _balance));
+        require(MerkleProof.verify(_merkleProof, merkleRoot, nodehash), "invalid proof");
 
         require(!isClaim(merkleRoot, nodehash), "the swap has been claimed");
 
-        if (tokenRegister[_token] == WRAPPEDTOKEN) {
+        if (tokens[_token] == WRAPPEDTOKEN) {
             IVIP211 token211 = IVIP211(_token);
             uint256 beforeBalance = token211.balanceOf(address(this));
             require(
@@ -125,29 +153,28 @@ contract E2VBridgeHead is IBridgeHead {
             );
         }
 
-        IVIP180 token181 = IVIP180(_token);
-        token181.transfer(_to, _balance);
+        IERC20 erc20 = IERC20(_token);
+        erc20.transfer(_owner, _balance);
 
         setClaim(merkleRoot, nodehash);
 
-        emit Claim(_token, _to, _balance);
+        emit Claim(_token, _owner, _balance);
 
         return true;
     }
 
-    function lock() external onlyVerifier {
-        locked = true;
-    }
+   
 
     function isClaim(bytes32 _merkleroot, bytes32 nodehash)
-        external
+        public
+        view
         returns (bool)
     {
         return claimed[_merkleroot] == nodehash;
     }
 
     function setClaim(bytes32 _merkleroot, bytes32 nodehash) private {
-        return claimed[_merkleroot] == nodehash;
+        claimed[_merkleroot] = nodehash;
     }
 
     modifier onlyVerifier() {

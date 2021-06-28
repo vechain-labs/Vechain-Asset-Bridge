@@ -2,9 +2,11 @@ export type SwapTx = {
     chainName:string;
     chainId:string;
     blockNumber:number;
+    txid:string;
     clauseIndex:number;
     index:number;
-    to:string;
+    account:string;
     token:string;
-    balance:BigInt;
+    amount:bigint;
+    type:"swap"|"claim"
 }

@@ -1,13 +1,19 @@
 pragma solidity >=0.5.16 <0.6.0;
 
-import "./common/Interface_VIP211.sol";
-import "./common/Library_SafeMath.sol";
+import "./Interface_VIP211.sol";
+import "./Library_SafeMath.sol";
 
 contract WVet is IVIP211 {
+
+    string public name = "Wrapped VET";
+    string public symbol = "WVet";
+    uint8 public decimals = 18;
+
     address public bridgeContract;
     uint256 private total = 0;
-    mapping(address => uint256) private _balanceOf;
-    mapping(address => mapping(address => uint256)) private _allowance;
+    
+    mapping (address => uint)                       public  balanceOf;
+    mapping (address => mapping (address => uint))  public  allowance;
 
     event Approval(address indexed _from, address indexed _to, uint256 _amount);
     event Transfer(address indexed _from, address indexed _to, uint256 _amount);
@@ -18,24 +24,8 @@ contract WVet is IVIP211 {
         bridgeContract = _addr;
     }
 
-    function name() public view returns (string) {
-        return "Wrapped VET";
-    }
-
-    function symbol() public view returns (string) {
-        return "WVet";
-    }
-
-    function decimals() public view returns (uint8) {
-        return 18;
-    }
-
     function totalSupply() public view returns (uint256) {
         return total;
-    }
-
-    function balanceOf(address _owner) public view returns (uint256) {
-        return _balanceOf[_owner];
     }
 
     function transfer(address _to, uint256 _amount) public returns (bool) {
@@ -47,37 +37,29 @@ contract WVet is IVIP211 {
         address _to,
         uint256 _amount
     ) public returns (bool) {
-        require(_balanceOf[_from] >= _amount, "insufficient balance");
+        require(balanceOf[_from] >= _amount, "insufficient balance");
 
         if (
-            _from != msg.sender && _allowance[_from][msg.sender] != uint256(-1)
+            _from != msg.sender && allowance[_from][msg.sender] != uint256(-1)
         ) {
             require(
-                _allowance[_from][msg.sender] >= _amount,
+                allowance[_from][msg.sender] >= _amount,
                 "insufficient allowance"
             );
-            _allowance[_from][msg.sender] = SafeMath.sub(_allowance[_from][msg.sender], _amount);
+            allowance[_from][msg.sender] = SafeMath.sub(allowance[_from][msg.sender], _amount);
         }
 
-        _balanceOf[_from] = SafeMath.sub(_balanceOf[_from], _amount);
-        _balanceOf[_to] = SafeMath.add(_balanceOf[_to], _amount);
+        balanceOf[_from] = SafeMath.sub(balanceOf[_from], _amount);
+        balanceOf[_to] = SafeMath.add(balanceOf[_to], _amount);
 
         emit Transfer(_from, _to, _amount);
         return true;
     }
 
     function approve(address _spender, uint256 _amount) public returns (bool) {
-        _allowance[msg.sender][_spender] = _amount;
+        allowance[msg.sender][_spender] = _amount;
         emit Approval(msg.sender, _spender, _amount);
         return true;
-    }
-
-    function allowance(address _owner, address _spender)
-        public
-        view
-        returns (uint256)
-    {
-        return _allowance[msg.sender][_spender];
     }
 
     function mint(address _to, uint256 _amount)
@@ -85,7 +67,7 @@ contract WVet is IVIP211 {
         onlyBridge
         returns (bool)
     {
-        _balanceOf[_to] = SafeMath.add(_balanceOf[_to], _amount);
+        balanceOf[_to] = SafeMath.add(balanceOf[_to], _amount);
         total = SafeMath.add(total, _amount);
 
         emit Mint(_to, _amount);
@@ -98,8 +80,8 @@ contract WVet is IVIP211 {
         onlyBridge
         returns (bool)
     {
-        require(_balanceOf[_from] >= _amount, "insufficient balance");
-        _balanceOf[_from] = SafeMath.sub(_balanceOf[_from], _amount);
+        require(balanceOf[_from] >= _amount, "insufficient balance");
+        balanceOf[_from] = SafeMath.sub(balanceOf[_from], _amount);
 
         emit Transfer(_from, address(this), _amount);
         emit Recovery(_from, _amount);

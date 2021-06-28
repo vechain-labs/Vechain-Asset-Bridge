@@ -30,6 +30,13 @@
   },
   "dependencies": {
     "fast-json-stable-stringify": "^2.1.0",
-    "sort-array": "^4.1.4"
+    "level": "^7.0.0",
+    "merkle-patricia-tree": "^4.2.0",
+    "sleep": "^6.3.0",
+    "sort-array": "^4.1.4",
+    "thor-devkit": "^2.0.1",
+    "typeorm": "^0.2.34",
+    "web3": "^1.3.6",
+    "web3-eth-contract": "^1.3.6"
   }
 }

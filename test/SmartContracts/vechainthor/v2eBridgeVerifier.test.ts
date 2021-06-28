@@ -8,7 +8,7 @@ import { compileContract } from "myvetools/dist/utils";
 import assert from 'assert';
 import { getReceipt } from "myvetools/dist/connexUtils";
 
-export class BridgeVerifierTestCase {
+export class V2EBridgeVerifierTestCase {
     public connex!: Framework;
     public driver!: Driver;
     public wallet = new SimpleWallet();
@@ -31,28 +31,28 @@ export class BridgeVerifierTestCase {
             }
 
             try {
-                this.driver = await Driver.connect(new SimpleNet(this.config.nodeHost as string), this.wallet);
+                this.driver = await Driver.connect(new SimpleNet(this.config.vechain.nodeHost as string), this.wallet);
                 this.connex = new Framework(this.driver);
 
                 const bridgeFilePath = path.join(__dirname, "../../../src/SmartContracts/contracts/vechainthor/Contract_V2EBridgeHead.sol");
                 const bridgeAbi = JSON.parse(compileContract(bridgeFilePath, 'V2EBridgeHead', 'abi'));
                 const bridgeBin = compileContract(bridgeFilePath, 'V2EBridgeHead', 'bytecode');
-                this.bridgeContract = new Contract({ abi: bridgeAbi, connex: this.connex, bytecode: bridgeBin, address: this.config.contracts.v2eBridgeAddr != "" ? this.config.contracts.v2eBridgeAddr : undefined });
+                this.bridgeContract = new Contract({ abi: bridgeAbi, connex: this.connex, bytecode: bridgeBin, address: this.config.vechain.contracts.v2eBridge != "" ? this.config.vechain.contracts.v2eBridge : undefined });
 
                 const vVetFilePath = path.join(__dirname, "../../../src/SmartContracts/contracts/vechainthor/Contract_vVet.sol");
                 const vVetAbi = JSON.parse(compileContract(vVetFilePath, 'VVET', 'abi'));
                 const vVetBin = compileContract(vVetFilePath, 'VVET', 'bytecode');
-                this.vVetContract = new Contract({ abi: vVetAbi, connex: this.connex, bytecode: vVetBin, address: this.config.contracts.vVetAddr != "" ? this.config.contracts.vVetAddr : undefined });
+                this.vVetContract = new Contract({ abi: vVetAbi, connex: this.connex, bytecode: vVetBin, address: this.config.vechain.contracts.vVet != "" ? this.config.vechain.contracts.vVet : undefined });
 
                 const vEthFilePath = path.join(__dirname, "../../../src/SmartContracts/contracts/vechainthor/Contract_vEth.sol");
                 const vEthAbi = JSON.parse(compileContract(vEthFilePath, 'VETH', 'abi'));
                 const vEthBin = compileContract(vEthFilePath, 'VETH', 'bytecode');
-                this.vEthContract = new Contract({ abi: vEthAbi, connex: this.connex, bytecode: vEthBin, address: this.config.contracts.vEthAddr != "" ? this.config.contracts.vEthAddr : undefined });
+                this.vEthContract = new Contract({ abi: vEthAbi, connex: this.connex, bytecode: vEthBin, address: this.config.vechain.contracts.vEth != "" ? this.config.vechain.contracts.vEth : undefined });
 
                 const vBridgeVerifierPath = path.join(__dirname, "../../../src/SmartContracts/contracts/vechainthor/Contract_V2EBridgeVerifier.sol");
                 const vBridgeVerifierAbi = JSON.parse(compileContract(vBridgeVerifierPath, 'V2EBridgeVerifier', 'abi'));
                 const vBridgeVerifierBin = compileContract(vBridgeVerifierPath, 'V2EBridgeVerifier', 'bytecode');
-                this.v2eBridgeVerifier = new Contract({ abi: vBridgeVerifierAbi, connex: this.connex, bytecode: vBridgeVerifierBin, address: this.config.contracts.v2eBridgeVerifier != "" ? this.config.contracts.v2eBridgeVerifier : undefined });
+                this.v2eBridgeVerifier = new Contract({ abi: vBridgeVerifierAbi, connex: this.connex, bytecode: vBridgeVerifierBin, address: this.config.vechain.contracts.v2eBridge != "" ? this.config.vechain.contracts.v2eBridge : undefined });
 
             } catch (error) {
                 assert.fail('Failed to connect: ' + error);
@@ -63,8 +63,8 @@ export class BridgeVerifierTestCase {
     }
 
     public async deploy(): Promise<string>{
-        if(this.config.contracts.v2eBridgeVerifier.length == 42){
-            this.v2eBridgeVerifier.at(this.config.contracts.v2eBridgeVerifier);
+        if(this.config.vechain.contracts.v2eBridgeVerifier.length == 42){
+            this.v2eBridgeVerifier.at(this.config.vechain.contracts.v2eBridgeVerifier);
         } else {
             const clause1 = this.v2eBridgeVerifier.deploy(0);
             const txRep1 = await this.connex.vendor.sign('tx', [clause1])
@@ -76,7 +76,7 @@ export class BridgeVerifierTestCase {
             }
 
             this.v2eBridgeVerifier.at(receipt.outputs[0].contractAddress);
-            this.config.contracts.v2eBridgeVerifier = receipt.outputs[0].contractAddress;
+            this.config.vechain.contracts.v2eBridgeVerifier = receipt.outputs[0].contractAddress;
             try {
                 fs.writeFileSync(this.configPath, JSON.stringify(this.config));
                 const clause2 = this.v2eBridgeVerifier.send("setGovernance", 0, this.wallet.list[1].address);
@@ -92,16 +92,16 @@ export class BridgeVerifierTestCase {
                 assert.fail("save config faild");
             }
         }
-        return this.config.contracts.v2eBridgeVerifier;
+        return this.config.vechain.contracts.v2eBridgeVerifier;
     }
 
     public async initVVETToken() {
         let vVETAddr = "";
-        if (this.config.contracts.vVetAddr.length == 42) {
-            const call1 = await this.bridgeContract.call('tokens', this.config.contracts.v2eBridgeAddr);
+        if (this.config.vechain.contracts.vVet.length == 42) {
+            const call1 = await this.bridgeContract.call('tokens', this.config.vechain.contracts.v2eBridge);
             const type = Number(call1.decoded[0]);
             if (type == 1) {
-                vVETAddr = this.config.contracts.vVetAddr;
+                vVETAddr = this.config.vechain.contracts.vVet;
             } else {
                 vVETAddr = await this.deployVVet();
             }
@@ -113,30 +113,31 @@ export class BridgeVerifierTestCase {
 
     public async initVETHToken() {
         let vETHAddr = "";
-        if (this.config.contracts.vEthAddr.length == 42) {
-            const call1 = await this.bridgeContract.call('tokens', this.config.contracts.v2eBridgeAddr);
+        if (this.config.vechain.contracts.vEth.length == 42) {
+            const call1 = await this.bridgeContract.call('tokens', this.config.vechain.contracts.v2eBridge);
             const type = Number(call1.decoded[0]);
             if (type == 2) {
-                vETHAddr = this.config.contracts.vVetAddr;
+                vETHAddr = this.config.vechain.contracts.vVet;
             } else {
-                vETHAddr = await this.deployVVet();
+                vETHAddr = await this.deployVETH(this.config.vechain.contracts.v2eBridge);
             }
         } else {
-            vETHAddr = await this.deployVETH(this.config.contracts.v2eBridgeAddr);
+            vETHAddr = await this.deployVETH(this.config.vechain.contracts.v2eBridge);
         }
+        this.vEthContract.at(vETHAddr);
     }
     
     public async initBridge(){
-        if(this.config.contracts.v2eBridgeAddr == ""){
+        if(this.config.vechain.contracts.v2eBridge == ""){
             let bridgeAddr = await this.deployBridge();
-            this.config.contracts.v2eBridgeAddr = bridgeAddr;
+            this.config.vechain.contracts.v2eBridge = bridgeAddr;
         }
-        this.bridgeContract.at(this.config.contracts.v2eBridgeAddr);
+        this.bridgeContract.at(this.config.vechain.contracts.v2eBridge);
 
         const call1 = await this.bridgeContract.call('verifier');
         const verifierAddr = String(call1.decoded[0]);
-        if(verifierAddr.toLocaleLowerCase() != this.config.contracts.v2eBridgeVerifier.toLocaleLowerCase()){
-            const clause1 = await this.bridgeContract.send('setVerifier',0,this.config.contracts.v2eBridgeVerifier);
+        if(verifierAddr.toLocaleLowerCase() != this.config.vechain.contracts.v2eBridgeVerifier.toLocaleLowerCase()){
+            const clause1 = await this.bridgeContract.send('setVerifier',0,this.config.vechain.contracts.v2eBridgeVerifier);
             const txRep1 = await this.connex.vendor.sign('tx',[clause1])
                 .signer(this.wallet.list[1].address)
                 .request();
@@ -148,8 +149,8 @@ export class BridgeVerifierTestCase {
 
         const call2 =await this.v2eBridgeVerifier.call('bridge');
         const bridegAddr = String(call2.decoded[0]);
-        if(bridegAddr.toLocaleLowerCase() != this.config.contracts.v2eBridgeAddr.toLocaleLowerCase()){
-            const clause1 = await this.v2eBridgeVerifier.send('setBridge',0,this.config.contracts.v2eBridgeAddr);
+        if(bridegAddr.toLocaleLowerCase() != this.config.vechain.contracts.v2eBridge.toLocaleLowerCase()){
+            const clause1 = await this.v2eBridgeVerifier.send('setBridge',0,this.config.vechain.contracts.v2eBridge);
             const txRep1 = await this.connex.vendor.sign('tx',[clause1])
                 .signer(this.wallet.list[1].address)
                 .request();
@@ -216,7 +217,7 @@ export class BridgeVerifierTestCase {
         const lastMerkleroot = String(call1.decoded[0]);
 
         const sign1 = await this.wallet.list[5].sign(Buffer.from(lastMerkleroot.substr(2),'hex'));
-        const clause1 = await this.v2eBridgeVerifier.send('lockBridge',0,lastMerkleroot,sign1);
+        const clause1 = this.v2eBridgeVerifier.send('lockBridge',0,lastMerkleroot,sign1);
         const txRep1 = await this.connex.vendor.sign('tx',[clause1])
             .signer(this.wallet.list[5].address)
             .request();
@@ -226,7 +227,7 @@ export class BridgeVerifierTestCase {
         }
 
         const sign2 = await this.wallet.list[6].sign(Buffer.from(lastMerkleroot.substr(2),'hex'));
-        const clause2 = await this.v2eBridgeVerifier.send('lockBridge',0,lastMerkleroot,sign2);
+        const clause2 = this.v2eBridgeVerifier.send('lockBridge',0,lastMerkleroot,sign2);
         const txRep2 = await this.connex.vendor.sign('tx',[clause2])
             .signer(this.wallet.list[6].address)
             .request();
@@ -243,7 +244,7 @@ export class BridgeVerifierTestCase {
         const rootHash = "0xe5cf3f0d618545e911e46507c696459b0e01187c09bb0118f8eeb797bd0d8b90";
         
         const sign3 = await this.wallet.list[6].sign(Buffer.from(rootHash.substr(2),'hex'));
-        const clause3 = await this.v2eBridgeVerifier.send('updateBridgeMerkleRoot',0,lastMerkleroot,rootHash,sign3);
+        const clause3 = this.v2eBridgeVerifier.send('updateBridgeMerkleRoot',0,lastMerkleroot,rootHash,sign3);
         const txRep3 = await this.connex.vendor.sign('tx',[clause3])
             .signer(this.wallet.list[6].address)
             .request();
@@ -253,13 +254,13 @@ export class BridgeVerifierTestCase {
         }
 
         const sign4 = await this.wallet.list[7].sign(Buffer.from(rootHash.substr(2),'hex'));
-        const clause4 = await this.v2eBridgeVerifier.send('updateBridgeMerkleRoot',0,lastMerkleroot,rootHash,sign4);
+        const clause4 = this.v2eBridgeVerifier.send('updateBridgeMerkleRoot',0,lastMerkleroot,rootHash,sign4);
         const txRep4 = await this.connex.vendor.sign('tx',[clause4])
             .signer(this.wallet.list[7].address)
             .request();
         const receipt4 = await getReceipt(this.connex,5,txRep4.txid);
         if(receipt4 == null || receipt4.reverted){
-            assert.fail(`addr6:${this.wallet.list[6].address} updateBridgeMerkleRoot faild`);
+            assert.fail(`addr7:${this.wallet.list[7].address} updateBridgeMerkleRoot faild`);
         }
 
         const call3 = await this.bridgeContract.call('locked');
@@ -282,7 +283,7 @@ export class BridgeVerifierTestCase {
             assert.fail("vVET deploy faild");
         }
         this.vVetContract.at(receipt.outputs[0]!.contractAddress!);
-        this.config.contracts.vVetAddr = receipt.outputs[0].contractAddress;
+        this.config.vechain.contracts.vVet = receipt.outputs[0].contractAddress;
 
         try {
             fs.writeFileSync(this.configPath, JSON.stringify(this.config));
@@ -290,7 +291,7 @@ export class BridgeVerifierTestCase {
             assert.fail("save config faild");
         }
 
-        const clause2 = this.bridgeContract.send("setToken",0,this.config.contracts.vVetAddr,1);
+        const clause2 = this.bridgeContract.send("setToken",0,this.config.vechain.contracts.vVet,1);
         const txRep2 = await this.connex.vendor.sign('tx',[clause2])
             .signer(this.wallet.list[1].address)
             .request();
@@ -299,7 +300,7 @@ export class BridgeVerifierTestCase {
             assert.fail('register token faild');
         }
 
-        return this.config.contracts.vVetAddr;
+        return this.config.vechain.contracts.vVet;
     }
 
     private async deployVETH(addr: string): Promise<string> {
@@ -313,11 +314,11 @@ export class BridgeVerifierTestCase {
         }
 
         this.vEthContract.at(receipt1.outputs[0]!.contractAddress!);
-        this.config.contracts.vEthAddr = receipt1.outputs[0]!.contractAddress!;
+        this.config.vechain.contracts.vEth = receipt1.outputs[0]!.contractAddress!;
 
         try {
             fs.writeFileSync(this.configPath, JSON.stringify(this.config));
-            const clause2 = this.bridgeContract.send('setToken',0,this.config.contracts.vEthAddr,2);
+            const clause2 = this.bridgeContract.send('setToken',0,this.config.vechain.contracts.vEth,2);
             const txRep2 = await this.connex.vendor.sign('tx',[clause2])
                 .signer(this.wallet.list[1].address)
                 .request();
@@ -329,11 +330,11 @@ export class BridgeVerifierTestCase {
             assert.fail("save config faild");
         }
 
-        return this.config.contracts.vEthAddr;
+        return this.config.vechain.contracts.vEth;
     }
 
     private async deployBridge():Promise<string> {
-        const clause1 = this.bridgeContract.deploy(0);
+        const clause1 = this.bridgeContract.deploy(0,"vechain","0xf6");
         const txRep1 = await this.connex.vendor.sign('tx', [clause1])
             .signer(this.wallet.list[0].address)
             .request();
@@ -343,7 +344,8 @@ export class BridgeVerifierTestCase {
         }
 
         this.bridgeContract.at(receipt.outputs[0].contractAddress);
-        this.config.contracts.v2eBridgeAddr = receipt.outputs[0].contractAddress;
+        this.config.vechain.contracts.v2eBridge = receipt.outputs[0].contractAddress;
+        this.config.vechain.startBlockNum = receipt.meta.blockNumber;
         try {
             fs.writeFileSync(this.configPath, JSON.stringify(this.config));
             const clause2 = this.bridgeContract.send("setVerifier", 0, this.wallet.list[1].address);
@@ -360,14 +362,14 @@ export class BridgeVerifierTestCase {
             assert.fail("save config faild");
         }
 
-        return this.config.contracts.v2eBridgeAddr;
+        return this.config.vechain.contracts.v2eBridge;
     }
 
 
 }
 
 describe("V2E verifier test", ()=>{
-    let testcase = new BridgeVerifierTestCase();
+    let testcase = new V2EBridgeVerifierTestCase();
 
     before(async() =>{
         await testcase.init();

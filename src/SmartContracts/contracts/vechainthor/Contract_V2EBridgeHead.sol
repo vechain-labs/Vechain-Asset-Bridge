@@ -10,6 +10,11 @@ contract V2EBridgeHead is IBridgeHead {
     address public verifier;
     address public governance;
 
+    string public chainname;
+    string public chainid;
+
+    uint private blockNumCache = 0;
+
     uint8 public constant FREEZE = 0;
     uint8 public constant NATIVETOKEN = 1;
     uint8 public constant WRAPPEDTOKEN = 2;
@@ -21,13 +26,16 @@ contract V2EBridgeHead is IBridgeHead {
 
     event Swap(address indexed _token,address indexed _from,address indexed _to,uint256 _amount);
     event Claim(address indexed _token, address indexed _to, uint256 _amount);
-    event UpdateMerkleRoot(uint256 indexed _lastnum,bytes32 indexed _root);
+    event UpdateMerkleRoot(bytes32 indexed _root,uint indexed _from,bytes32 indexed _lastRoot);
     event BridgeLockChange(bytes32 indexed _lastRoot,bool indexed _status);
 
     bool public locked = false;
 
-    constructor() public {
+    constructor(string memory _chainname,string memory _chainid) public {
+        chainname = _chainname;
+        chainid = _chainid;
         governance = msg.sender;
+        blockNumCache = block.number;
     }
 
     function name() external view returns (string memory) {
@@ -53,7 +61,9 @@ contract V2EBridgeHead is IBridgeHead {
         require(locked == true, "the bridge isn't lock");
         merkleRoot = _root;
         locked = false;
-        emit UpdateMerkleRoot(block.number,merkleRoot);
+        emit UpdateMerkleRoot(merkleRoot,blockNumCache,_lastRoot);
+        emit BridgeLockChange(_lastRoot,false);
+        blockNumCache = block.number;
     }
 
     function lock(bytes32 _lastRoot) external onlyVerifier {
@@ -62,7 +72,7 @@ contract V2EBridgeHead is IBridgeHead {
         emit BridgeLockChange(_lastRoot,true);
     }
 
-    function unlock(bytes32 _lastRoot) external onlyVerifier {
+    function unlock(bytes32 _lastRoot) external onlyGovernance {
         require(_lastRoot == merkleRoot,"last merkle root invalid");
         locked = false;
         emit BridgeLockChange(_lastRoot,false);
@@ -80,23 +90,22 @@ contract V2EBridgeHead is IBridgeHead {
             "token not register or freeze"
         );
 
-        IVIP180 token181 = IVIP180(_token);
-        
+        IVIP180 token180 = IVIP180(_token);
         require(
-            token181.balanceOf(msg.sender) >= _amount,
+            token180.balanceOf(msg.sender) >= _amount,
             "insufficient balance"
         );
         require(
-            token181.allowance(msg.sender, address(this)) >= _amount,
+            token180.allowance(msg.sender, address(this)) >= _amount,
             "insufficient allowance"
         );
 
-        uint256 beforeBlance = token181.balanceOf(address(this));
+        uint256 beforeBlance = token180.balanceOf(address(this));
         require(
-            token181.transferFrom(msg.sender, address(this), _amount),
+            token180.transferFrom(msg.sender, address(this), _amount),
             "transfer faild"
         );
-        uint256 afterBalance = token181.balanceOf(address(this));
+        uint256 afterBalance = token180.balanceOf(address(this));
         require(
             SafeMath.sub(afterBalance, beforeBlance) == _amount,
             "balance check faild"
@@ -116,7 +125,7 @@ contract V2EBridgeHead is IBridgeHead {
 
     function claim(
         address _token,
-        address _to,
+        address _owner,
         uint256 _balance,
         bytes32[] calldata _merkleProof
     ) external isLock returns (bool) {
@@ -125,7 +134,7 @@ contract V2EBridgeHead is IBridgeHead {
             "token not register or freeze"
         );
 
-        bytes32 nodehash = keccak256(abi.encodePacked(_to, _token, _balance));
+        bytes32 nodehash = keccak256(abi.encodePacked(chainname,chainid,_owner, _token, _balance));
         require(MerkleProof.verify(_merkleProof, merkleRoot, nodehash), "invalid proof");
 
         require(!isClaim(merkleRoot, nodehash), "the swap has been claimed");
@@ -144,18 +153,19 @@ contract V2EBridgeHead is IBridgeHead {
             );
         }
 
-        IVIP180 token181 = IVIP180(_token);
-        token181.transfer(_to, _balance);
+        IVIP180 token180 = IVIP180(_token);
+        token180.transfer(_owner, _balance);
 
         setClaim(merkleRoot, nodehash);
 
-        emit Claim(_token, _to, _balance);
+        emit Claim(_token, _owner, _balance);
 
         return true;
     }
 
     function isClaim(bytes32 _merkleroot, bytes32 nodehash)
         public
+        view
         returns (bool)
     {
         return claimed[_merkleroot] == nodehash;

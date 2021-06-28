@@ -28,7 +28,7 @@ export class VETHTestCase {
             }
 
             try {
-                this.driver = await Driver.connect(new SimpleNet(this.config.nodeHost as string),this.wallet);
+                this.driver = await Driver.connect(new SimpleNet(this.config.vechain.nodeHost as string),this.wallet);
                 this.connex = new Framework(this.driver);
 
                 const filePath = path.join(__dirname,"../../../src/SmartContracts/contracts/vechainthor/Contract_vEth.sol");
@@ -46,8 +46,8 @@ export class VETHTestCase {
     }
 
     public async deploy():Promise<string>{
-        if(this.config.contracts.vEthAddr != undefined && this.config.contracts.vEthAddr.length == 42){
-            this.contract.at(this.config.contracts.vEthAddr);
+        if(this.config.vechain.contracts.vEth != undefined && this.config.vechain.contracts.vEth.length == 42){
+            this.contract.at(this.config.vechain.contracts.vEth);
         } else {
             const clause1 = this.contract.deploy(0,this.wallet.list[1].address);
 
@@ -62,14 +62,14 @@ export class VETHTestCase {
             }
 
             this.contract.at(receipt.outputs[0]!.contractAddress!);
-            this.config.contracts.vEthAddr = receipt.outputs[0].contractAddress;
+            this.config.vechain.contracts.vEth = receipt.outputs[0].contractAddress;
             try {
                 fs.writeFileSync(this.configPath,JSON.stringify(this.config));
             } catch (error) {
                 assert.fail("save config faild");
             }
         }
-        return this.config.contracts.vEthAddr;
+        return this.config.vechain.contracts.vEth;
     }
 
     public async mint(){

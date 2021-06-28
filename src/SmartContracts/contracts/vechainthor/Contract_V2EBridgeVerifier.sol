@@ -6,6 +6,7 @@ import "./Library_ECVerify.sol";
 interface IV2EBridgeHead {
     function updateMerkleRoot(bytes32 _lastRoot,bytes32 _root) external;
     function lock(bytes32 _lastRoot) external;
+    function locked() external returns(bool);
 }
 
 contract V2EBridgeVerifier {
@@ -17,9 +18,9 @@ contract V2EBridgeVerifier {
     
     struct Proposal{
         uint8 quorum;
-        uint8 approvalCount;
         bool executed;
         bytes32 value;
+        address[] verifiers;
         bytes[] signatures;
     }
 
@@ -61,23 +62,26 @@ contract V2EBridgeVerifier {
         address signer = ECVerify.ecrecovery(_root,_sig);
         require(verifiers[signer],"signer isn't a verifier");
 
-        if(merkleRootProposals[_root].approvalCount == 0){
+        IV2EBridgeHead bri = IV2EBridgeHead(bridge);
+        require(bri.locked() == true,"the bridge hadn't locked");
+
+        if(merkleRootProposals[_root].signatures.length == 0){
             Proposal memory _new =  Proposal({
                 quorum:quorum(verifierCount),
-                approvalCount:0,
                 executed:false,
                 value:_root,
+                verifiers: new address[](0),
                 signatures: new bytes[](0)
             });
             merkleRootProposals[_root] = _new;
         }
-        
         Proposal storage prop = merkleRootProposals[_root];
-        prop.approvalCount ++;
-        prop.signatures.push(_sig);
 
-        if(prop.approvalCount >= prop.quorum){
-            IV2EBridgeHead bri = IV2EBridgeHead(bridge);
+        require(addressExist(prop.verifiers,signer) == false,"signer had approved");
+        prop.signatures.push(_sig);
+        prop.verifiers.push(signer);
+
+        if(merkleRootProposals[_root].signatures.length >= prop.quorum){
             bri.updateMerkleRoot(_lastRoot,_root);
             prop.executed = true;
             emit ExecOpertion(_root,prop.signatures);
@@ -89,24 +93,27 @@ contract V2EBridgeVerifier {
         require(lockBridgeProposals[_lastRoot].executed == false,"the opertion had executed");
         address signer = ECVerify.ecrecovery(_lastRoot,_sig);
         require(verifiers[signer],"signer isn't a verifier");
+        
+        IV2EBridgeHead bri = IV2EBridgeHead(bridge);
+        require(bri.locked() == false,"the bridge had locked");
 
-        if(lockBridgeProposals[_lastRoot].approvalCount == 0){
+        if(lockBridgeProposals[_lastRoot].signatures.length == 0){
             Proposal memory _new = Proposal({
                 quorum:quorum(verifierCount),
-                approvalCount:0,
                 executed:false,
                 value:_lastRoot,
+                verifiers: new address[](0),
                 signatures:new bytes[](0)
             });
             lockBridgeProposals[_lastRoot] = _new;
         }
         
         Proposal storage prop = lockBridgeProposals[_lastRoot];
-        prop.approvalCount++;
+        require(addressExist(prop.verifiers,signer) == false,"signer had approved");
         prop.signatures.push(_sig);
+        prop.verifiers.push(signer);
 
-        if(prop.approvalCount >= prop.quorum){
-            IV2EBridgeHead bri = IV2EBridgeHead(bridge);
+        if(prop.signatures.length >= prop.quorum){
             bri.lock(_lastRoot);
             prop.executed = true;
             emit ExecOpertion(_lastRoot,prop.signatures);
@@ -115,17 +122,29 @@ contract V2EBridgeVerifier {
         emit LockBridge(_lastRoot,signer,_sig);
     }
 
+    function getMerkleRootProposal(bytes32 _hash) external view returns(Proposal memory){
+        return merkleRootProposals[_hash];
+    }
+
+    function getLockBridgeProposals(bytes32 _hash) external view returns(Proposal memory){
+        return lockBridgeProposals[_hash];
+    }
+
     function quorum(uint8 total) internal pure returns(uint8) {
         return uint8((uint(total) + 1) * 2 / 3);
     }
 
-    modifier onlyGovernance() {
-        require(msg.sender == governance, "permission denied");
-        _;
+    function addressExist(address[] memory array,address target) internal pure returns(bool) {
+        for(uint8 i = 0; i < array.length; i++){
+            if(array[i] == target){
+                return true;
+            }
+        }
+        return false;
     }
 
-    modifier onlyVerifier() {
-        require(verifiers[msg.sender],"sender isn't a verifier");
+    modifier onlyGovernance() {
+        require(msg.sender == governance, "permission denied");
         _;
     }
 }
