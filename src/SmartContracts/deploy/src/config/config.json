@@ -1,0 +1,8 @@
+{
+    "vechain":{
+        "nodeHost": "http://47.57.94.244:8680"
+    },
+    "ethereum":{
+        "nodeHost":"http://47.57.94.244:8545"
+    }
+}

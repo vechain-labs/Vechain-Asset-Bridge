@@ -53,8 +53,10 @@ export class PromiseActionResult {
                     result.data.succeed.push(subResult);
                 } else {
                     result.data.failed.push(subResult);
-                    result.error = new Error("has error action");
                 }
+            }
+            if(result.data.failed.length > 0){
+                result.copyBase(result.data.failed[0]);
             }
         } else if (typeof (promiseAllResult) == typeof (ActionResult)) {
             promiseAllResult = promiseAllResult as ActionResult;
@@ -62,7 +64,7 @@ export class PromiseActionResult {
                 result.data.succeed.push(promiseAllResult);
             } else {
                 result.data.failed.push(promiseAllResult);
-                result.error = new Error("has error action");
+                result.copyBase(promiseAllResult);
             }
         }
         return result;

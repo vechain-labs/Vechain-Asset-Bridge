@@ -7,19 +7,25 @@ import * as Devkit from 'thor-devkit';
 import { compileContract } from "myvetools/dist/utils";
 import assert from 'assert';
 import { getReceipt } from "myvetools/dist/connexUtils";
+import { tokenid, TokenInfo } from "../../../src/ValidationNode/utils/types/tokenInfo";
+import { BridgeSnapshoot } from "../../../src/ValidationNode/utils/types/bridgeSnapshoot";
+import { SwapTx } from "../../../src/ValidationNode/utils/types/swapTx";
+import BridgeStorage from "../../../src/ValidationNode/server/bridgeStorage";
 
 export class V2EBridgeVerifierTestCase {
     public connex!: Framework;
     public driver!: Driver;
     public wallet = new SimpleWallet();
 
-    public configPath = path.join(__dirname, './test.config.json');
+    public configPath = path.join(__dirname, '../test.config.json');
     public config: any = {};
 
     public bridgeContract!: Contract;
     public vVetContract!: Contract;
     public vEthContract!: Contract;
     public v2eBridgeVerifier!: Contract;
+    public tokens:Array<TokenInfo> = new Array();
+    
 
     public async init() {
         if (fs.existsSync(this.configPath)) {
@@ -213,6 +219,10 @@ export class V2EBridgeVerifierTestCase {
     }
 
     public async updateMerkleRoot(){
+
+        await this.initTokens();
+        const swapTx = await this.swapVVET();
+
         const call1 = await this.bridgeContract.call('merkleRoot');
         const lastMerkleroot = String(call1.decoded[0]);
 
@@ -235,13 +245,13 @@ export class V2EBridgeVerifierTestCase {
         if(receipt2 == null || receipt2.reverted){
             assert.fail(`addr6:${this.wallet.list[6].address} lock bridge faild`);
         }
-
+ 
         const call2 = await this.bridgeContract.call('locked');
         const locked = Boolean(call2.decoded[0]);
 
         assert.strictEqual(locked,true,"bridge not locked");
 
-        const rootHash = "0xe5cf3f0d618545e911e46507c696459b0e01187c09bb0118f8eeb797bd0d8b90";
+        const rootHash = this.initStorage(this.config.vechain.startBlockNum,receipt2.meta.blockNumber,[swapTx]);
         
         const sign3 = await this.wallet.list[6].sign(Buffer.from(rootHash.substr(2),'hex'));
         const clause3 = this.v2eBridgeVerifier.send('updateBridgeMerkleRoot',0,lastMerkleroot,rootHash,sign3);
@@ -365,7 +375,101 @@ export class V2EBridgeVerifierTestCase {
         return this.config.vechain.contracts.v2eBridge;
     }
 
+    private async initTokens():Promise<any>{
+        this.tokens = [
+            {
+                tokenid:"",
+                chainName:this.config.vechain.chainName,
+                chainId:this.config.vechain.chainId,
+                tokenAddr:this.config.vechain.contracts.vVet,
+                tokeType:"1",
+                targetToken:""
+            },
+            {
+                tokenid:"",
+                chainName:this.config.vechain.chainName,
+                chainId:this.config.vechain.chainId,
+                tokenAddr:this.config.vechain.contracts.vEth,
+                tokeType:"2",
+                targetToken:""
+            },
+            {
+                tokenid:"",
+                chainName:this.config.ethereum.chainName,
+                chainId:this.config.ethereum.chainId,
+                tokenAddr:this.config.ethereum.contracts.wEth,
+                tokeType:"1",
+                targetToken:""
+            },
+            {
+                tokenid:"",
+                chainName:this.config.ethereum.chainName,
+                chainId:this.config.ethereum.chainId,
+                tokenAddr:this.config.ethereum.contracts.wVET,
+                tokeType:"2",
+                targetToken:""
+            },
+        ]
 
+        for(let token of this.tokens){
+            token.tokenid = tokenid(token.chainName,token.chainId,token.tokenAddr);
+        }
+        this.tokens[0].targetToken = this.tokens[2].tokenid;
+        this.tokens[2].targetToken = this.tokens[0].tokenid;
+        this.tokens[1].targetToken = this.tokens[3].tokenid;
+        this.tokens[3].targetToken = this.tokens[1].tokenid;
+    }
+
+    private async swapVVET():Promise<SwapTx>{
+        const amount = 100000000;
+        const clause1 = this.vVetContract.send("deposit",amount);
+        const clause2 = this.vVetContract.send("approve",0,this.config.vechain.contracts.v2eBridge,amount);
+        const clause3 = this.bridgeContract.send("swap",0,this.config.vechain.contracts.vVet,amount,this.wallet.list[4].address);
+
+        const txRep1 = await this.connex.vendor.sign("tx",[clause1,clause2,clause3])
+                .signer(this.wallet.list[3].address)
+                .request();
+        const receipt1 = await getReceipt(this.connex,5,txRep1.txid);
+        if(receipt1 == null || receipt1.reverted){
+            assert.fail("swap faild");
+        }
+        
+        let result:SwapTx = {
+            chainName:this.config.vechain.chainName,
+            chainId:this.config.vechain.chainId,
+            blockNumber:receipt1.meta.blockNumber,
+            txid:receipt1.meta.txID,
+            clauseIndex:2,
+            index:0,
+            account:this.wallet.list[4].address,
+            token:this.config.vechain.contracts.vVet,
+            amount:BigInt(amount),
+            timestamp:receipt1.meta.blockTimestamp,
+            type:"swap"
+        }
+
+        return result;
+    }
+
+    private initStorage(begin:number,end:number,swapTxs:SwapTx[]):string{
+        let result = "";
+        const sn:BridgeSnapshoot = {
+            parentMerkleRoot:"0x0000000000000000000000000000000000000000000000000000000000000000",
+            merkleRoot:"0x0000000000000000000000000000000000000000000000000000000000000000",
+            chains:[
+                {chainName:this.config.vechain.chainName,chainId:this.config.vechain.chainId,beginBlockNum:begin,endBlockNum:end},
+                {chainName:this.config.ethereum.chainName,chainId:this.config.ethereum.chainId,beginBlockNum:begin,endBlockNum:end}
+            ]
+        }
+
+        let storage = new BridgeStorage(sn);
+        storage.updateLedgers(swapTxs,this.tokens);
+        storage.buildTree();
+        result = storage.getMerkleRoot();
+        return result;
+    }
+
+    
 }
 
 describe("V2E verifier test", ()=>{

@@ -2,6 +2,7 @@ pragma solidity >=0.5.16 <0.6.0;
 pragma experimental ABIEncoderV2;
 
 import "./Library_ECVerify.sol";
+import "./Library_Array.sol";
 
 interface IV2EBridgeHead {
     function updateMerkleRoot(bytes32 _lastRoot, bytes32 _root) external;
@@ -9,14 +10,51 @@ interface IV2EBridgeHead {
     function locked() external returns (bool);
 }
 
-contract E2VBridgeVerifier {
+contract BridgeVerifierControl {
     address public governance;
     address public bridge;
-
     mapping(address => bool) public verifiers;
     uint8 public verifierCount;
 
-    event VerifierChanged(address _verifier, bool _status);
+    constructor() public {
+        governance = msg.sender;
+    }
+
+    event VerifierChanged(address indexed _verifier,bool indexed _status);
+    event GovernanceUpdate(address indexed _addr);
+    event BridgeUpdate(address indexed _addr);
+
+    function setGovernance(address _addr) external onlyGovernance {
+        governance = _addr;
+        emit GovernanceUpdate(_addr);
+    }
+
+    function setBridge(address _addr) external onlyGovernance {
+        bridge = _addr;
+        emit BridgeUpdate(_addr);
+    }
+
+    function addVerifier(address _verifier) external onlyGovernance {
+        verifiers[_verifier] = true;
+        verifierCount++;
+        emit VerifierChanged(_verifier,true);
+    }
+
+    function removeVerifier(address _verifier) external onlyGovernance {
+        require(verifiers[_verifier] == true,"verifier not in map");
+        verifiers[_verifier] = false;
+        verifierCount--;
+        emit VerifierChanged(_verifier,false);
+    }
+
+    modifier onlyGovernance() {
+        require(msg.sender == governance, "permission denied");
+        _;
+    }
+}
+
+contract E2VBridgeVerifier is BridgeVerifierControl{
+
     event UpdateBridgeMerkleRoot(bytes32 indexed _value);
     event LockBridge(bytes32 indexed _value);
     event ExecOpertion(bytes32 indexed _hash);
@@ -24,28 +62,9 @@ contract E2VBridgeVerifier {
     mapping(bytes32 => bool) public merkleRootProposals;
     mapping(bytes32 => bool) public lockBridgeProposals;
 
-    struct ProposalCache{
-        mapping(address => bool) approval;
-    }
-
-    constructor() public {
-        governance = msg.sender;
-    }
-
-    function setGovernance(address _addr) external onlyGovernance {
-        governance = _addr;
-    }
-
-    function setBridge(address _addr) external onlyGovernance {
-        bridge = _addr;
-    }
-
-    function removeVerifier(address _verifier) external onlyGovernance {
-        require(verifiers[_verifier] == true, "verifier not in map");
-        verifiers[_verifier] = false;
-        verifierCount--;
-        emit VerifierChanged(_verifier, false);
-    }
+    constructor() 
+        public
+        BridgeVerifierControl(){}
 
     function updateBridgeMerkleRoot(
         bytes32 _lastRoot,
@@ -71,14 +90,15 @@ contract E2VBridgeVerifier {
         for (uint8 i = 0; i < _sigs.length; i++) {
             address signer = ECVerify.ecrecovery(_root, _sigs[i]);
             require(verifiers[signer], "signer isn't a verifier");
-            require(addressExist(signers,signer) == false,"signer had approved");
+            require(ArrayLib.addressExist(signers,signer) == false,"signer had approved");
             signers[i] = signer;
             if (i + 1 >= limit) {
                 bri.updateMerkleRoot(_lastRoot, _root);
                 merkleRootProposals[_root] = true;
+                emit ExecOpertion(_root);
+                emit UpdateBridgeMerkleRoot(_root);
+                break;
             }
-            emit UpdateBridgeMerkleRoot(_root);
-            break;
         }
     }
 
@@ -106,7 +126,7 @@ contract E2VBridgeVerifier {
         for (uint8 i = 0; i < _sigs.length; i++) {
             address signer = ECVerify.ecrecovery(_lastRoot, _sigs[i]);
             require(verifiers[signer], "signer isn't a verifier");
-            require(addressExist(signers,signer) == false,"signer had approved");
+            require(ArrayLib.addressExist(signers,signer) == false,"signer had approved");
             signers[i] = signer;
             if (i + 1 >= limit) {
                 bri.lock(_lastRoot);
@@ -124,15 +144,6 @@ contract E2VBridgeVerifier {
 
     function expiration(uint blockRef,uint expirnum) internal view returns(bool) {
         return block.number - blockRef <= expirnum;
-    }
-
-    function addressExist(address[] memory array,address target) internal pure returns(bool) {
-        for(uint8 i = 0; i < array.length; i++){
-            if(array[i] == target){
-                return true;
-            }
-        }
-        return false;
     }
 
     modifier onlyGovernance() {

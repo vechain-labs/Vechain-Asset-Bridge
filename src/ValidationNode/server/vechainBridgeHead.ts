@@ -5,7 +5,7 @@ import path from "path";
 import { abi } from "thor-devkit";
 import { ActionData } from "../utils/components/actionResult";
 import { IBridgeHead } from "../utils/iBridgeHead";
-import { BridgeSnapshoot } from "../utils/types/bridgeSnapshoot";
+import { BridgeSnapshoot, ZeroRoot } from "../utils/types/bridgeSnapshoot";
 import { SwapTx } from "../utils/types/swapTx";
 
 export class VeChainBridgeHead implements IBridgeHead {
@@ -25,7 +25,7 @@ export class VeChainBridgeHead implements IBridgeHead {
             inputs:[
                 {name:"_root",type:"bytes32",indexed:true},
                 {name:"_from",type:"uint",indexed:true},
-                {name:"_lastRoot",type:"bytes32",indexed:true}
+                {name:"_parentRoot",type:"bytes32",indexed:true}
             ]
     });
 
@@ -50,36 +50,35 @@ export class VeChainBridgeHead implements IBridgeHead {
         ]
     });
 
-
-    public async getLashSnapshootOnChain(): Promise<ActionData<BridgeSnapshoot>> {
-        let result = new ActionData<BridgeSnapshoot>();
-
-        const bestBlockNum = this.connex.thor.status.head.number;
-        const startBlockNum = this.config.vechain.startBlockNum;
-
-        let snapshoot:BridgeSnapshoot = {
-            parentMerkleRoot:"0x0000000000000000000000000000000000000000000000000000000000000000",
-            merkleRoot:"0x0000000000000000000000000000000000000000000000000000000000000000",
-            chains:[
-                {chainName:this.config.vechain.chainName,chainId:this.config.vechain.chainId,fromBlockNum:startBlockNum,endBlockNum:bestBlockNum}
-            ]
-        };
+    public async getSnapshoot(begin:number,end:number):Promise<ActionData<BridgeSnapshoot[]>>{
+        let result = new ActionData<BridgeSnapshoot[]>();
+        result.data = new Array<BridgeSnapshoot>();
+        let snapshoots = new Array<BridgeSnapshoot>();
 
         let filter = this.connex.thor.filter("event",[{
             address:this.config.vechain.contracts.v2eBridge,
             topic0:this.UpdateMerkleRootEvent.signature
         }]).order("desc"); 
 
-        for(let blockNum = bestBlockNum;blockNum >= startBlockNum;){
-            let from = blockNum - this.scanBlockStep >= startBlockNum ? blockNum - this.scanBlockStep : startBlockNum;
+        let snapShoot:BridgeSnapshoot = {
+            parentMerkleRoot:ZeroRoot(),
+            merkleRoot:ZeroRoot(),
+            chains:[
+                {
+                    chainName:this.config.vechain.chainName,chainId:this.config.vechain.chainId,beginBlockNum:0,endBlockNum:0}
+            ]
+        };
+
+        for(let blockNum = end;blockNum >= begin;){
+            let from = blockNum - this.scanBlockStep >= begin ? blockNum - this.scanBlockStep : begin;
             let to = blockNum;
-            let filterResult = await filter.range({unit:"block",from:from,to:to}).apply(0,1);
-            if(filterResult.length == 1){
-                let ev = filterResult[0];
-                snapshoot.merkleRoot = ev.topics[1];
-                snapshoot.parentMerkleRoot = ev.topics[3];
-                snapshoot.chains[0].fromBlockNum = parseInt(ev.topics[2],16);
-                snapshoot.chains[0].endBlockNum = ev.meta.blockNumber;
+            let events = await filter.range({unit:"block",from:from,to:to}).apply(0,1);
+            if(events.length == 1){
+                let ev = events[0];
+                snapShoot.merkleRoot = ev.topics[1];
+                snapShoot.parentMerkleRoot = ev.topics[3];
+                snapShoot.chains[0].beginBlockNum = parseInt(ev.topics[2],16);
+                snapShoot.chains[0].endBlockNum = ev.meta.blockNumber - 1;
                 break;
             } else {
                 blockNum = from - 1;
@@ -87,7 +86,113 @@ export class VeChainBridgeHead implements IBridgeHead {
             }
         }
 
-        result.data = snapshoot;
+        if(snapShoot.merkleRoot == ZeroRoot()){
+            return result;
+        }
+
+        snapshoots.push(snapShoot);
+        
+        if(snapShoot.chains[0].beginBlockNum > begin && snapShoot.parentMerkleRoot != ZeroRoot()){
+            let tagetBlock = snapShoot.chains[0].beginBlockNum;
+            while(true){
+                let events = await filter.range({unit:"block",from:tagetBlock,to:tagetBlock}).apply(0,1);
+                if(events.length == 0){
+                    result.error = "can't found parent merkle root";
+                    return result;
+                }
+                let ev = events[0];
+                let snap:BridgeSnapshoot = {
+                    merkleRoot:ev.topics[1],
+                    parentMerkleRoot:ev.topics[3],
+                    chains:[{
+                        chainName:this.config.vechain.chainName,
+                        chainId:this.config.vechain.chainId,
+                        beginBlockNum:parseInt(ev.topics[2],16),
+                        endBlockNum:ev.meta.blockNumber - 1
+                    }]
+                };
+                snapshoots.push(snap);
+                if(snap.chains[0].beginBlockNum < begin){
+                    break;
+                }
+                tagetBlock = snap.chains[0].beginBlockNum;
+            }
+        }
+
+        result.data = snapshoots.reverse();
+        return result;
+    }
+
+    public async getLastSnapshoot():Promise<ActionData<BridgeSnapshoot>>{
+        let result = new ActionData<BridgeSnapshoot>();
+
+        let filter = this.connex.thor.filter("event",[{
+            address:this.config.vechain.contracts.v2eBridge,
+            topic0:this.UpdateMerkleRootEvent.signature
+        }]).order("desc"); 
+
+        let snapShoot:BridgeSnapshoot = {
+            parentMerkleRoot:ZeroRoot(),
+            merkleRoot:ZeroRoot(),
+            chains:[
+                {
+                    chainName:this.config.vechain.chainName,
+                    chainId:this.config.vechain.chainId,
+                    beginBlockNum:this.config.vechain.startBlockNum,
+                    endBlockNum:0
+                }
+            ]
+        };
+
+        let begin = this.config.vechain.startBlockNum;
+        let end = this.connex.thor.status.head.number;
+
+        for(let blockNum = end;blockNum >= begin;){
+            let from = blockNum - this.scanBlockStep >= begin ? blockNum - this.scanBlockStep : begin;
+            let to = blockNum;
+            const events = await filter.range({unit:"block",from:from,to:to}).apply(0,1);
+            if(events.length == 1){
+                let ev = events[0];
+                snapShoot.merkleRoot = ev.topics[1];
+                snapShoot.parentMerkleRoot = ev.topics[3];
+                snapShoot.chains[0].beginBlockNum = parseInt(ev.topics[2],16);
+                snapShoot.chains[0].endBlockNum = ev.meta.blockNumber - 1;
+                break;
+            } else {
+                blockNum = from - 1;
+                continue;
+            }
+        }
+
+        result.data = snapShoot;
+        return result;
+    }
+
+    public async getSnapshootByBlock(block:number):Promise<ActionData<BridgeSnapshoot>>{
+        let result = new ActionData<BridgeSnapshoot>();
+
+        let filter = this.connex.thor.filter("event",[{
+            address:this.config.vechain.contracts.v2eBridge,
+            topic0:this.UpdateMerkleRootEvent.signature
+        }]).order("desc"); 
+
+        let snapShoot:BridgeSnapshoot = {
+            parentMerkleRoot:ZeroRoot(),
+            merkleRoot:ZeroRoot(),
+            chains:[
+                {chainName:this.config.vechain.chainName,chainId:this.config.vechain.chainId,beginBlockNum:0,endBlockNum:0}
+            ]
+        };
+
+        const events = await filter.range({unit:"block",from:block,to:block}).apply(0,1);
+        if(events.length == 1){
+            let ev = events[0];
+            snapShoot.merkleRoot = ev.topics[1];
+            snapShoot.parentMerkleRoot = ev.topics[3];
+            snapShoot.chains[0].beginBlockNum = parseInt(ev.topics[2],16);
+            snapShoot.chains[0].endBlockNum = ev.meta.blockNumber - 1;
+        }
+        result.data = snapShoot;
         return result;
     }
 
@@ -157,6 +262,7 @@ export class VeChainBridgeHead implements IBridgeHead {
                             account:event.topics[3],
                             token:event.topics[1],
                             amount:BigInt(event.data),
+                            timestamp:event.meta.blockTimestamp,
                             type:"swap"
                         }
                         
@@ -171,6 +277,7 @@ export class VeChainBridgeHead implements IBridgeHead {
                             account:event.topics[2],
                             token:event.topics[1],
                             amount:BigInt(event.data),
+                            timestamp:event.meta.blockTimestamp,
                             type:"claim"
                         }
                     }
@@ -192,7 +299,7 @@ export class VeChainBridgeHead implements IBridgeHead {
     }
 
     private initV2EBridge(){
-        const filePath = path.join(__dirname,"../../../../src/SmartContracts/contracts/vechainthor/Contract_V2EBridgeHead.sol");
+        const filePath = path.join(this.env.contractdir,"/vechainthor/Contract_V2EBridgeHead.sol");
         const abi = JSON.parse(compileContract(filePath, 'V2EBridgeHead', 'abi'));
         this.v2eBridge = new Contract({abi:abi,connex:this.connex,address:this.config.vechain.contracts.v2eBridge});
     }

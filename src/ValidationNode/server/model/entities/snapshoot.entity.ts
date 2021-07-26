@@ -14,7 +14,6 @@ export class SnapshootEntity{
     @Column({name:"parent_merkleroot",length:66})
     public parentMerkleRoot!:string;
 
-    //@Column({name:"config",type: 'text',transformer:simpleJSON<TreeConfig>("calculate_tree_config.config")})
     @Column({name:"chains",type:"text",transformer:simpleJSON<Array<ChainInfo>>("snapshoot.chains")})
     public chains!:Array<ChainInfo>
 

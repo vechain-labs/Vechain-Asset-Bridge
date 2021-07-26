@@ -1,12 +1,15 @@
 import { keccak256 } from "thor-devkit";
+import { ActionResult } from "../utils/components/actionResult";
 import MerkleTree, { TreeNode } from "../utils/merkleTree";
-import { BridgeLedger, BridgeLedgerHelper } from "../utils/types/bridgeLedger";
+import { BridgeLedger, ledgerHash, ledgerID } from "../utils/types/bridgeLedger";
 import { BridgeSnapshoot, ChainInfo } from "../utils/types/bridgeSnapshoot";
+import { SwapTx } from "../utils/types/swapTx";
+import { findTargetToken, TokenInfo } from "../utils/types/tokenInfo";
 const sortArray = require('sort-array');
 
 export default class BridgeStorage {
 
-    private ledgerCache = new Array<BridgeLedger>();
+    public readonly ledgerCache = new Array<BridgeLedger>();
     private tree = new MerkleTree();
     private snapshoot:BridgeSnapshoot;
     private merkleRootNode:TreeNode = new TreeNode();
@@ -19,7 +22,52 @@ export default class BridgeStorage {
         }
     }
 
-    public updateLedgers(ledgers:BridgeLedger[]){
+    public updateLedgers(txs:SwapTx[],tokenInfo:TokenInfo[]):ActionResult{
+        let result = new ActionResult();
+        const sorted:Array<SwapTx> = sortArray(txs,{
+            by:["timestamp"],
+            order:"asc"
+        });
+
+        for(const tx of sorted){
+            const targetToken = findTargetToken(tokenInfo,tx.chainName,tx.chainId,tx.token);
+            if(targetToken == undefined){
+                result.error = `not found target token, sourcetoken: chainName:${tx.chainName} chainId:${tx.chainId} token:${tx.token}`;
+                return result;
+            }
+
+            const ledgerid = ledgerID(targetToken.chainName,targetToken.chainId,targetToken.tokenAddr,tx.account);
+            const targetIndex = this.ledgerCache.findIndex(item =>{return item.ledgerid == ledgerid});
+            if(targetIndex != -1){
+                let ledger = this.ledgerCache[targetIndex];
+                if(tx.type == "swap"){
+                    ledger.balance = ledger.balance + tx.amount;
+                } else {
+                    ledger.balance = ledger.balance - tx.amount;
+                }
+                if(ledger.balance == BigInt(0)){
+                    this.ledgerCache.splice(targetIndex,1);
+                }
+            } else if(tx.type == "swap"){
+                let newLedger:BridgeLedger = {
+                    root:"",
+                    ledgerid:ledgerid,
+                    chainName:targetToken.chainName,
+                    chainId:targetToken.chainId,
+                    account:tx.account,
+                    token:targetToken.tokenAddr,
+                    balance:tx.amount
+                }
+                this.ledgerCache.push(newLedger);
+            } else {
+                result.error = `update ledger error: empty ledger can't to claim,chainName:${targetToken.chainName} chainId:${targetToken.chainId} account:${tx.account} token:${targetToken.tokenAddr}`;
+                return result;
+            }
+        }
+        return result;
+    }
+
+    public mergeLedgers(ledgers:BridgeLedger[]){
         for(const ledger of ledgers){
             let targetIndex = this.ledgerCache.findIndex(item =>{return item.ledgerid == ledger.ledgerid});
             if( targetIndex != -1){
@@ -44,7 +92,7 @@ export default class BridgeStorage {
         sorted.forEach(ledger =>{
             let leaf = new BridgeStorageTreeNode();
             leaf.ledger = ledger;
-            leaf.nodeHash = BridgeLedgerHelper.ledgerHash(leaf.ledger);
+            leaf.nodeHash = ledgerHash(leaf.ledger);
             this.tree.addNode(leaf);
         });
 
@@ -73,12 +121,12 @@ export default class BridgeStorage {
     }
 
     public getMerkleProof(ledger:BridgeLedger):Array<string> {
-        let leafHash = BridgeLedgerHelper.ledgerHash(ledger);
+        let leafHash = ledgerHash(ledger);
         return this.tree.getMerkleProof(leafHash);
     }
 
     public static verificationMerkleProof(ledger:BridgeLedger,root:string,proof:Array<string>):boolean{
-        let leafHash = BridgeLedgerHelper.ledgerHash(ledger);
+        let leafHash = ledgerHash(ledger);
         return MerkleTree.verificationMerkleProof(leafHash,root,proof);
     }
 
@@ -93,7 +141,7 @@ export default class BridgeStorage {
             let chainBuff = Buffer.concat([
                 Buffer.from(chain.chainName,'hex'),
                 Buffer.from(chain.chainId,'hex'),
-                Buffer.from(BigInt(chain.fromBlockNum).toString(16),'hex'),
+                Buffer.from(BigInt(chain.beginBlockNum).toString(16),'hex'),
                 Buffer.from(BigInt(chain.endBlockNum).toString(16),'hex'),
             ]);
             encode = Buffer.concat([encode,chainBuff]);

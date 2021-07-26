@@ -1,31 +1,31 @@
 {
     "mnemonic": "denial kitchen pet squirrel other broom bar gas better priority spoil cross",
     "vechain": {
-        "nodeHost": "http://localhost:8680",
+        "nodeHost": "http://47.57.94.244:8680",
         "chainName": "vechain",
         "chainId": "0xf6",
-        "startBlockNum": 51286,
+        "startBlockNum": 43735,
         "confirmHeight": 12,
         "expiration": 180,
         "contracts": {
-            "vVet": "0x36fb908ef8ca7a0afd14de6dc1ee79c3f7c93757",
-            "vEth": "0xa84414811e3cf93b2ffd99bc950c47d54b433ecb",
-            "v2eBridge": "0x22b0dcee1991e34a04317a0f232d10705523f96a",
-            "v2eBridgeVerifier": "0xb9219915e55eaa80bc442efcaad2309015c6f0e7"
+            "vVet": "0xb951c564e6908e450dfb559ac5b0d4cb6cba164a",
+            "vEth": "0x9bcf52e446dfa146e22fe53cc0014655a777c6d9",
+            "v2eBridge": "0x268e439dece26cf5af88e24984f23b5db118ee1e",
+            "v2eBridgeVerifier": "0x0322bf1322489a958e52129981e82551d82a3577"
         }
     },
     "ethereum": {
         "nodeHost": "http://47.57.94.244:8545",
         "chainName": "ethereum",
-        "chainId": "3",
-        "startBlockNum": 10486398,
-        "confirmHeight":24,
-        "expiration":100,
+        "chainId": "1337",
+        "startBlockNum": 17582,
+        "confirmHeight": 6,
+        "expiration": 24,
         "contracts": {
-            "wEth":"0x110084B414d1d47088311a667fb85Ce376c49D8f",
-            "wVET":"0x291464cD0b79E3032A7c375bC7Ab085206Cc1e2f",
-            "e2vBridge":"0x01FD17DC274244637Cb55F168F48C1592A2B2B94",
-            "e2vBridgeVerifier":""
+            "wEth": "0x110084B414d1d47088311a667fb85Ce376c49D8f",
+            "wVET": "0x291464cD0b79E3032A7c375bC7Ab085206Cc1e2f",
+            "e2vBridge": "0xC3656a390B6110BD58Ac599e47B4062FA769e2B9",
+            "e2vBridgeVerifier": ""
         }
     }
 }

@@ -82,6 +82,7 @@ contract WVet is IVIP211 {
     {
         require(balanceOf[_from] >= _amount, "insufficient balance");
         balanceOf[_from] = SafeMath.sub(balanceOf[_from], _amount);
+        total = SafeMath.sub(total, _amount);
 
         emit Transfer(_from, address(this), _amount);
         emit Recovery(_from, _amount);

@@ -3,8 +3,9 @@ import { BridgeSnapshoot } from "./types/bridgeSnapshoot";
 import { SwapTx } from "./types/swapTx";
 
 export interface IBridgeHead {
-    getLashSnapshootOnChain():Promise<ActionData<BridgeSnapshoot>>;
+    getLastSnapshoot():Promise<ActionData<BridgeSnapshoot>>;
+    getSnapshoot(begin:number,end:number):Promise<ActionData<BridgeSnapshoot[]>>;
     getLockedStatus():Promise<ActionData<boolean>>;
     getMerkleRoot():Promise<ActionData<string>>;
-    scanTxs(from:number,end:number):Promise<ActionData<SwapTx[]>>;
+    scanTxs(begin:number,end:number):Promise<ActionData<SwapTx[]>>;
 }

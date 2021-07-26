@@ -4,11 +4,11 @@
   "description": "",
   "main": "index.js",
   "directories": {},
-  "scripts": {},
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/mongelly/Vechain-Asset-Bridge.git"
+  "bin": {
+    "mynewcli": "./bin/run"
   },
+  "scripts": {},
+  "repository": "nodejs/mynewcli",
   "author": "mog.lu@vechain.org",
   "license": "MIT",
   "bugs": {
@@ -16,6 +16,9 @@
   },
   "homepage": "https://github.com/mongelly/Vechain-Asset-Bridge#readme",
   "devDependencies": {
+    "@oclif/command": "^1.8.0",
+    "@oclif/config": "^1.17.0",
+    "@oclif/plugin-help": "^3.2.2",
     "@types/assert": "^1.5.2",
     "@types/chai": "^4.2.18",
     "@types/mocha": "^8.2.0",
@@ -32,11 +35,23 @@
     "fast-json-stable-stringify": "^2.1.0",
     "level": "^7.0.0",
     "merkle-patricia-tree": "^4.2.0",
+    "oclif": "^1.18.1",
+    "path": "^0.12.7",
     "sleep": "^6.3.0",
     "sort-array": "^4.1.4",
+    "sqlite3": "^5.0.2",
     "thor-devkit": "^2.0.1",
     "typeorm": "^0.2.34",
     "web3": "^1.3.6",
-    "web3-eth-contract": "^1.3.6"
+    "web3-eth-contract": "^1.3.6",
+    "@vechain/connex-driver": "^2.0.5",
+    "@vechain/connex-framework": "^2.0.5"
+  },
+  "oclif": {
+    "commands": "./lib/commands",
+    "bin": "mynewcli",
+    "plugins": [
+      "@oclif/plugin-help"
+    ]
   }
 }

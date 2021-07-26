@@ -5,15 +5,21 @@ import { LedgerEntity } from "./entities/ledger.entity";
 
 export default class LedgerModel {
 
+    constructor(env:any){
+        this.env = env;
+        this.config = env.config;
+    }
+
     public async load(root:string):Promise<ActionData<BridgeLedger[]>>{
         let result = new ActionData<BridgeLedger[]>();
         result.data = new Array<BridgeLedger>();
 
         try {
             let data = await getRepository(LedgerEntity)
-                .find({where:{merkleroot:root.toLowerCase()}});
+                .find({where:{merkleRoot:root.toLowerCase()}});
             for(const item of data){
                 let ledger:BridgeLedger = {
+                    root:item.merkleRoot,
                     ledgerid:item.ledgerid,
                     chainName:item.chainName,
                     chainId:item.chainId,
@@ -31,6 +37,7 @@ export default class LedgerModel {
 
     public async save(root:string,ledgers:BridgeLedger[]):Promise<ActionResult>{
         let result = new ActionResult();
+        const step = 100;
 
         try {
             await getManager().transaction(async transactionalEntityManager =>{
@@ -53,4 +60,7 @@ export default class LedgerModel {
 
         return result;
     }
+
+    private env:any;
+    private config:any;
 }

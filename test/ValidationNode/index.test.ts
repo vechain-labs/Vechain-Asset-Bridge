@@ -1,1 +1,1 @@
-require('./vechainBridgeVerifier.test');
+require('./bridgeSyncTask.test');

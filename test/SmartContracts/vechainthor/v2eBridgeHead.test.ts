@@ -7,7 +7,7 @@ import * as Devkit from 'thor-devkit';
 import { compileContract } from "myvetools/dist/utils";
 import assert from 'assert';
 import { getReceipt } from "myvetools/dist/connexUtils";
-import { BridgeLedger, BridgeLedgerHelper } from "../../../src/ValidationNode/utils/types/bridgeLedger";
+import { BridgeLedger, ledgerHash, ledgerID } from "../../../src/ValidationNode/utils/types/bridgeLedger";
 import { BridgeSnapshoot } from "../../../src/ValidationNode/utils/types/bridgeSnapshoot";
 import BridgeStorage from "../../../src/ValidationNode/server/bridgeStorage";
 
@@ -17,7 +17,7 @@ export class V2EBridgeHeadTestCase {
     public driver!: Driver;
     public wallet = new SimpleWallet();
 
-    public configPath = path.join(__dirname, './test.config.json');
+    public configPath = path.join(__dirname, '../test.config.json');
     public config: any = {};
 
     public bridgeContract!: Contract;
@@ -199,21 +199,21 @@ export class V2EBridgeHeadTestCase {
 
     public async claimVVET():Promise<any> {
         let ledgers:Array<BridgeLedger> = [
-            {ledgerid:"",chainName:"vechain",chainId:"0xf6",account:this.wallet.list[6].address,token:this.config.vechain.contracts.vVet,balance:BigInt(100)},
-            {ledgerid:"",chainName:"vechain",chainId:"0xf6",account:this.wallet.list[7].address,token:this.config.vechain.contracts.vVet,balance:BigInt(500)},
-            {ledgerid:"",chainName:"vechain",chainId:"0xf6",account:this.wallet.list[8].address,token:this.config.vechain.contracts.vVet,balance:BigInt(50000)},
+            {root:"",ledgerid:"",chainName:"vechain",chainId:"0xf6",account:this.wallet.list[6].address,token:this.config.vechain.contracts.vVet,balance:BigInt(100)},
+            {root:"",ledgerid:"",chainName:"vechain",chainId:"0xf6",account:this.wallet.list[7].address,token:this.config.vechain.contracts.vVet,balance:BigInt(500)},
+            {root:"",ledgerid:"",chainName:"vechain",chainId:"0xf6",account:this.wallet.list[8].address,token:this.config.vechain.contracts.vVet,balance:BigInt(50000)},
         ];
 
         ledgers.forEach(ledger =>{
-            ledger.ledgerid = BridgeLedgerHelper.ledgerID(ledger.chainName,ledger.chainId,ledger.account,ledger.token);
+            ledger.ledgerid = ledgerID(ledger.chainName,ledger.chainId,ledger.account,ledger.token);
         });
 
         let genesisSnapshoot:BridgeSnapshoot = {
             parentMerkleRoot:"0x0000000000000000000000000000000000000000000000000000000000000000",
             merkleRoot:"",
             chains:[
-                {chainName:"ethereum",chainId:"3",fromBlockNum:100,endBlockNum:150},
-                {chainName:"vechain",chainId:"0xf6",fromBlockNum:1000,endBlockNum:3000}
+                {chainName:"ethereum",chainId:"3",beginBlockNum:100,endBlockNum:150},
+                {chainName:"vechain",chainId:"0xf6",beginBlockNum:1000,endBlockNum:3000}
             ]
         }
 
@@ -255,7 +255,7 @@ export class V2EBridgeHeadTestCase {
             assert.fail("balance check faild");
         }
 
-        const call4 = await this.bridgeContract.call("isClaim",newRoot,BridgeLedgerHelper.ledgerHash(ledgers[1]));
+        const call4 = await this.bridgeContract.call("isClaim",newRoot,ledgerHash(ledgers[1]));
         const isClaim = Boolean(call4.decoded[0]);
 
         if(!isClaim){
@@ -265,21 +265,21 @@ export class V2EBridgeHeadTestCase {
 
     public async claimVETH():Promise<any> {
         let ledgers:Array<BridgeLedger> = [
-            {ledgerid:"",chainName:"vechain",chainId:"0xf6",account:this.wallet.list[6].address,token:this.config.vechain.contracts.vEth,balance:BigInt(100)},
-            {ledgerid:"",chainName:"vechain",chainId:"0xf6",account:this.wallet.list[7].address,token:this.config.vechain.contracts.vEth,balance:BigInt(500)},
-            {ledgerid:"",chainName:"vechain",chainId:"0xf6",account:this.wallet.list[8].address,token:this.config.vechain.contracts.vEth,balance:BigInt(50000)},
+            {root:"",ledgerid:"",chainName:"vechain",chainId:"0xf6",account:this.wallet.list[6].address,token:this.config.vechain.contracts.vEth,balance:BigInt(100)},
+            {root:"",ledgerid:"",chainName:"vechain",chainId:"0xf6",account:this.wallet.list[7].address,token:this.config.vechain.contracts.vEth,balance:BigInt(500)},
+            {root:"",ledgerid:"",chainName:"vechain",chainId:"0xf6",account:this.wallet.list[8].address,token:this.config.vechain.contracts.vEth,balance:BigInt(50000)},
         ];
 
         ledgers.forEach(ledger =>{
-            ledger.ledgerid = BridgeLedgerHelper.ledgerID(ledger.chainName,ledger.chainId,ledger.account,ledger.token);
+            ledger.ledgerid = ledgerID(ledger.chainName,ledger.chainId,ledger.account,ledger.token);
         });
 
         let genesisSnapshoot:BridgeSnapshoot = {
             parentMerkleRoot:"0x0000000000000000000000000000000000000000000000000000000000000000",
             merkleRoot:"",
             chains:[
-                {chainName:"ethereum",chainId:"3",fromBlockNum:100,endBlockNum:150},
-                {chainName:"vechain",chainId:"0xf6",fromBlockNum:1000,endBlockNum:3000}
+                {chainName:"ethereum",chainId:"3",beginBlockNum:100,endBlockNum:150},
+                {chainName:"vechain",chainId:"0xf6",beginBlockNum:1000,endBlockNum:3000}
             ]
         }
 
@@ -321,7 +321,7 @@ export class V2EBridgeHeadTestCase {
             assert.fail("balance check faild");
         }
 
-        const call4 = await this.bridgeContract.call("isClaim",newRoot,BridgeLedgerHelper.ledgerHash(ledgers[1]));
+        const call4 = await this.bridgeContract.call("isClaim",newRoot,ledgerHash(ledgers[1]));
         const isClaim = Boolean(call4.decoded[0]);
 
         if(!isClaim){

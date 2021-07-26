@@ -2,6 +2,7 @@ pragma solidity >=0.5.16 <0.6.0;
 pragma experimental ABIEncoderV2;
 
 import "./Library_ECVerify.sol";
+import "./Library_Array.sol";
 
 interface IV2EBridgeHead {
     function updateMerkleRoot(bytes32 _lastRoot,bytes32 _root) external;
@@ -9,28 +10,15 @@ interface IV2EBridgeHead {
     function locked() external returns(bool);
 }
 
-contract V2EBridgeVerifier {
-
+contract BridgeVerifierControl {
     address public governance;
     address public bridge;
     mapping(address => bool) public verifiers;
     uint8 public verifierCount;
-    
-    struct Proposal{
-        uint8 quorum;
-        bool executed;
-        bytes32 value;
-        address[] verifiers;
-        bytes[] signatures;
-    }
 
-    mapping(bytes32 => Proposal) public merkleRootProposals;
-    mapping(bytes32 => Proposal) public lockBridgeProposals;
-
-    event VerifierChanged(address _verifier,bool _status);
-    event UpdateBridgeMerkleRoot(bytes32 indexed _value,address indexed _verifier, bytes _sig);
-    event LockBridge(bytes32 indexed _value,address indexed _verifier, bytes _sig);
-    event ExecOpertion(bytes32 indexed _hash, bytes[] _sig);
+    event VerifierChanged(address indexed _verifier,bool indexed _status);
+    event GovernanceUpdate(address indexed _addr);
+    event BridgeUpdate(address indexed _addr);
 
     constructor() public {
         governance = msg.sender;
@@ -38,10 +26,12 @@ contract V2EBridgeVerifier {
 
     function setGovernance(address _addr) external onlyGovernance {
         governance = _addr;
+        emit GovernanceUpdate(_addr);
     }
 
     function setBridge(address _addr) external onlyGovernance {
         bridge = _addr;
+        emit BridgeUpdate(_addr);
     }
 
     function addVerifier(address _verifier) external onlyGovernance {
@@ -57,6 +47,32 @@ contract V2EBridgeVerifier {
         emit VerifierChanged(_verifier,false);
     }
 
+    modifier onlyGovernance() {
+        require(msg.sender == governance, "permission denied");
+        _;
+    }
+}
+
+contract V2EBridgeVerifier is BridgeVerifierControl {
+
+    struct Proposal{
+        uint8 quorum;
+        bool executed;
+        bytes32 value;
+        bytes[] signatures;
+    }
+
+    mapping(bytes32 => Proposal) public merkleRootProposals;
+    mapping(bytes32 => Proposal) public lockBridgeProposals;
+
+    event SubmitUpdateRoot(bytes32 indexed _value,address indexed _verifier, bytes _sig);
+    event SubmitLockBridge(bytes32 indexed _value,address indexed _verifier, bytes _sig);
+    event ExecOpertion(bytes32 indexed _hash, bytes[] _sig);
+
+    constructor() 
+    public
+    BridgeVerifierControl(){}
+
     function updateBridgeMerkleRoot(bytes32 _lastRoot,bytes32 _root,bytes calldata _sig) external {
         require(merkleRootProposals[_root].executed == false,"the opertion had executed");
         address signer = ECVerify.ecrecovery(_root,_sig);
@@ -70,23 +86,22 @@ contract V2EBridgeVerifier {
                 quorum:quorum(verifierCount),
                 executed:false,
                 value:_root,
-                verifiers: new address[](0),
                 signatures: new bytes[](0)
             });
             merkleRootProposals[_root] = _new;
         }
         Proposal storage prop = merkleRootProposals[_root];
 
-        require(addressExist(prop.verifiers,signer) == false,"signer had approved");
+        require(ArrayLib.bytesExists(prop.signatures,_sig) == false,"signer already submitted");
         prop.signatures.push(_sig);
-        prop.verifiers.push(signer);
+
+        emit SubmitUpdateRoot(_root,signer,_sig);
 
         if(merkleRootProposals[_root].signatures.length >= prop.quorum){
             bri.updateMerkleRoot(_lastRoot,_root);
             prop.executed = true;
             emit ExecOpertion(_root,prop.signatures);
         }
-        emit UpdateBridgeMerkleRoot(_root,signer,_sig);
     }
 
     function lockBridge(bytes32 _lastRoot,bytes calldata _sig) external {
@@ -102,24 +117,22 @@ contract V2EBridgeVerifier {
                 quorum:quorum(verifierCount),
                 executed:false,
                 value:_lastRoot,
-                verifiers: new address[](0),
                 signatures:new bytes[](0)
             });
             lockBridgeProposals[_lastRoot] = _new;
         }
         
         Proposal storage prop = lockBridgeProposals[_lastRoot];
-        require(addressExist(prop.verifiers,signer) == false,"signer had approved");
+        require(ArrayLib.bytesExists(prop.signatures,_sig) == false,"signer already submitted");
         prop.signatures.push(_sig);
-        prop.verifiers.push(signer);
+
+        emit SubmitLockBridge(_lastRoot,signer,_sig);
 
         if(prop.signatures.length >= prop.quorum){
             bri.lock(_lastRoot);
             prop.executed = true;
             emit ExecOpertion(_lastRoot,prop.signatures);
         }
-
-        emit LockBridge(_lastRoot,signer,_sig);
     }
 
     function getMerkleRootProposal(bytes32 _hash) external view returns(Proposal memory){
@@ -132,19 +145,5 @@ contract V2EBridgeVerifier {
 
     function quorum(uint8 total) internal pure returns(uint8) {
         return uint8((uint(total) + 1) * 2 / 3);
-    }
-
-    function addressExist(address[] memory array,address target) internal pure returns(bool) {
-        for(uint8 i = 0; i < array.length; i++){
-            if(array[i] == target){
-                return true;
-            }
-        }
-        return false;
-    }
-
-    modifier onlyGovernance() {
-        require(msg.sender == governance, "permission denied");
-        _;
-    }
+    }    
 }

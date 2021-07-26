@@ -131,14 +131,14 @@ export class VeChainBridgeVerifiter {
                 result.error = error;
                 break;
             }
-            sleep.sleep(10000);
+            sleep.sleep(10);
         }
         
         return result;
     }
 
     private initV2eVerifiter(){
-        const filePath = path.join(__dirname,"../../SmartContracts/contracts/vechainthor/Contract_V2EBridgeVerifier.sol");
+        const filePath = path.join(this.env.contractdir,"/vechainthor/Contract_V2EBridgeVerifier.sol");
         const abi = JSON.parse(compileContract(filePath, 'V2EBridgeVerifier', 'abi'));
         this.v2eVerifiter = new Contract({abi:abi,connex:this.connex,address:this.config.vechain.contracts.v2eBridgeVerifier});
     }

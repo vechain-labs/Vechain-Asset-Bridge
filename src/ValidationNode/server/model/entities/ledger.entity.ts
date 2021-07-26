@@ -1,5 +1,6 @@
 import { Entity, PrimaryColumn, Column, Index } from "typeorm";
 
+@Entity("ledger")
 export class LedgerEntity{
 
     @PrimaryColumn({name:"snapshootid"})

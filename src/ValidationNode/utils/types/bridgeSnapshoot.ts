@@ -7,6 +7,10 @@ export type BridgeSnapshoot = {
 export type ChainInfo = {
     chainName:string;
     chainId:string;
-    fromBlockNum:number;
+    beginBlockNum:number;
     endBlockNum:number;
-} 
+}
+
+export function ZeroRoot():string{
+    return "0x0000000000000000000000000000000000000000000000000000000000000000";
+}

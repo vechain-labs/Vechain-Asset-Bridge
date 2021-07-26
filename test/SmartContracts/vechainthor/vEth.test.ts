@@ -13,7 +13,7 @@ export class VETHTestCase {
 	public driver!: Driver;
     public wallet = new SimpleWallet();
 
-    public configPath = path.join(__dirname,'./test.config.json');
+    public configPath = path.join(__dirname,'../test.config.json');
     public config:any = {};
     public contract!:Contract;
 

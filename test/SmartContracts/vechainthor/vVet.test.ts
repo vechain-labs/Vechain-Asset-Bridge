@@ -14,7 +14,7 @@ export class VVETTestCase{
     public wallet = new SimpleWallet();
     public contract!:Contract;
 
-    public configPath = path.join(__dirname,'./test.config.json');
+    public configPath = path.join(__dirname,'../test.config.json');
     public config:any = {};
 
     public async init(){

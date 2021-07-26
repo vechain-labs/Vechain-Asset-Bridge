@@ -1,169 +1,185 @@
 pragma solidity >=0.5.16 <0.6.0;
 
-import "./Interface_BridgeHead.sol";
 import "./Interface_ERC20.sol";
 import "./Interface_VIP211.sol";
 import "./Library_SafeMath.sol";
 import "./Library_Merkle.sol";
 
-contract E2VBridgeHead is IBridgeHead {
-    address public verifier;
-    address public governance;
-
+contract BridgeHeadControl {
     string public chainname;
     string public chainid;
-
-    uint private blockNumCache = 0;
-
-    uint8 public constant FREEZE = 0;
-    uint8 public constant NATIVETOKEN = 1;
-    uint8 public constant WRAPPEDTOKEN = 2;
-
-    mapping(bytes32 => bytes32) public claimed;
+    address public verifier;
+    address public governance;
     mapping(address => uint8) public tokens;
+    bool public govLock = false;
 
-    bytes32 public merkleRoot;
-
-    event Swap(address indexed _token,address indexed _from,address indexed _to,uint256 _amount);
-    event Claim(address indexed _token, address indexed _to, uint256 _amount);
-    event UpdateMerkleRoot(bytes32 indexed _root,uint indexed _from,bytes32 indexed _lastRoot);
-    event BridgeLockChange(bytes32 indexed _lastRoot,bool indexed _status);
-
-    bool public locked = false;
-
-    constructor(string memory _chainname,string memory _chainid) public {
+    constructor(string memory _chainname, string memory _chainid) public {
         chainname = _chainname;
         chainid = _chainid;
         governance = msg.sender;
-        blockNumCache = block.number;
     }
 
-    function name() external view returns (string memory) {
-        return "Ethereum To VeChainThor bridge head";
-    }
-
-    // Management
+    event VerifierUpdate(address indexed _addr);
+    event GovernanceUpdate(address indexed _addr);
+    event TokenUpdate(address indexed _token, uint8 indexed _type);
+    event GovLockChange(bool indexed _status);
 
     function setVerifier(address _addr) external onlyGovernance {
         verifier = _addr;
+        emit VerifierUpdate(_addr);
     }
 
     function setGovernance(address _addr) external onlyGovernance {
         governance = _addr;
+        emit GovernanceUpdate(_addr);
     }
 
     function setToken(address _token, uint8 _type) external onlyGovernance {
         tokens[_token] = _type;
+        emit TokenUpdate(_token, _type);
     }
 
-    function updateMerkleRoot(bytes32 _lastRoot,bytes32 _root) external onlyVerifier {
-        require(_lastRoot == merkleRoot,"last merkle root invalid");
-        require(locked != false, "the bridge isn't lock");
-        merkleRoot = _root;
-        locked = false;
-        emit UpdateMerkleRoot(merkleRoot,blockNumCache,_lastRoot);
-        emit BridgeLockChange(_lastRoot,false);
+    function lockByGov() external onlyGovernance {
+        govLock = true;
+        emit GovLockChange(true);
+    }
+
+    function unlockByGov() external onlyGovernance {
+        govLock = false;
+        emit GovLockChange(false);
+    }
+
+    modifier onlyGovernance() {
+        require(msg.sender == governance, "permission denied");
+        _;
+    }
+
+    modifier govUnlock() {
+        require(govLock == false, "the bridge locked by governance");
+        _;
+    }
+}
+
+contract E2VBridgeHead is BridgeHeadControl {
+    string public constant name = "Ethereum To VeChainThor bridge head";
+    uint256 private blockNumCache = 0;
+
+    uint8 public constant FREEZE = 0;
+    uint8 public constant ORIGINTOKEN = 1;
+    uint8 public constant WRAPPEDTOKEN = 2;
+
+    mapping(bytes32 => bytes32) public claimed;
+    bytes32 public merkleRoot;
+
+    event Swap(
+        address indexed _token,
+        address indexed _from,
+        address indexed _recipient,
+        uint256 _amount
+    );
+    event Claim(
+        address indexed _token,
+        address indexed _recipient,
+        uint256 _amount
+    );
+    event UpdateMerkleRoot(
+        bytes32 indexed _root,
+        uint256 indexed _from,
+        bytes32 _parentRoot
+    );
+    event BridgeLockChange(bytes32 indexed _root, bool indexed _status);
+
+    bool public locked = false;
+
+    constructor(string memory _chainname, string memory _chainid)
+        public
+        BridgeHeadControl(_chainname, _chainid)
+    {
         blockNumCache = block.number;
     }
 
-    function lock(bytes32 _lastRoot) external onlyVerifier {
-        require(_lastRoot == merkleRoot,"last merkle root invalid");
-        locked = true;
-        emit BridgeLockChange(_lastRoot,true);
-    }
-
-     function unlock(bytes32 _lastRoot) external onlyGovernance {
-        require(_lastRoot == merkleRoot,"last merkle root invalid");
+    function updateMerkleRoot(bytes32 _parentRoot, bytes32 _root)
+        external
+        onlyVerifier
+        govUnlock
+    {
+        require(_parentRoot == merkleRoot, "parent merkle root invalid");
+        require(locked != false, "the bridge isn't lock");
+        merkleRoot = _root;
         locked = false;
-        emit BridgeLockChange(_lastRoot,false);
+        emit UpdateMerkleRoot(merkleRoot, blockNumCache, _parentRoot);
+        emit BridgeLockChange(_parentRoot, false);
+        blockNumCache = block.number;
     }
 
-    // Bridge funtions
+    function lock(bytes32 _root) external onlyVerifier govUnlock {
+        require(_root == merkleRoot, " merkle root invalid");
+        locked = true;
+        emit BridgeLockChange(_root, true);
+    }
+
+    function unlock(bytes32 _root) external onlyVerifier govUnlock {
+        require(_root == merkleRoot, "merkle root invalid");
+        locked = false;
+        emit BridgeLockChange(_root, false);
+    }
 
     function swap(
         address _token,
         uint256 _amount,
-        address _to
-    ) external isLock returns (bool) {
+        address _recipient
+    ) external unLock govUnlock returns (bool) {
         require(
-            tokens[_token] == 1 || tokens[_token] == 2,
+            tokens[_token] == ORIGINTOKEN || tokens[_token] == WRAPPEDTOKEN,
             "token not register or freeze"
         );
 
-        IERC20 erc20 = IERC20(_token);
-        require(
-            erc20.balanceOf(msg.sender) >= _amount,
-            "insufficient balance"
-        );
-        require(
-            erc20.allowance(msg.sender, address(this)) >= _amount,
-            "insufficient allowance"
-        );
-
-        uint256 beforeBlance = erc20.balanceOf(address(this));
-        require(
-            erc20.transferFrom(msg.sender, address(this), _amount),
-            "transfer faild"
-        );
-        uint256 afterBalance = erc20.balanceOf(address(this));
-        require(
-            SafeMath.sub(afterBalance, beforeBlance) == _amount,
-            "balance check faild"
-        );
-
-        if (tokens[_token] == WRAPPEDTOKEN) {
-            IVIP211 token211 = IVIP211(_token);
-            require(
-                token211.recovery(address(this), _amount),
-                "wrapped token recovery faild"
-            );
+        if(tokens[_token] == ORIGINTOKEN){
+            swapOriginToken(_token,_amount);
         }
 
-        emit Swap(_token, msg.sender, _to, _amount);
+        if(tokens[_token] == WRAPPEDTOKEN){
+            swapWrappedToken(_token, _amount);
+        }
+
+        emit Swap(_token, msg.sender, _recipient, _amount);
         return true;
     }
 
     function claim(
         address _token,
-        address _owner,
+        address _recipient,
         uint256 _balance,
         bytes32[] calldata _merkleProof
-    ) external isLock returns (bool) {
+    ) external unLock govUnlock returns (bool) {
         require(
             tokens[_token] == 1 || tokens[_token] == 2,
             "token not register or freeze"
         );
 
-        bytes32 nodehash = keccak256(abi.encodePacked(chainname,chainid,_owner, _token, _balance));
-        require(MerkleProof.verify(_merkleProof, merkleRoot, nodehash), "invalid proof");
+        bytes32 nodehash = keccak256(
+            abi.encodePacked(chainname, chainid, _recipient, _token, _balance)
+        );
+        require(
+            MerkleProof.verify(_merkleProof, merkleRoot, nodehash),
+            "invalid proof"
+        );
 
         require(!isClaim(merkleRoot, nodehash), "the swap has been claimed");
 
-        if (tokens[_token] == WRAPPEDTOKEN) {
-            IVIP211 token211 = IVIP211(_token);
-            uint256 beforeBalance = token211.balanceOf(address(this));
-            require(
-                token211.mint(address(this), _balance),
-                "wrapped token mint faild"
-            );
-            uint256 afterBalance = token211.balanceOf(address(this));
-            require(
-                SafeMath.sub(afterBalance, beforeBalance) == _balance,
-                "balance check faild"
-            );
+        if (tokens[_token] == ORIGINTOKEN) {
+            claimOrginToken(_token, _recipient, _balance);
         }
 
-        IERC20 erc20 = IERC20(_token);
-        erc20.transfer(_owner, _balance);
+        if (tokens[_token] == WRAPPEDTOKEN) {
+            claimWrappedToken(_token, _recipient, _balance);
+        }
 
         setClaim(merkleRoot, nodehash);
-
-        emit Claim(_token, _owner, _balance);
+        emit Claim(_token, _recipient, _balance);
 
         return true;
     }
-
-   
 
     function isClaim(bytes32 _merkleroot, bytes32 nodehash)
         public
@@ -177,6 +193,92 @@ contract E2VBridgeHead is IBridgeHead {
         claimed[_merkleroot] = nodehash;
     }
 
+    function swapOriginToken(address _token, uint256 _amount) private {
+        IERC20 token = IERC20(_token);
+        require(token.balanceOf(msg.sender) >= _amount, "insufficient balance");
+
+        require(
+            token.allowance(msg.sender, address(this)) >= _amount,
+            "insufficient allowance"
+        );
+
+        uint256 beforeBlance = token.balanceOf(address(this));
+        token.transferFrom(msg.sender, address(this), _amount);
+        uint256 afterBalance = token.balanceOf(address(this));
+        require(
+            SafeMath.sub(afterBalance, beforeBlance) == _amount,
+            "transfer balance check faild"
+        );
+    }
+
+    function swapWrappedToken(address _token, uint256 _amount) private {
+        IVIP211 token = IVIP211(_token);
+        require(token.balanceOf(msg.sender) >= _amount, "insufficient balance");
+
+        require(
+            token.allowance(msg.sender, address(this)) >= _amount,
+            "insufficient allowance"
+        );
+
+        uint256 beforeBalance = token.balanceOf(address(this));
+        token.transferFrom(msg.sender, address(this), _amount);
+        uint256 afterBalance = token.balanceOf(address(this));
+        require(
+            SafeMath.sub(afterBalance, beforeBalance) == _amount,
+            "transferFrom balance check faild"
+        );
+
+        uint256 beforeRecovery = token.balanceOf(address(this));
+        token.recovery(address(this), _amount);
+        uint256 afterRecovery = token.balanceOf(address(this));
+
+        require(
+            SafeMath.sub(beforeRecovery, afterRecovery) == _amount,
+            "recovery balance check faild"
+        );
+    }
+
+    function claimOrginToken(
+        address _token,
+        address _recipient,
+        uint256 _balance
+    ) private {
+        IERC20 token = IERC20(_token);
+
+        uint256 beforeBalance = token.balanceOf(address(this));
+        token.transfer(_recipient, _balance);
+        uint256 afterBalance = token.balanceOf(address(this));
+
+        require(
+            SafeMath.sub(beforeBalance, afterBalance) == _balance,
+            "transfer balance check faild"
+        );
+    }
+
+    function claimWrappedToken(
+        address _token,
+        address _recipient,
+        uint256 _balance
+    ) private {
+        IVIP211 token = IVIP211(_token);
+
+        uint256 beforemint = token.balanceOf(address(this));
+        token.mint(address(this), _balance);
+        uint256 aftermint = token.balanceOf(address(this));
+        require(
+            SafeMath.sub(aftermint, beforemint) == _balance,
+            "mint balance check faild"
+        );
+
+        uint256 beforeBalance = token.balanceOf(address(this));
+        token.transfer(_recipient, _balance);
+        uint256 afterBalance = token.balanceOf(address(this));
+        require(
+            SafeMath.sub(beforeBalance, afterBalance) == _balance,
+            "transfer balance check faild"
+        );
+    }
+
     modifier onlyVerifier() {
         require(msg.sender == verifier, "permission denied");
         _;
@@ -187,7 +289,7 @@ contract E2VBridgeHead is IBridgeHead {
         _;
     }
 
-    modifier isLock() {
+    modifier unLock() {
         require(locked == false, "the bridge locked");
         _;
     }
