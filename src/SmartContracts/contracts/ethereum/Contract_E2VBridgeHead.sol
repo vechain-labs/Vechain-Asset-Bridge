@@ -13,12 +13,6 @@ contract BridgeHeadControl {
     mapping(address => uint8) public tokens;
     bool public govLock = false;
 
-    constructor(string memory _chainname, string memory _chainid) public {
-        chainname = _chainname;
-        chainid = _chainid;
-        governance = msg.sender;
-    }
-
     event VerifierUpdate(address indexed _addr);
     event GovernanceUpdate(address indexed _addr);
     event TokenUpdate(address indexed _token, uint8 indexed _type);
@@ -68,7 +62,7 @@ contract E2VBridgeHead is BridgeHeadControl {
     uint8 public constant ORIGINTOKEN = 1;
     uint8 public constant WRAPPEDTOKEN = 2;
 
-    mapping(bytes32 => bytes32) public claimed;
+    mapping(bytes32 => mapping(bytes32 => bool)) public claimed;
     bytes32 public merkleRoot;
 
     event Swap(
@@ -93,8 +87,10 @@ contract E2VBridgeHead is BridgeHeadControl {
 
     constructor(string memory _chainname, string memory _chainid)
         public
-        BridgeHeadControl(_chainname, _chainid)
     {
+        chainname = _chainname;
+        chainid = _chainid;
+        governance = msg.sender;
         blockNumCache = block.number;
     }
 
@@ -153,7 +149,7 @@ contract E2VBridgeHead is BridgeHeadControl {
         bytes32[] calldata _merkleProof
     ) external unLock govUnlock returns (bool) {
         require(
-            tokens[_token] == 1 || tokens[_token] == 2,
+            tokens[_token] == ORIGINTOKEN || tokens[_token] == WRAPPEDTOKEN,
             "token not register or freeze"
         );
 
@@ -186,11 +182,11 @@ contract E2VBridgeHead is BridgeHeadControl {
         view
         returns (bool)
     {
-        return claimed[_merkleroot] == nodehash;
+        return claimed[_merkleroot][nodehash];
     }
 
     function setClaim(bytes32 _merkleroot, bytes32 nodehash) private {
-        claimed[_merkleroot] = nodehash;
+        claimed[_merkleroot][nodehash] = true;
     }
 
     function swapOriginToken(address _token, uint256 _amount) private {

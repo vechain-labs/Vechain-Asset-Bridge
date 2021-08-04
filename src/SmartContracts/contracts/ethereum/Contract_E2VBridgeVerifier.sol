@@ -16,10 +16,6 @@ contract BridgeVerifierControl {
     mapping(address => bool) public verifiers;
     uint8 public verifierCount;
 
-    constructor() public {
-        governance = msg.sender;
-    }
-
     event VerifierChanged(address indexed _verifier,bool indexed _status);
     event GovernanceUpdate(address indexed _addr);
     event BridgeUpdate(address indexed _addr);
@@ -62,9 +58,10 @@ contract E2VBridgeVerifier is BridgeVerifierControl{
     mapping(bytes32 => bool) public merkleRootProposals;
     mapping(bytes32 => bool) public lockBridgeProposals;
 
-    constructor() 
-        public
-        BridgeVerifierControl(){}
+    constructor() public
+    {
+        governance = msg.sender;
+    }
 
     function updateBridgeMerkleRoot(
         bytes32 _lastRoot,

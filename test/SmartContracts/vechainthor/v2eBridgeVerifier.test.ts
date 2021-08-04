@@ -221,7 +221,8 @@ export class V2EBridgeVerifierTestCase {
     public async updateMerkleRoot(){
 
         await this.initTokens();
-        const swapTx = await this.swapVVET();
+        const swapTx1 = await this.mockSwapVVET();
+        const swapTx2 = await this.mockSwapVETH();
 
         const call1 = await this.bridgeContract.call('merkleRoot');
         const lastMerkleroot = String(call1.decoded[0]);
@@ -251,7 +252,7 @@ export class V2EBridgeVerifierTestCase {
 
         assert.strictEqual(locked,true,"bridge not locked");
 
-        const rootHash = this.initStorage(this.config.vechain.startBlockNum,receipt2.meta.blockNumber,[swapTx]);
+        const rootHash = this.initStorage(this.config.vechain.startBlockNum,receipt2.meta.blockNumber,[swapTx1,swapTx2]);
         
         const sign3 = await this.wallet.list[6].sign(Buffer.from(rootHash.substr(2),'hex'));
         const clause3 = this.v2eBridgeVerifier.send('updateBridgeMerkleRoot',0,lastMerkleroot,rootHash,sign3);
@@ -420,7 +421,7 @@ export class V2EBridgeVerifierTestCase {
         this.tokens[3].targetToken = this.tokens[1].tokenid;
     }
 
-    private async swapVVET():Promise<SwapTx>{
+    private async mockSwapVVET():Promise<SwapTx>{
         const amount = 100000000;
         const clause1 = this.vVetContract.send("deposit",amount);
         const clause2 = this.vVetContract.send("approve",0,this.config.vechain.contracts.v2eBridge,amount);
@@ -451,6 +452,25 @@ export class V2EBridgeVerifierTestCase {
         return result;
     }
 
+    private async mockSwapVETH():Promise<SwapTx>{
+        const amount = 200000000;
+        let result:SwapTx = {
+            chainName:this.config.ethereum.chainName,
+            chainId:this.config.chainName.chainId,
+            blockNumber:100000000,
+            txid:"0x3273443c8c795077583b1601b1d219f56236c22deb88833df3970a138021083b",
+            clauseIndex:0,
+            index:0,
+            account:this.wallet.list[4].address,
+            token:this.config.ethereum.contracts.wEth,
+            amount:BigInt(amount),
+            timestamp:(new Date()).getTime(),
+            type:"swap"
+        }
+
+        return result;
+    }
+
     private initStorage(begin:number,end:number,swapTxs:SwapTx[]):string{
         let result = "";
         const sn:BridgeSnapshoot = {
@@ -469,7 +489,6 @@ export class V2EBridgeVerifierTestCase {
         return result;
     }
 
-    
 }
 
 describe("V2E verifier test", ()=>{

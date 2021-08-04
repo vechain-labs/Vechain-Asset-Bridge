@@ -13,12 +13,6 @@ contract BridgeHeadControl {
     mapping(address => uint8) public tokens;
     bool public govLock = false;
 
-    constructor(string memory _chainname, string memory _chainid) public {
-        chainname = _chainname;
-        chainid = _chainid;
-        governance = msg.sender;
-    }
-
     event VerifierUpdate(address indexed _addr);
     event GovernanceUpdate(address indexed _addr);
     event TokenUpdate(address indexed _token,uint8 indexed _type);
@@ -94,8 +88,10 @@ contract V2EBridgeHead is BridgeHeadControl {
 
     constructor(string memory _chainname, string memory _chainid)
         public
-        BridgeHeadControl(_chainname, _chainid)
     {
+        chainname = _chainname;
+        chainid = _chainid;
+        governance = msg.sender;
         blockNumCache = block.number;
     }
 
