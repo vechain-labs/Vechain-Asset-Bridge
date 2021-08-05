@@ -345,7 +345,7 @@ export class V2EBridgeVerifierTestCase {
     }
 
     private async deployBridge():Promise<string> {
-        const clause1 = this.bridgeContract.deploy(0,"vechain","0xf6");
+        const clause1 = this.bridgeContract.deploy(0,this.config.vechain.chainName,this.config.vechain.chainId);
         const txRep1 = await this.connex.vendor.sign('tx', [clause1])
             .signer(this.wallet.list[0].address)
             .request();
@@ -376,7 +376,7 @@ export class V2EBridgeVerifierTestCase {
         return this.config.vechain.contracts.v2eBridge;
     }
 
-    private async initTokens():Promise<any>{
+    private initTokens(){
         this.tokens = [
             {
                 tokenid:"",
@@ -406,7 +406,7 @@ export class V2EBridgeVerifierTestCase {
                 tokenid:"",
                 chainName:this.config.ethereum.chainName,
                 chainId:this.config.ethereum.chainId,
-                tokenAddr:this.config.ethereum.contracts.wVET,
+                tokenAddr:this.config.ethereum.contracts.wVet,
                 tokeType:"2",
                 targetToken:""
             },
@@ -455,14 +455,14 @@ export class V2EBridgeVerifierTestCase {
     private async mockSwapVETH():Promise<SwapTx>{
         const amount = 200000000;
         let result:SwapTx = {
-            chainName:this.config.ethereum.chainName,
-            chainId:this.config.chainName.chainId,
+            chainName:this.config.vechain.chainName,
+            chainId:this.config.vechain.chainId,
             blockNumber:100000000,
             txid:"0x3273443c8c795077583b1601b1d219f56236c22deb88833df3970a138021083b",
             clauseIndex:0,
             index:0,
             account:this.wallet.list[4].address,
-            token:this.config.ethereum.contracts.wEth,
+            token:this.config.vechain.contracts.vEth,
             amount:BigInt(amount),
             timestamp:(new Date()).getTime(),
             type:"swap"

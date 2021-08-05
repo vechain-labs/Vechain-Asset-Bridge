@@ -27,16 +27,15 @@ export class E2VBridgeHeadTestCase{
     public async init(){
         if (fs.existsSync(this.configPath)) {
             this.config = require(this.configPath);
-            
-            try {
-                this.web3 = new Web3(new Web3.providers.HttpProvider(this.config.ethereum.nodeHost));
+            this.web3 = new Web3(new Web3.providers.HttpProvider(this.config.ethereum.nodeHost));
                 let masterNode = Devkit.HDNode.fromMnemonic((this.config.mnemonic as string).split(' '));
                 for (let index = 0; index < 10; index++) {
                     let account = masterNode.derive(index);
                     this.wallet.import(account.privateKey!.toString('hex'));
                     this.web3.eth.accounts.wallet.add(account.privateKey!.toString('hex'));
                 }
-
+            
+            try {
                 const wEthFilePath = path.join(__dirname, "../../../src/SmartContracts/contracts/ethereum/Contract_wEth.sol");
                 const wEthAbi = JSON.parse(compileContract(wEthFilePath,"WETH9","abi"));
                 this.wEthContract = new this.web3.eth.Contract(wEthAbi,this.config.ethereum.contracts.wEth.length == 42 ? this.config.ethereum.contracts.wEth : undefined);
@@ -86,7 +85,7 @@ export class E2VBridgeHeadTestCase{
                 await this.bridgeContract.methods.setVerifier(this.wallet.list[1].address).send({
                     from:this.wallet.list[0].address,
                     gas:gas2,
-                    gasprice:this.gasPrice
+                    gasPrice:this.gasPrice
                 });
 
                 const gas3 = await this.bridgeContract.methods.setGovernance(this.wallet.list[1].address).estimateGas({
@@ -95,7 +94,7 @@ export class E2VBridgeHeadTestCase{
                 await this.bridgeContract.methods.setGovernance(this.wallet.list[1].address).send({
                     from:this.wallet.list[0].address,
                     gas:gas3,
-                    gasprice:this.gasPrice
+                    gasPrice:this.gasPrice
                 });
 
                 this.config.ethereum.contracts.e2vBridge = this.bridgeContract.options.address;
@@ -578,25 +577,25 @@ describe("E2V bridge test", () => {
         await testcase.initWVETToken();
     });
 
-    // it("lock bridge", async() =>{
-    //     await testcase.lock();
-    // });
+    it("lock bridge", async() =>{
+        await testcase.lock();
+    });
 
-    // it("update merkleroot", async()=>{
-    //     await testcase.updateMerkleRoot();
-    // });
+    it("update merkleroot", async()=>{
+        await testcase.updateMerkleRoot();
+    });
 
-    // it("swap WETH",async()=>{
-    //     await testcase.swapWETH();
-    // });
+    it("swap WETH",async()=>{
+        await testcase.swapWETH();
+    });
 
-    // it("claim WETH",async()=>{
-    //     await testcase.claimWETH();
-    // });
+    it("claim WETH",async()=>{
+        await testcase.claimWETH();
+    });
 
-    // it("claim WVET", async()=>{
-    //     await testcase.claimWVET();
-    // });
+    it("claim WVET", async()=>{
+        await testcase.claimWVET();
+    });
 
     it("swap WVET",async()=>{
         await testcase.swapWVET();

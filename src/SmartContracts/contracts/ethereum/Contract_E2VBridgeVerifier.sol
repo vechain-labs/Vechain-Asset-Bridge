@@ -31,8 +31,10 @@ contract BridgeVerifierControl {
     }
 
     function addVerifier(address _verifier) external onlyGovernance {
-        verifiers[_verifier] = true;
-        verifierCount++;
+        if(!verifiers[_verifier]){
+            verifiers[_verifier] = true;
+            verifierCount++;
+        }
         emit VerifierChanged(_verifier,true);
     }
 

@@ -1,1 +1,1 @@
-require('./ethereum/e2vBridgeHead.test');
+require('./ethereum/e2vBridgeVerifier.test');
