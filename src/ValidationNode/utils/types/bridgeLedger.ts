@@ -1,7 +1,7 @@
 import { keccak256 } from "thor-devkit";
 
 export type BridgeLedger = {
-    root:string;
+    root?:string;
     ledgerid:string;
     chainName:string;
     chainId:string;

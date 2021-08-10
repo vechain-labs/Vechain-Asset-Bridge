@@ -26,7 +26,6 @@ export class V2EBridgeVerifierTestCase {
     public v2eBridgeVerifier!: Contract;
     public tokens:Array<TokenInfo> = new Array();
     
-
     public async init() {
         if (fs.existsSync(this.configPath)) {
             this.config = require(this.configPath);
@@ -514,15 +513,15 @@ describe("V2E verifier test", ()=>{
         await testcase.initVETHToken();
     });
 
-    it('add verifiers', async() => {
-       await testcase.addVerifiers();         
-    });
+    // it('add verifiers', async() => {
+    //    await testcase.addVerifiers();         
+    // });
 
-    it('remove verifiers', async() => {
-        await testcase.removeVerifier();
-    });
+    // it('remove verifiers', async() => {
+    //     await testcase.removeVerifier();
+    // });
 
-    it('update Merkleroot', async() => {
-        await testcase.updateMerkleRoot();
-    });
+    // it('update Merkleroot', async() => {
+    //     await testcase.updateMerkleRoot();
+    // });
 });

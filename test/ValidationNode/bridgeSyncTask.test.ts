@@ -72,7 +72,7 @@ export class BridgeSyncTaskTestCase{
                         tokenid:"",
                         chainName:this.config.ethereum.chainName,
                         chainId:this.config.ethereum.chainId,
-                        tokenAddr:this.config.ethereum.contracts.wVET,
+                        tokenAddr:this.config.ethereum.contracts.wVet,
                         tokeType:"2",
                         targetToken:""
                     },

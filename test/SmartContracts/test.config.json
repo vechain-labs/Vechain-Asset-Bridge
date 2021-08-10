@@ -4,28 +4,28 @@
         "nodeHost": "http://47.57.94.244:8680",
         "chainName": "vechain",
         "chainId": "0xf6",
-        "startBlockNum": 188842,
+        "startBlockNum": 198589,
         "confirmHeight": 12,
         "expiration": 180,
         "contracts": {
-            "vVet": "0x326e9ce719c231a4455ca6812af3472cbbd23fcb",
-            "vEth": "0xcf95b883d2862e10b47a788691e69035dbeb1d80",
-            "v2eBridge": "0x4f5fa37ade2f935e21e4409a72cfab542459a3ed",
-            "v2eBridgeVerifier": "0x9b0d0c28ccc1d3ee608469468faf27a6b4656d48"
+            "vVet": "0xa99ab30aa4eb78613dcba2350da59c8a4a399fcc",
+            "vEth": "0x712212c138c231abdd28163260e50c4f5e48d00c",
+            "v2eBridge": "0x1e8e0f26d0d29a5442587e7a557441ac42a83710",
+            "v2eBridgeVerifier": "0xeeaf25d69ffa49e1a4a8a1edf1107b03ffcecdc2"
         }
     },
     "ethereum": {
         "nodeHost": "http://47.57.94.244:8545",
         "chainName": "ethereum",
         "chainId": "1337",
-        "startBlockNum": 66760,
+        "startBlockNum": 69125,
         "confirmHeight": 6,
         "expiration": 24,
         "contracts": {
-            "wEth": "0xb5Df0f46AF75659F54CE9d50B7aB8e4A4dD68878",
-            "wVet": "0x68b4E814B30F373fA53A284edF21417f3759b6Df",
-            "e2vBridge": "0x25E47258d37fae0bEEe05a5D748270Dd9F336B4d",
-            "e2vBridgeVerifier": "0x6a632b15Fe5A00200898d2c6cd5E5A5a6bFbC6Dd"
+            "wEth": "0xc407459e7b9255106bE56a4fC6dd9309dcf6E48D",
+            "wVet": "0xD90371D1F030bC305Cb2eaCabe44A5662fB0419F",
+            "e2vBridge": "0xe5Ec0786e3a58Fe7Ae7a4CA6b2d57AEfD844696E",
+            "e2vBridgeVerifier": "0x7e3B4A73e463a697d3AD077aE0FD4714262E2E30"
         }
     }
 }

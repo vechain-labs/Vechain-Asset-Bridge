@@ -554,23 +554,23 @@ describe("E2V verifier test", ()=>{
         await testcase.initBridge();
     });
 
-    it('init VVet token', async () => {
+    it('init WETH token', async () => {
         await testcase.initWETHToken();
     });
 
-    it('init VETH token', async () => {
+    it('init WVET token', async () => {
         await testcase.initWVETToken();
     });
 
-    it('add verifiers', async() => {
-       await testcase.addVerifiers();         
-    });
+    // it('add verifiers', async() => {
+    //    await testcase.addVerifiers();         
+    // });
 
-    it('remove verifiers', async() => {
-        await testcase.removeVerifier();
-    });
+    // it('remove verifiers', async() => {
+    //     await testcase.removeVerifier();
+    // });
 
-    it('update Merkleroot', async() => {
-        await testcase.updateMerkleRoot();
-    });
+    // it('update Merkleroot', async() => {
+    //     await testcase.updateMerkleRoot();
+    // });
 });
