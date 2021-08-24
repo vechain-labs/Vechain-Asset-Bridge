@@ -8,8 +8,9 @@ import { compileContract } from "myvetools/dist/utils";
 import assert from 'assert';
 import { getReceipt } from "myvetools/dist/connexUtils";
 import { BridgeLedger, ledgerHash, ledgerID } from "../../../src/ValidationNode/utils/types/bridgeLedger";
-import { BridgeSnapshoot } from "../../../src/ValidationNode/utils/types/bridgeSnapshoot";
+import { BridgeSnapshoot, ZeroRoot } from "../../../src/ValidationNode/utils/types/bridgeSnapshoot";
 import BridgeStorage from "../../../src/ValidationNode/server/bridgeStorage";
+import { keccak256 } from "thor-devkit";
 
 export class V2EBridgeHeadTestCase {
 
@@ -18,6 +19,7 @@ export class V2EBridgeHeadTestCase {
     public wallet = new SimpleWallet();
 
     public configPath = path.join(__dirname, '../test.config.json');
+    
     public config: any = {};
 
     public bridgeContract!: Contract;
@@ -37,9 +39,9 @@ export class V2EBridgeHeadTestCase {
                 this.driver = await Driver.connect(new SimpleNet(this.config.vechain.nodeHost as string), this.wallet);
                 this.connex = new Framework(this.driver);
 
-                const bridgeFilePath = path.join(__dirname, "../../../src/SmartContracts/contracts/vechainthor/Contract_V2EBridgeHead.sol");
-                const bridgeAbi = JSON.parse(compileContract(bridgeFilePath, 'V2EBridgeHead', 'abi'));
-                const bridgeBin = compileContract(bridgeFilePath, 'V2EBridgeHead', 'bytecode');
+                const bridgeFilePath = path.join(__dirname, "../../../src/SmartContracts/contracts/common/Contract_BridgeHead.sol");
+                const bridgeAbi = JSON.parse(compileContract(bridgeFilePath, 'BridgeHead', 'abi'));
+                const bridgeBin = compileContract(bridgeFilePath, 'BridgeHead', 'bytecode');
                 this.bridgeContract = new Contract({ abi: bridgeAbi, connex: this.connex, bytecode: bridgeBin, address: this.config.vechain.contracts.v2eBridge != "" ? this.config.vechain.contracts.v2eBridge : undefined });
 
                 const vVetFilePath = path.join(__dirname, "../../../src/SmartContracts/contracts/vechainthor/Contract_vVet.sol");
@@ -47,9 +49,9 @@ export class V2EBridgeHeadTestCase {
                 const vVetBin = compileContract(vVetFilePath, 'VVET', 'bytecode');
                 this.vVetContract = new Contract({ abi: vVetAbi, connex: this.connex, bytecode: vVetBin, address: this.config.vechain.contracts.vVet != "" ? this.config.vechain.contracts.vVet : undefined });
 
-                const vEthFilePath = path.join(__dirname, "../../../src/SmartContracts/contracts/vechainthor/Contract_vEth.sol");
-                const vEthAbi = JSON.parse(compileContract(vEthFilePath, 'VETH', 'abi'));
-                const vEthBin = compileContract(vEthFilePath, 'VETH', 'bytecode');
+                const vEthFilePath = path.join(__dirname, "../../../src/SmartContracts/contracts/common/Contract_BridgeWrappedToken.sol");
+                const vEthAbi = JSON.parse(compileContract(vEthFilePath, 'BridgeWrappedToken', 'abi'));
+                const vEthBin = compileContract(vEthFilePath, 'BridgeWrappedToken', 'bytecode');
                 this.vEthContract = new Contract({ abi: vEthAbi, connex: this.connex, bytecode: vEthBin, address: this.config.vechain.contracts.vEth != "" ? this.config.vechain.contracts.vEth : undefined });
 
             } catch (error) {
@@ -64,7 +66,7 @@ export class V2EBridgeHeadTestCase {
         if (this.config.vechain.contracts.v2eBridge.length == 42) {
             this.bridgeContract.at(this.config.vechain.contracts.v2eBridge);
         } else {
-            const clause1 = this.bridgeContract.deploy(0, "vechain", "0xf6");
+            const clause1 = this.bridgeContract.deploy(0, this.config.vechain.chainName, this.config.vechain.chainId);
             const txRep1 = await this.connex.vendor.sign('tx', [clause1])
                 .signer(this.wallet.list[0].address)
                 .request();
@@ -79,13 +81,14 @@ export class V2EBridgeHeadTestCase {
             try {
                 fs.writeFileSync(this.configPath, JSON.stringify(this.config));
                 const clause2 = this.bridgeContract.send("setVerifier", 0, this.wallet.list[1].address);
-                const clause3 = this.bridgeContract.send("setGovernance", 0, this.wallet.list[1].address);
-                const txRep2: Connex.Vendor.TxResponse = await this.connex.vendor.sign('tx', [clause2, clause3])
+                const clause3 = this.bridgeContract.send("setReward",0,3);
+                const clause4 = this.bridgeContract.send("setGovernance", 0, this.wallet.list[1].address);
+                const txRep2: Connex.Vendor.TxResponse = await this.connex.vendor.sign('tx', [clause2, clause3, clause4])
                     .signer(this.wallet.list[0].address)
                     .request();
                 const receipt2 = await getReceipt(this.connex, 5, txRep2.txid);
                 if (receipt2 == null || receipt2.reverted) {
-                    assert.fail("set verifier & governance faild");
+                    assert.fail("set params faild");
                 }
             } catch (error) {
                 assert.fail("save config faild");
@@ -177,7 +180,7 @@ export class V2EBridgeHeadTestCase {
         if(receipt1 == null || receipt1.reverted){
             assert.fail("deposit vvet faild");
         }
-
+        
         const call1 = await this.vVetContract.call("balanceOf",this.config.vechain.contracts.v2eBridge);
         const before = Number(call1.decoded[0]);
 
@@ -188,7 +191,28 @@ export class V2EBridgeHeadTestCase {
                 .request();
         const receipt2 = await getReceipt(this.connex,5,txRep2.txid);
         if(receipt2 == null || receipt2.reverted){
-            assert.fail("swap faild");
+            assert.fail(`swap faild, txid:${txRep2.txid}`);
+        }
+
+        const call2 = await this.vVetContract.call("balanceOf",this.config.vechain.contracts.v2eBridge);
+        const after = Number(call2.decoded[0]);
+
+        assert.strictEqual(after - before,amount);
+    }
+
+    public async swapVET(){
+        const amount = 100000000;
+
+        const call1 = await this.vVetContract.call("balanceOf",this.config.vechain.contracts.v2eBridge);
+        const before = Number(call1.decoded[0]);
+
+        const clause1 = this.bridgeContract.send("swapNativeCoin",amount,this.wallet.list[4].address);
+        const txRep1 = await this.connex.vendor.sign("tx",[clause1])
+                .signer(this.wallet.list[3].address)
+                .request();
+        const receipt = await getReceipt(this.connex,5,txRep1.txid);
+        if(receipt == null || receipt.reverted){
+            assert.fail(`swapNativeCoin faild, txid:${txRep1.txid}`);
         }
 
         const call2 = await this.vVetContract.call("balanceOf",this.config.vechain.contracts.v2eBridge);
@@ -199,9 +223,9 @@ export class V2EBridgeHeadTestCase {
 
     public async claimVVET() {
         let ledgers:Array<BridgeLedger> = [
-            {root:"",ledgerid:"",chainName:"",chainId:"",account:this.wallet.list[6].address,token:this.config.vechain.contracts.vVet,balance:BigInt(100)},
-            {root:"",ledgerid:"",chainName:"",chainId:"",account:this.wallet.list[7].address,token:this.config.vechain.contracts.vVet,balance:BigInt(500)},
-            {root:"",ledgerid:"",chainName:"",chainId:"",account:this.wallet.list[8].address,token:this.config.vechain.contracts.vVet,balance:BigInt(50000)},
+            {root:"",ledgerid:"",chainName:"",chainId:"",account:this.wallet.list[6].address,token:this.config.vechain.contracts.vVet,balance:BigInt(10000)},
+            {root:"",ledgerid:"",chainName:"",chainId:"",account:this.wallet.list[7].address,token:this.config.vechain.contracts.vVet,balance:BigInt(50000)},
+            {root:"",ledgerid:"",chainName:"",chainId:"",account:this.wallet.list[8].address,token:this.config.vechain.contracts.vVet,balance:BigInt(5000000)},
         ];
 
         ledgers.forEach(ledger =>{
@@ -211,7 +235,7 @@ export class V2EBridgeHeadTestCase {
         });
 
         let genesisSnapshoot:BridgeSnapshoot = {
-            parentMerkleRoot:"0x0000000000000000000000000000000000000000000000000000000000000000",
+            parentMerkleRoot:ZeroRoot(),
             merkleRoot:"",
             chains:[
                 {chainName:this.config.ethereum.chainName,chainId:this.config.ethereum.chainId,beginBlockNum:100,endBlockNum:150},
@@ -265,11 +289,32 @@ export class V2EBridgeHeadTestCase {
         }
     }
 
-    public async claimVETH() {
+    public async claimVET() {
+        const amount = 100000000;
+
+        const clause1 = this.vVetContract.send("deposit",amount);
+        const txRep1 = await this.connex.vendor.sign('tx',[clause1])
+            .signer(this.wallet.list[3].address)
+            .request();
+        const receipt1 = await getReceipt(this.connex,5,txRep1.txid);
+        if(receipt1 == null || receipt1.reverted){
+            assert.fail("deposit vvet faild");
+        }
+
+        const clause2 = this.vVetContract.send("approve",0,this.config.vechain.contracts.v2eBridge,amount);
+        const clause3 = this.bridgeContract.send("swap",0,this.config.vechain.contracts.vVet,amount,this.wallet.list[4].address);
+        const txRep2 = await this.connex.vendor.sign("tx",[clause2,clause3])
+                .signer(this.wallet.list[3].address)
+                .request();
+        const receipt2 = await getReceipt(this.connex,5,txRep2.txid);
+        if(receipt2 == null || receipt2.reverted){
+            assert.fail(`swap faild, txid:${txRep2.txid}`);
+        }
+
         let ledgers:Array<BridgeLedger> = [
-            {root:"",ledgerid:"",chainName:"",chainId:"",account:this.wallet.list[6].address,token:this.config.vechain.contracts.vEth,balance:BigInt(100)},
-            {root:"",ledgerid:"",chainName:"",chainId:"",account:this.wallet.list[7].address,token:this.config.vechain.contracts.vEth,balance:BigInt(500)},
-            {root:"",ledgerid:"",chainName:"",chainId:"",account:this.wallet.list[8].address,token:this.config.vechain.contracts.vEth,balance:BigInt(50000)},
+            {root:"",ledgerid:"",chainName:"",chainId:"",account:this.wallet.list[6].address,token:this.config.vechain.contracts.vVet,balance:BigInt(10000)},
+            {root:"",ledgerid:"",chainName:"",chainId:"",account:this.wallet.list[7].address,token:this.config.vechain.contracts.vVet,balance:BigInt(50000)},
+            {root:"",ledgerid:"",chainName:"",chainId:"",account:this.wallet.list[8].address,token:this.config.vechain.contracts.vVet,balance:BigInt(5000000)},
         ];
 
         ledgers.forEach(ledger =>{
@@ -279,7 +324,73 @@ export class V2EBridgeHeadTestCase {
         });
 
         let genesisSnapshoot:BridgeSnapshoot = {
-            parentMerkleRoot:"0x0000000000000000000000000000000000000000000000000000000000000000",
+            parentMerkleRoot:ZeroRoot(),
+            merkleRoot:"",
+            chains:[
+                {chainName:this.config.ethereum.chainName,chainId:this.config.ethereum.chainId,beginBlockNum:100,endBlockNum:this.connex.thor.status.head.number},
+                {chainName:this.config.vechain.chainName,chainId:this.config.vechain.chainId,beginBlockNum:1000,endBlockNum:this.connex.thor.status.head.number}
+            ]
+        }
+
+        let storage:BridgeStorage = new BridgeStorage(genesisSnapshoot,ledgers);
+        storage.buildTree();
+
+        let newRoot = storage.getMerkleRoot();
+        let merkleProof = storage.getMerkleProof(ledgers[1]);
+
+        const call1 = await this.bridgeContract.call("merkleRoot");
+        let lastRoot = String(call1.decoded[0]);
+
+        const clause4 = this.bridgeContract.send('lock',0,lastRoot);
+        const clause5 = this.bridgeContract.send('updateMerkleRoot',0,lastRoot,newRoot);
+        const txRep3 = await this.connex.vendor.sign('tx',[clause4,clause5])
+                .signer(this.wallet.list[1].address)
+                .request();
+        const receipt3 = await getReceipt(this.connex,5,txRep3.txid);
+        if(receipt3 == null || receipt3.reverted){
+            assert.fail("update merkleroot faild");
+        }
+
+        const balanceBefore = BigInt((await this.connex.thor.account(ledgers[1].account).get()).balance);
+
+        const clause6 = this.bridgeContract.send("claimNativeCoin",0,ledgers[1].account,Number(ledgers[1].balance),merkleProof);
+        const txRep4 = await this.connex.vendor.sign("tx",[clause6])
+                .signer(ledgers[1].account)
+                .request();
+        const receipt4 = await getReceipt(this.connex,5,txRep4.txid);
+        if(receipt4 == null || receipt4.reverted){
+            assert.fail("claim VET faild");
+        }
+
+        const balanceAfter = BigInt((await this.connex.thor.account(ledgers[1].account).get()).balance);
+        if(BigInt(balanceAfter - balanceBefore) != ledgers[1].balance){
+            assert.fail("balance check faild");
+        }
+
+        const call4 = await this.bridgeContract.call("isClaim",newRoot,ledgerHash(ledgers[1]));
+        const isClaim = Boolean(call4.decoded[0]);
+
+        if(!isClaim){
+            assert.fail("IsClaim check faild");
+        }
+
+    }
+
+    public async claimVETH() {
+        let ledgers:Array<BridgeLedger> = [
+            {root:"",ledgerid:"",chainName:"",chainId:"",account:this.wallet.list[6].address,token:this.config.vechain.contracts.vEth,balance:BigInt(10000)},
+            {root:"",ledgerid:"",chainName:"",chainId:"",account:this.wallet.list[7].address,token:this.config.vechain.contracts.vEth,balance:BigInt(50000)},
+            {root:"",ledgerid:"",chainName:"",chainId:"",account:this.wallet.list[8].address,token:this.config.vechain.contracts.vEth,balance:BigInt(5000000)},
+        ];
+
+        ledgers.forEach(ledger =>{
+            ledger.chainName = this.config.vechain.chainName;
+            ledger.chainId = this.config.vechain.chainId;
+            ledger.ledgerid = ledgerID(ledger.chainName,ledger.chainId,ledger.account,ledger.token);
+        });
+
+        let genesisSnapshoot:BridgeSnapshoot = {
+            parentMerkleRoot:ZeroRoot(),
             merkleRoot:"",
             chains:[
                 {chainName:this.config.ethereum.chainName,chainId:this.config.ethereum.chainId,beginBlockNum:100,endBlockNum:150},
@@ -291,7 +402,9 @@ export class V2EBridgeHeadTestCase {
         storage.buildTree();
 
         let newRoot = storage.getMerkleRoot();
-        let merkleProof = storage.getMerkleProof(ledgers[1]);
+        let merkleProof1 = storage.getMerkleProof(ledgers[0]);
+        let merkleProof2 = storage.getMerkleProof(ledgers[1]);
+        let merkleProof3 = storage.getMerkleProof(ledgers[2]);
 
         const call1 = await this.bridgeContract.call("merkleRoot");
         let lastRoot = String(call1.decoded[0]);
@@ -309,8 +422,10 @@ export class V2EBridgeHeadTestCase {
         const call2 = await this.vEthContract.call("balanceOf",ledgers[1].account);
         const balanceBefore = Number(call2.decoded[0]);
 
-        const clause3 = this.bridgeContract.send("claim",0,ledgers[1].token,ledgers[1].account,Number(ledgers[1].balance),merkleProof);
-        const txRep2 = await this.connex.vendor.sign("tx",[clause3])
+        const clause3 = this.bridgeContract.send("claim",0,ledgers[0].token,ledgers[0].account,Number(ledgers[0].balance),merkleProof1);
+        const clause4 = this.bridgeContract.send("claim",0,ledgers[1].token,ledgers[1].account,Number(ledgers[1].balance),merkleProof2);
+        const clause5 = this.bridgeContract.send("claim",0,ledgers[2].token,ledgers[2].account,Number(ledgers[2].balance),merkleProof3);
+        const txRep2 = await this.connex.vendor.sign("tx",[clause3,clause4,clause5])
                 .signer(ledgers[1].account)
                 .request();
         const receipt2 = await getReceipt(this.connex,5,txRep2.txid);
@@ -407,7 +522,7 @@ export class V2EBridgeHeadTestCase {
             assert.fail("save config faild");
         }
 
-        const clause2 = this.bridgeContract.send("setToken", 0, this.config.vechain.contracts.vVet, 1);
+        const clause2 = this.bridgeContract.send("setWrappedNativeCoin",0,this.config.vechain.contracts.vVet);
         const txRep2 = await this.connex.vendor.sign('tx', [clause2])
             .signer(this.wallet.list[1].address)
             .request();
@@ -420,7 +535,7 @@ export class V2EBridgeHeadTestCase {
     }
 
     private async deployVETH(addr: string): Promise<string> {
-        const clause1 = this.vEthContract.deploy(0, addr);
+        const clause1 = this.vEthContract.deploy(0, "VeChain Wrapped ETH","VETH",18,addr);
         const txRep1 = await this.connex.vendor.sign('tx', [clause1])
             .signer(this.wallet.list[0].address)
             .request();
@@ -478,6 +593,10 @@ describe("V2E bridge test", () => {
         await testcase.updateMerkleRoot();
     });
 
+    it("swap VET", async() =>{
+        await testcase.swapVET();
+    });
+
     it("swap VVET",async() =>{
         await testcase.swapVVET();
     });
@@ -488,6 +607,10 @@ describe("V2E bridge test", () => {
 
     it("claim VETH", async() =>{
         await testcase.claimVETH();
+    });
+
+    it("claim VET", async() =>{
+        await testcase.claimVET();
     });
 
     it("swap VETH",async() =>{

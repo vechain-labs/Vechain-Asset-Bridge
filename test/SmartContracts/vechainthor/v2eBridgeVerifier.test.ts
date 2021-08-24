@@ -8,9 +8,10 @@ import { compileContract } from "myvetools/dist/utils";
 import assert from 'assert';
 import { getReceipt } from "myvetools/dist/connexUtils";
 import { tokenid, TokenInfo } from "../../../src/ValidationNode/utils/types/tokenInfo";
-import { BridgeSnapshoot } from "../../../src/ValidationNode/utils/types/bridgeSnapshoot";
+import { BridgeSnapshoot, ZeroRoot } from "../../../src/ValidationNode/utils/types/bridgeSnapshoot";
 import { SwapTx } from "../../../src/ValidationNode/utils/types/swapTx";
 import BridgeStorage from "../../../src/ValidationNode/server/bridgeStorage";
+import { keccak256 } from "thor-devkit";
 
 export class V2EBridgeVerifierTestCase {
     public connex!: Framework;
@@ -39,9 +40,11 @@ export class V2EBridgeVerifierTestCase {
                 this.driver = await Driver.connect(new SimpleNet(this.config.vechain.nodeHost as string), this.wallet);
                 this.connex = new Framework(this.driver);
 
-                const bridgeFilePath = path.join(__dirname, "../../../src/SmartContracts/contracts/vechainthor/Contract_V2EBridgeHead.sol");
-                const bridgeAbi = JSON.parse(compileContract(bridgeFilePath, 'V2EBridgeHead', 'abi'));
-                const bridgeBin = compileContract(bridgeFilePath, 'V2EBridgeHead', 'bytecode');
+                const libPath = path.join(__dirname,"../../../src/SmartContracts/contracts/");
+
+                const bridgeFilePath = path.join(__dirname, "../../../src/SmartContracts/contracts/common/Contract_BridgeHead.sol");
+                const bridgeAbi = JSON.parse(compileContract(bridgeFilePath, 'BridgeHead', 'abi'));
+                const bridgeBin = compileContract(bridgeFilePath, 'BridgeHead', 'bytecode');
                 this.bridgeContract = new Contract({ abi: bridgeAbi, connex: this.connex, bytecode: bridgeBin, address: this.config.vechain.contracts.v2eBridge != "" ? this.config.vechain.contracts.v2eBridge : undefined });
 
                 const vVetFilePath = path.join(__dirname, "../../../src/SmartContracts/contracts/vechainthor/Contract_vVet.sol");
@@ -49,14 +52,14 @@ export class V2EBridgeVerifierTestCase {
                 const vVetBin = compileContract(vVetFilePath, 'VVET', 'bytecode');
                 this.vVetContract = new Contract({ abi: vVetAbi, connex: this.connex, bytecode: vVetBin, address: this.config.vechain.contracts.vVet != "" ? this.config.vechain.contracts.vVet : undefined });
 
-                const vEthFilePath = path.join(__dirname, "../../../src/SmartContracts/contracts/vechainthor/Contract_vEth.sol");
-                const vEthAbi = JSON.parse(compileContract(vEthFilePath, 'VETH', 'abi'));
-                const vEthBin = compileContract(vEthFilePath, 'VETH', 'bytecode');
+                const vEthFilePath = path.join(__dirname, "../../../src/SmartContracts/contracts/common/Contract_BridgeWrappedToken.sol");
+                const vEthAbi = JSON.parse(compileContract(vEthFilePath, 'BridgeWrappedToken', 'abi'));
+                const vEthBin = compileContract(vEthFilePath, 'BridgeWrappedToken', 'bytecode');
                 this.vEthContract = new Contract({ abi: vEthAbi, connex: this.connex, bytecode: vEthBin, address: this.config.vechain.contracts.vEth != "" ? this.config.vechain.contracts.vEth : undefined });
 
                 const vBridgeVerifierPath = path.join(__dirname, "../../../src/SmartContracts/contracts/vechainthor/Contract_V2EBridgeVerifier.sol");
-                const vBridgeVerifierAbi = JSON.parse(compileContract(vBridgeVerifierPath, 'V2EBridgeVerifier', 'abi'));
-                const vBridgeVerifierBin = compileContract(vBridgeVerifierPath, 'V2EBridgeVerifier', 'bytecode');
+                const vBridgeVerifierAbi = JSON.parse(compileContract(vBridgeVerifierPath, 'V2EBridgeVerifier', 'abi',[libPath]));
+                const vBridgeVerifierBin = compileContract(vBridgeVerifierPath, 'V2EBridgeVerifier', 'bytecode',[libPath]);
                 this.v2eBridgeVerifier = new Contract({ abi: vBridgeVerifierAbi, connex: this.connex, bytecode: vBridgeVerifierBin, address: this.config.vechain.contracts.v2eBridge != "" ? this.config.vechain.contracts.v2eBridge : undefined });
 
             } catch (error) {
@@ -91,7 +94,7 @@ export class V2EBridgeVerifierTestCase {
 
                 const receipt2 = await getReceipt(this.connex, 5, txRep2.txid);
                 if (receipt2 == null || receipt2.reverted) {
-                    assert.fail("set verifier & governance faild");
+                    assert.fail("set governance faild");
                 }
             } catch (error) {
                 assert.fail("save config faild");
@@ -226,24 +229,24 @@ export class V2EBridgeVerifierTestCase {
         const call1 = await this.bridgeContract.call('merkleRoot');
         const lastMerkleroot = String(call1.decoded[0]);
 
-        const sign1 = await this.wallet.list[5].sign(Buffer.from(lastMerkleroot.substr(2),'hex'));
+        const sign1 = await this.wallet.list[5].sign(this.signEncodePacked("lockBridge",lastMerkleroot));
         const clause1 = this.v2eBridgeVerifier.send('lockBridge',0,lastMerkleroot,sign1);
         const txRep1 = await this.connex.vendor.sign('tx',[clause1])
             .signer(this.wallet.list[5].address)
             .request();
         const receipt1 = await getReceipt(this.connex,5,txRep1.txid);
         if(receipt1 == null || receipt1.reverted){
-            assert.fail(`addr5:${this.wallet.list[5].address} lock bridge faild`);
+            assert.fail(`addr5:${this.wallet.list[5].address} lock bridge faild. txid:${txRep1.txid}`);
         }
 
-        const sign2 = await this.wallet.list[6].sign(Buffer.from(lastMerkleroot.substr(2),'hex'));
+        const sign2 = await this.wallet.list[6].sign(this.signEncodePacked("lockBridge",lastMerkleroot));
         const clause2 = this.v2eBridgeVerifier.send('lockBridge',0,lastMerkleroot,sign2);
         const txRep2 = await this.connex.vendor.sign('tx',[clause2])
             .signer(this.wallet.list[6].address)
             .request();
         const receipt2 = await getReceipt(this.connex,5,txRep2.txid);
         if(receipt2 == null || receipt2.reverted){
-            assert.fail(`addr6:${this.wallet.list[6].address} lock bridge faild`);
+            assert.fail(`addr6:${this.wallet.list[6].address} lock bridge faild. txid:${txRep2.txid}`, );
         }
  
         const call2 = await this.bridgeContract.call('locked');
@@ -253,17 +256,17 @@ export class V2EBridgeVerifierTestCase {
 
         const rootHash = this.initStorage(this.config.vechain.startBlockNum,receipt2.meta.blockNumber,[swapTx1,swapTx2]);
         
-        const sign3 = await this.wallet.list[6].sign(Buffer.from(rootHash.substr(2),'hex'));
+        const sign3 = await this.wallet.list[6].sign(this.signEncodePacked("updateBridgeMerkleRoot",rootHash));
         const clause3 = this.v2eBridgeVerifier.send('updateBridgeMerkleRoot',0,lastMerkleroot,rootHash,sign3);
         const txRep3 = await this.connex.vendor.sign('tx',[clause3])
             .signer(this.wallet.list[6].address)
             .request();
         const receipt3 = await getReceipt(this.connex,5,txRep3.txid);
         if(receipt3 == null || receipt3.reverted){
-            assert.fail(`addr6:${this.wallet.list[6].address} updateBridgeMerkleRoot faild`);
+            assert.fail(`addr6:${this.wallet.list[6].address} updateBridgeMerkleRoot faild. txid:${txRep3.txid}`);
         }
 
-        const sign4 = await this.wallet.list[7].sign(Buffer.from(rootHash.substr(2),'hex'));
+        const sign4 = await this.wallet.list[7].sign(this.signEncodePacked("updateBridgeMerkleRoot",rootHash));
         const clause4 = this.v2eBridgeVerifier.send('updateBridgeMerkleRoot',0,lastMerkleroot,rootHash,sign4);
         const txRep4 = await this.connex.vendor.sign('tx',[clause4])
             .signer(this.wallet.list[7].address)
@@ -301,20 +304,20 @@ export class V2EBridgeVerifierTestCase {
             assert.fail("save config faild");
         }
 
-        const clause2 = this.bridgeContract.send("setToken",0,this.config.vechain.contracts.vVet,1);
-        const txRep2 = await this.connex.vendor.sign('tx',[clause2])
+        const clause2 = this.bridgeContract.send("setWrappedNativeCoin",0,this.config.vechain.contracts.vVet);
+        const txRep2 = await this.connex.vendor.sign('tx', [clause2])
             .signer(this.wallet.list[1].address)
             .request();
-        const receipt2 = await getReceipt(this.connex,5,txRep2.txid);
-        if(receipt2 == null || receipt2.reverted){
-            assert.fail('register token faild');
+        const receipt2 = await getReceipt(this.connex, 5, txRep2.txid);
+        if (receipt2 == null || receipt2.reverted) {
+            assert.fail('setToken faild');
         }
 
         return this.config.vechain.contracts.vVet;
     }
 
     private async deployVETH(addr: string): Promise<string> {
-        const clause1 = this.vEthContract.deploy(0, addr);
+        const clause1 = this.vEthContract.deploy(0, "VeChain Wrapped ETH","VETH",18,addr);
         const txRep1 = await this.connex.vendor.sign('tx', [clause1])
             .signer(this.wallet.list[0].address)
             .request();
@@ -488,6 +491,15 @@ export class V2EBridgeVerifierTestCase {
         return result;
     }
 
+    private signEncodePacked(opertion:string,hash:string):Buffer {
+        let hashBuffer = hash != ZeroRoot() ? Buffer.from(hash.substr(2),'hex') : Buffer.alloc(32);
+        let encode = Buffer.concat([
+            Buffer.from(opertion),
+            hashBuffer
+        ]);
+        return keccak256(encode);
+    }
+
 }
 
 describe("V2E verifier test", ()=>{
@@ -513,15 +525,15 @@ describe("V2E verifier test", ()=>{
         await testcase.initVETHToken();
     });
 
-    // it('add verifiers', async() => {
-    //    await testcase.addVerifiers();         
-    // });
+    it('add verifiers', async() => {
+       await testcase.addVerifiers();         
+    });
 
-    // it('remove verifiers', async() => {
-    //     await testcase.removeVerifier();
-    // });
+    it('remove verifiers', async() => {
+        await testcase.removeVerifier();
+    });
 
-    // it('update Merkleroot', async() => {
-    //     await testcase.updateMerkleRoot();
-    // });
+    it('update Merkleroot', async() => {
+        await testcase.updateMerkleRoot();
+    });
 });

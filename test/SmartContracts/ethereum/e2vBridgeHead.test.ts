@@ -15,6 +15,7 @@ export class E2VBridgeHeadTestCase{
     public web3!:Web3;
     public wallet = new SimpleWallet();
     public configPath = path.join(__dirname,'../test.config.json');
+    private libPath = path.join(__dirname,"../../../src/SmartContracts/contracts/");
     public config:any = {};
 
     public wEthContract!:Contract;
@@ -40,15 +41,16 @@ export class E2VBridgeHeadTestCase{
                 const wEthAbi = JSON.parse(compileContract(wEthFilePath,"WETH9","abi"));
                 this.wEthContract = new this.web3.eth.Contract(wEthAbi,this.config.ethereum.contracts.wEth.length == 42 ? this.config.ethereum.contracts.wEth : undefined);
 
-                const wVetFilePath = path.join(__dirname, "../../../src/SmartContracts/contracts/ethereum/Contract_wVet.sol");
-                const wVetAbi = JSON.parse(compileContract(wVetFilePath,"WVet","abi"));
+                const wVetFilePath = path.join(__dirname, "../../../src/SmartContracts/contracts/common/Contract_BridgeWrappedToken.sol");
+                const wVetAbi = JSON.parse(compileContract(wVetFilePath,"BridgeWrappedToken","abi",[this.libPath]));
                 this.wVetContract = new this.web3.eth.Contract(wVetAbi,this.config.ethereum.contracts.wVet.length == 42 ? this.config.ethereum.contracts.wVet : undefined);
 
-                const bridgeFilePath = path.join(__dirname, "../../../src/SmartContracts/contracts/ethereum/Contract_E2VBridgeHead.sol");
-                const bridgeAbi = JSON.parse(compileContract(bridgeFilePath,"E2VBridgeHead","abi"));
+                const bridgeFilePath = path.join(__dirname, "../../../src/SmartContracts/contracts/common/Contract_BridgeHead.sol");
+                const bridgeAbi = JSON.parse(compileContract(bridgeFilePath,"BridgeHead","abi",[this.libPath]));
                 this.bridgeContract = new this.web3.eth.Contract(bridgeAbi,this.config.ethereum.contracts.e2vBridge.length == 42 ? this.config.ethereum.contracts.e2vBridge : undefined);
 
                 this.gasPrice = await this.web3.eth.getGasPrice();
+
             } catch (error) {
                 assert.fail(`init faild`);
             }
@@ -62,9 +64,10 @@ export class E2VBridgeHeadTestCase{
             this.bridgeContract.options.address = this.config.ethereum.contracts.e2vBridge;
         } else {
             let startBlockNum = 0;
+            let txhash = "";
             try {
-                const bridgeFilePath = path.join(__dirname, "../../../src/SmartContracts/contracts/ethereum/Contract_E2VBridgeHead.sol");
-                const bytecode = compileContract(bridgeFilePath,"E2VBridgeHead","bytecode");
+                const bridgeFilePath = path.join(__dirname, "../../../src/SmartContracts/contracts/common/Contract_BridgeHead.sol");
+                const bytecode = compileContract(bridgeFilePath,"BridgeHead","bytecode",[this.libPath]);
 
                 const gas1 = await this.bridgeContract.deploy({data:bytecode,arguments:[this.config.ethereum.chainName.toString(),this.config.ethereum.chainId.toString()]}).estimateGas({
                     from:this.wallet.list[0].address
@@ -75,6 +78,7 @@ export class E2VBridgeHeadTestCase{
                     gas:gas1,
                     gasPrice:this.gasPrice
                 }).on("receipt",function(receipt){
+                    txhash = receipt.transactionHash,
                     startBlockNum = receipt.blockNumber;
                 });
 
@@ -86,6 +90,8 @@ export class E2VBridgeHeadTestCase{
                     from:this.wallet.list[0].address,
                     gas:gas2,
                     gasPrice:this.gasPrice
+                }).on("receipt",function(receipt:any){
+                    txhash = receipt.transactionHash
                 });
 
                 const gas3 = await this.bridgeContract.methods.setGovernance(this.wallet.list[1].address).estimateGas({
@@ -95,13 +101,15 @@ export class E2VBridgeHeadTestCase{
                     from:this.wallet.list[0].address,
                     gas:gas3,
                     gasPrice:this.gasPrice
+                }).on("receipt",function(receipt:any){
+                    txhash = receipt.transactionHash
                 });
 
                 this.config.ethereum.contracts.e2vBridge = this.bridgeContract.options.address;
                 this.config.ethereum.startBlockNum = startBlockNum;
                 fs.writeFileSync(this.configPath,JSON.stringify(this.config));
             } catch (error) {
-                assert.fail(`deploy faild: ${error}`);   
+                assert.fail(`deploy faild: ${error}, txhash: ${txhash}`);   
             }
         }
 
@@ -413,22 +421,19 @@ export class E2VBridgeHeadTestCase{
     }
 
     public async swapWVET() {
-        const amount = 50;
 
-        const beforeBalance = await this.wVetContract.methods.balanceOf(this.wallet.list[6].address).call();
-
-        if(beforeBalance < amount){
-            assert.fail("swapWVET faild,check before balance faild");
-        }
+        const beforeBalance = await this.wVetContract.methods.balanceOf(this.wallet.list[7].address).call();
+        const amount = beforeBalance / 2;
 
         const beforeBalance1 = await this.wVetContract.methods.balanceOf(this.config.ethereum.contracts.e2vBridge).call();
 
         const approveMethod = this.wVetContract.methods.approve(this.config.ethereum.contracts.e2vBridge,amount);
+
         const gas1 = await approveMethod.estimateGas({
-            from:this.wallet.list[6].address
+            from:this.wallet.list[7].address
         });
         const s1 = await approveMethod.send({
-            from:this.wallet.list[6].address,
+            from:this.wallet.list[7].address,
             gas:gas1,
             gasPrice:this.gasPrice
         });
@@ -440,10 +445,10 @@ export class E2VBridgeHeadTestCase{
 
         const swapMethod = this.bridgeContract.methods.swap(this.config.ethereum.contracts.wVet,amount,this.wallet.list[8].address);
         const gas2 = await swapMethod.estimateGas({
-            from:this.wallet.list[6].address
+            from:this.wallet.list[7].address
         });
         const s2 = await swapMethod.send({
-            from:this.wallet.list[6].address,
+            from:this.wallet.list[7].address,
             gas:gas2,
             gasPrice:this.gasPrice
         });
@@ -490,6 +495,7 @@ export class E2VBridgeHeadTestCase{
     private async deployWETH():Promise<string>{
         const bridgeFilePath = path.join(__dirname, "../../../src/SmartContracts/contracts/ethereum/Contract_wEth.sol");
         const bytecode = compileContract(bridgeFilePath,"WETH9","bytecode"); 
+        let txhash = "";
 
         try {
             const gas = await this.wEthContract.deploy({data:bytecode}).estimateGas({
@@ -499,41 +505,50 @@ export class E2VBridgeHeadTestCase{
                 from:this.wallet.list[0].address,
                 gas:gas,
                 gasPrice:this.gasPrice
+            }).on("receipt",function(receipt:any){
+                txhash = receipt.transactionHash
             });
+
             this.config.ethereum.contracts.wEth = this.wEthContract.options.address;
     
-            const gas2 = await this.bridgeContract.methods.setToken(this.config.ethereum.contracts.wEth,1).estimateGas({
+            const gas2 = await this.bridgeContract.methods.setWrappedNativeCoin(this.config.ethereum.contracts.wEth).estimateGas({
                 from:this.wallet.list[1].address
             });
-            const s1 = await this.bridgeContract.methods.setToken(this.config.ethereum.contracts.wEth,1).send({
+            const s1 = await this.bridgeContract.methods.setWrappedNativeCoin(this.config.ethereum.contracts.wEth).send({
                 from:this.wallet.list[1].address,
                 gas:gas2,
                 gasPrice:this.gasPrice
+            }).on("receipt",function(receipt:any){
+                txhash = receipt.transactionHash
             });
+
             const receipt1 = await this.web3.eth.getTransactionReceipt(s1.transactionHash);
             if(receipt1 == null || receipt1.status == false){
-                assert.fail("setToken faild");
+                assert.fail("setWrappedNativeCoin faild");
             }
             fs.writeFileSync(this.configPath,JSON.stringify(this.config));
         } catch (error) {
-            assert.fail(`deploy WETH faild: ${error}`);
+            assert.fail(`deploy WETH faild: ${error}, txhash:${txhash}`);
         }
 
         return this.config.ethereum.contracts.wEth;
     }
 
     private async deployWVET(addr:string):Promise<string>{
-        const bridgeFilePath = path.join(__dirname, "../../../src/SmartContracts/contracts/ethereum/Contract_wVet.sol");
-        const bytecode = compileContract(bridgeFilePath,"WVet","bytecode");
+        const bridgeFilePath = path.join(__dirname, "../../../src/SmartContracts/contracts/common/Contract_BridgeWrappedToken.sol");
+        const bytecode = compileContract(bridgeFilePath,"BridgeWrappedToken","bytecode",[this.libPath]);
+        let txhash = "";
 
         try {
-            const gas = await this.wVetContract.deploy({data:bytecode,arguments:[addr]}).estimateGas({
+            const gas = await this.wVetContract.deploy({data:bytecode,arguments:["Wrapped VET","WVET",18,addr]}).estimateGas({
                 from:this.wallet.list[0].address
             });
-            this.wVetContract = await this.wVetContract.deploy({data:bytecode,arguments:[addr]}).send({
+            this.wVetContract = await this.wVetContract.deploy({data:bytecode,arguments:["Wrapped VET","WVET",18,addr]}).send({
                 from:this.wallet.list[0].address,
                 gas:gas,
                 gasPrice:this.gasPrice
+            }).on("receipt",function(receipt:any){
+                txhash = receipt.transactionHash
             });
             this.config.ethereum.contracts.wVet = this.wVetContract.options.address;
     
@@ -544,6 +559,8 @@ export class E2VBridgeHeadTestCase{
                 from:this.wallet.list[1].address,
                 gas:gas2,
                 gasPrice:this.gasPrice
+            }).on("receipt",function(receipt:any){
+                txhash = receipt.transactionHash
             });
             const receipt1 = await this.web3.eth.getTransactionReceipt(s1.transactionHash);
             if(receipt1 == null || receipt1.status == false){

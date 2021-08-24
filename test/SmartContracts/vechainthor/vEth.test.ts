@@ -30,10 +30,11 @@ export class VETHTestCase {
             try {
                 this.driver = await Driver.connect(new SimpleNet(this.config.vechain.nodeHost as string),this.wallet);
                 this.connex = new Framework(this.driver);
-
-                const filePath = path.join(__dirname,"../../../src/SmartContracts/contracts/vechainthor/Contract_vEth.sol");
-                const abi = JSON.parse(compileContract(filePath, 'VETH', 'abi'));
-                const bin = compileContract(filePath, 'VETH', 'bytecode');
+                
+                const libPath = path.join(__dirname,"../../../src/SmartContracts/contracts/");
+                const filePath = path.join(__dirname,"../../../src/SmartContracts/contracts/common/Contract_BridgeWrappedToken.sol");
+                const abi = JSON.parse(compileContract(filePath, 'BridgeWrappedToken', 'abi',[libPath]));
+                const bin = compileContract(filePath, 'BridgeWrappedToken', 'bytecode');
 
                 this.contract = new Contract({ abi: abi, connex: this.connex, bytecode: bin });
 
@@ -49,7 +50,7 @@ export class VETHTestCase {
         if(this.config.vechain.contracts.vEth != undefined && this.config.vechain.contracts.vEth.length == 42){
             this.contract.at(this.config.vechain.contracts.vEth);
         } else {
-            const clause1 = this.contract.deploy(0,this.wallet.list[1].address);
+            const clause1 = this.contract.deploy(0,"VeChain Wrapped ETH","VETH",18,this.wallet.list[1].address);
 
             let txRep: Connex.Vendor.TxResponse = await this.connex.vendor.sign('tx', [clause1])
             .signer(this.wallet.list[0].address)
@@ -78,10 +79,10 @@ export class VETHTestCase {
         const call1 = await this.contract.call("totalSupply");
         const beforeTotal = BigInt(call1.decoded[0]);
 
-        const call2 = await this.contract.call("balanceOf",this.wallet.list[2].address);
+        const call2 = await this.contract.call("balanceOf",this.wallet.list[1].address);
         const beforeBalance = BigInt(call2.decoded[0]);
 
-        const clause1 = this.contract.send("mint",0,this.wallet.list[2].address,amount);
+        const clause1 = this.contract.send("mint",0,amount);
         const txRep1 = await this.connex.vendor.sign('tx', [clause1])
                 .signer(this.wallet.list[1].address)
                 .request();
@@ -94,36 +95,36 @@ export class VETHTestCase {
         const call3 = await this.contract.call("totalSupply");
         const afterTotal = BigInt(call3.decoded[0]);
 
-        const call4 = await this.contract.call("balanceOf",this.wallet.list[2].address);
+        const call4 = await this.contract.call("balanceOf",this.wallet.list[1].address);
         const afterBalance = BigInt(call4.decoded[0]);
 
         assert.strictEqual(afterTotal - beforeTotal,BigInt(amount));
         assert.strictEqual(afterBalance - beforeBalance,BigInt(amount));
     }
 
-    public async recovery(){
+    public async burn(){
         const amount = 100;
 
         const call1 = await this.contract.call("totalSupply");
         const beforeTotal = BigInt(call1.decoded[0]);
 
-        const call2 = await this.contract.call("balanceOf",this.wallet.list[2].address);
+        const call2 = await this.contract.call("balanceOf",this.wallet.list[1].address);
         const beforeBalance = BigInt(call2.decoded[0]);
 
-        const clause1 = this.contract.send("recovery",0,this.wallet.list[2].address,amount);
+        const clause1 = this.contract.send("burn",0,amount);
         const txRep1 = await this.connex.vendor.sign('tx', [clause1])
                 .signer(this.wallet.list[1].address)
                 .request();
         
         const receipt1 = await getReceipt(this.connex, 5, txRep1.txid);
         if(receipt1 == null || receipt1.reverted){
-            assert.fail("recovery faild");
+            assert.fail("burn faild");
         }
 
         const call3 = await this.contract.call("totalSupply");
         const afterTotal = BigInt(call3.decoded[0]);
 
-        const call4 = await this.contract.call("balanceOf",this.wallet.list[2].address);
+        const call4 = await this.contract.call("balanceOf",this.wallet.list[1].address);
         const afterBalance = BigInt(call4.decoded[0]);
 
         assert.strictEqual(beforeTotal - afterTotal,BigInt(amount));
@@ -133,27 +134,36 @@ export class VETHTestCase {
     public async transfer(){
         const amount = 100;
 
-        const call1 = await this.contract.call("balanceOf",this.wallet.list[2].address);
+        const clause1 = this.contract.send("mint",0,amount * 10);
+        const txRep1 = await this.connex.vendor.sign('tx',[clause1])
+                .signer(this.wallet.list[1].address)
+                .request();
+        const receipt1 = await getReceipt(this.connex,5,txRep1.txid);
+        if(receipt1 == null || receipt1.reverted){
+            assert.fail('burn faild');
+        }
+
+        const call1 = await this.contract.call("balanceOf",this.wallet.list[1].address);
         const beforeBalance1 = BigInt(call1.decoded[0]);
 
-        const call2 = await this.contract.call("balanceOf",this.wallet.list[3].address);
+        const call2 = await this.contract.call("balanceOf",this.wallet.list[2].address);
         const beforeBalance2 = BigInt(call2.decoded[0]);
 
-        const clause1 = this.contract.send("transfer",0,this.wallet.list[3].address,amount);
-        const txRep1 = await this.connex.vendor.sign('tx', [clause1])
-                .signer(this.wallet.list[2].address)
+        const clause2 = this.contract.send("transfer",0,this.wallet.list[2].address,amount);
+        const txRep2 = await this.connex.vendor.sign('tx', [clause2])
+                .signer(this.wallet.list[1].address)
                 .request();
 
-        const receipt1 = await getReceipt(this.connex, 5, txRep1.txid);
+        const receipt2 = await getReceipt(this.connex, 5, txRep2.txid);
 
-        if(receipt1 == null || receipt1.reverted){
+        if(receipt2 == null || receipt2.reverted){
             assert.fail('transfer faild');
         }
 
-        const call3 = await this.contract.call("balanceOf",this.wallet.list[2].address);
+        const call3 = await this.contract.call("balanceOf",this.wallet.list[1].address);
         const afterBalance1 = BigInt(call3.decoded[0]);
 
-        const call4 = await this.contract.call("balanceOf",this.wallet.list[3].address);
+        const call4 = await this.contract.call("balanceOf",this.wallet.list[2].address);
         const afterBalance2 = BigInt(call4.decoded[0]);
 
         assert.strictEqual(beforeBalance1 - afterBalance1,BigInt(amount));
@@ -164,45 +174,54 @@ export class VETHTestCase {
         const amount1 = 150;
         const amount2 = 100;
 
-        const call1 = await this.contract.call("balanceOf",this.wallet.list[2].address);
+        const clause1 = this.contract.send("mint",0,amount1 * 10);
+        const txRep1 = await this.connex.vendor.sign('tx',[clause1])
+                .signer(this.wallet.list[1].address)
+                .request();
+        const receipt1 = await getReceipt(this.connex,5,txRep1.txid);
+        if(receipt1 == null || receipt1.reverted){
+            assert.fail('burn faild');
+        }
+
+        const call1 = await this.contract.call("balanceOf",this.wallet.list[1].address);
         const beforeBalance1 = BigInt(call1.decoded[0]);
 
         const call2 = await this.contract.call("balanceOf",this.wallet.list[4].address);
         const beforeBalance2 = BigInt(call2.decoded[0]);
 
-        const clause1 = this.contract.send("approve",0,this.wallet.list[3].address,amount1);
-        const txRep1 = await this.connex.vendor.sign('tx', [clause1])
-                .signer(this.wallet.list[2].address)
+        const clause2 = this.contract.send("approve",0,this.wallet.list[3].address,amount1);
+        const txRep2 = await this.connex.vendor.sign('tx', [clause2])
+                .signer(this.wallet.list[1].address)
                 .request();
 
-        const receipt1 = await getReceipt(this.connex, 5, txRep1.txid);
+        const receipt2 = await getReceipt(this.connex, 5, txRep2.txid);
 
-        if(receipt1 == null || receipt1.reverted){
+        if(receipt2 == null || receipt2.reverted){
             assert.fail('approve faild');
         }
         
-        const call3 = await this.contract.call("allowance",this.wallet.list[2].address,this.wallet.list[3].address);
+        const call3 = await this.contract.call("allowance",this.wallet.list[1].address,this.wallet.list[3].address);
         const allowance1 = BigInt(call3.decoded[0]);
 
         assert.strictEqual(allowance1,BigInt(amount1));
 
-        const clause2 = this.contract.send("transferFrom",0,this.wallet.list[2].address,this.wallet.list[4].address,amount2);
-        const txRep2 = await this.connex.vendor.sign('tx', [clause2])
+        const clause3 = this.contract.send("transferFrom",0,this.wallet.list[1].address,this.wallet.list[4].address,amount2);
+        const txRep3 = await this.connex.vendor.sign('tx', [clause3])
             .signer(this.wallet.list[3].address)
             .request();
 
-        const receipt2 = await getReceipt(this.connex, 5, txRep2.txid);
-        if(receipt2 == null || receipt2.reverted){
+        const receipt3 = await getReceipt(this.connex, 5, txRep3.txid);
+        if(receipt3 == null || receipt3.reverted){
             assert.fail('transferFrom faild');
         }
 
-        const call4 = await this.contract.call("balanceOf",this.wallet.list[2].address);
+        const call4 = await this.contract.call("balanceOf",this.wallet.list[1].address);
         const afterBalance4 = BigInt(call4.decoded[0]);
 
         const call5 = await this.contract.call("balanceOf",this.wallet.list[4].address);
         const afterBalance5 = BigInt(call5.decoded[0]);
 
-        const call6 = await this.contract.call("allowance",this.wallet.list[2].address,this.wallet.list[3].address);
+        const call6 = await this.contract.call("allowance",this.wallet.list[1].address,this.wallet.list[3].address);
         const allowance2 = BigInt(call6.decoded[0]);
 
         assert.strictEqual(beforeBalance1 - afterBalance4,BigInt(amount2));
@@ -226,8 +245,8 @@ describe('vETH Contract test',() =>{
         await testcase.mint();
     });
 
-    it("vEth recovery", async() => {
-        await testcase.recovery();
+    it("vEth burn", async() => {
+        await testcase.burn();
     });
 
     it("vEth transfer", async() => {

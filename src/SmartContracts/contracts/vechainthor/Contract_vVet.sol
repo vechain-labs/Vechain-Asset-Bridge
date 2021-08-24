@@ -1,4 +1,5 @@
-pragma solidity >=0.5.16 <0.6.0;
+// SPDX-License-Identifier: GPL-3.0-only
+pragma solidity ^0.8.0;
 
 contract VVET {
     string public name     = "Veiled VET";
@@ -13,11 +14,7 @@ contract VVET {
     mapping (address => uint)                       public  balanceOf;
     mapping (address => mapping (address => uint))  public  allowance;
 
-    constructor() public{}
-
-    function() external payable {
-        deposit();
-    }
+    constructor(){}
     
     function deposit() public payable {
         balanceOf[msg.sender] += msg.value;
@@ -27,7 +24,7 @@ contract VVET {
     function withdraw(uint wad) public {
         require(balanceOf[msg.sender] >= wad);
         balanceOf[msg.sender] -= wad;
-        msg.sender.transfer(wad);
+        payable(msg.sender).transfer(wad);
         emit Withdrawal(msg.sender, wad);
     }
 
@@ -51,7 +48,7 @@ contract VVET {
     {
         require(balanceOf[src] >= wad);
 
-        if (src != msg.sender && allowance[src][msg.sender] != uint(-1)) {
+        if (src != msg.sender && allowance[src][msg.sender] != uint(0)) {
             require(allowance[src][msg.sender] >= wad);
             allowance[src][msg.sender] -= wad;
         }

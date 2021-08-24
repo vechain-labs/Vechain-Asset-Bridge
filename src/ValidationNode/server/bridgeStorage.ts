@@ -139,8 +139,8 @@ export default class BridgeStorage {
         let encode =  Buffer.from(parentRoot.substr(2),'hex');
         sorted.forEach(chain => {
             let chainBuff = Buffer.concat([
-                Buffer.from(chain.chainName,'hex'),
-                Buffer.from(chain.chainId,'hex'),
+                Buffer.from(chain.chainName),
+                Buffer.from(chain.chainId),
                 Buffer.from(BigInt(chain.beginBlockNum).toString(16),'hex'),
                 Buffer.from(BigInt(chain.endBlockNum).toString(16),'hex'),
             ]);
