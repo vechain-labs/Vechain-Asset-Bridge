@@ -33,6 +33,7 @@ export class EthereumBridgeHead implements IBridgeHead{
                         chainName:this.config.ethereum.chainName,
                         chainId:this.config.ethereum.chainId,
                         beginBlockNum:this.config.ethereum.startBlockNum,
+                        lockedBlockNum:this.config.ethereum.startBlockNum,
                         endBlockNum:0
                     }
                 ]
@@ -58,7 +59,7 @@ export class EthereumBridgeHead implements IBridgeHead{
                 snapshoot.merkleRoot = ev.raw.topics[1];
                 snapshoot.parentMerkleRoot = ev.raw.topics[3];
                 snapshoot.chains[0].beginBlockNum = parseInt(ev.raw.topics[2],16);
-                snapshoot.chains[0].endBlockNum = ev.blockNumber - 1;
+                snapshoot.chains[0].endBlockNum = ev.blockNumber;
                 break;
             }
             result.data = snapshoot;
@@ -71,77 +72,45 @@ export class EthereumBridgeHead implements IBridgeHead{
 
     public async getSnapshoot(begin:number,end:number):Promise<ActionData<BridgeSnapshoot[]>>{
         let result = new ActionData<BridgeSnapshoot[]>();
-        result.data = new Array<BridgeSnapshoot>();
-        let snapshoots = new Array<BridgeSnapshoot>();
+        result.data = new Array();
 
-        try {
+        const upEventResult = await this.updateMerkleRootEvents(begin,end);
+        if(upEventResult.error != undefined){
+            result.copyBase(upEventResult);
+            return result;
+        }
+        let upEvents = upEventResult.data!;
+        let lockEvents = new Array<{blockNum:number,root:string,status:boolean}>();
 
-            let snapShoot:BridgeSnapshoot = {
-                parentMerkleRoot:"0x0000000000000000000000000000000000000000000000000000000000000000",
-                merkleRoot:"0x0000000000000000000000000000000000000000000000000000000000000000",
-                chains:[
-                    {chainName:this.config.ethereum.chainName,chainId:this.config.ethereum.chainId,beginBlockNum:0,endBlockNum:0}
-                ]
-            };
-
-            for(let blockNum = end;blockNum >= begin;){
-                let from = blockNum - this.scanBlockStep >= begin ? blockNum - this.scanBlockStep : begin;
-                let to = blockNum;
-
-                const events = await this.e2vBridge.getPastEvents("UpdateMerkleRoot",{fromBlock:from,toBlock:to});
-                if(events.length == 0){
-                    blockNum = from - 1;
-                    continue;
-                }
-                const sorted:Array<EventData> = sortArray(events,[
-                    {by:"blockNumber",order:"desc"},
-                    {by:"transactionIndex",order:"desc"}]);
-
-                const ev = sorted[0];
-                snapShoot.merkleRoot = ev.raw.topics[1];
-                snapShoot.parentMerkleRoot = ev.raw.topics[3];
-                snapShoot.chains[0].beginBlockNum = parseInt(ev.raw.topics[2],16);
-                snapShoot.chains[0].endBlockNum = ev.blockNumber - 1;
-                break;
-            }
-
-            if(snapShoot.merkleRoot == "0x0000000000000000000000000000000000000000000000000000000000000000"){
+        if(upEvents.length>0){
+            const lockEventsResult = await this.lockChangeEvents(upEvents[0].from,end);
+            if(lockEventsResult.error != undefined){
+                result.copyBase(lockEventsResult);
                 return result;
             }
-
-            snapshoots.push(snapShoot);
-
-            if(snapShoot.chains[0].beginBlockNum > begin && snapShoot.parentMerkleRoot != "0x0000000000000000000000000000000000000000000000000000000000000000"){
-                let tagetBlock = snapShoot.chains[0].beginBlockNum;
-                while(true){
-                    const events = await this.e2vBridge.getPastEvents("UpdateMerkleRoot",{fromBlock:tagetBlock,toBlock:tagetBlock});
-                    if(events.length == 0){
-                        result.error = "can't found parent merkle root";
-                        return result;
-                    }
-                    let ev = events[0];
-                    let snap:BridgeSnapshoot = {
-                        merkleRoot:ev.raw.topics[1],
-                        parentMerkleRoot:ev.raw.topics[3],
-                        chains:[{
-                            chainName:this.config.ethereum.chainName,
-                            chainId:this.config.ethereum.chainId,
-                            beginBlockNum:parseInt(ev.raw.topics[2],16),
-                            endBlockNum:ev.blockNumber - 1
-                        }]
-                    };
-                    snapshoots.push(snap);
-                    if(snap.chains[0].beginBlockNum < begin){
-                        break;
-                    }
-                    tagetBlock = snap.chains[0].beginBlockNum;
-                }
-            }
-        } catch (error) {
-            result.error = error;
+            lockEvents = lockEventsResult.data!;
         }
 
-        result.data = snapshoots.reverse();
+        for(const upEvent of upEvents){
+            const targetLockEvent = lockEvents.filter( event => {return event.root == upEvent.parentRoot && event.status;})
+                .sort((a,b) => {return b.blockNum - a.blockNum;});
+            if(targetLockEvent.length == 0){
+                result.error = new Error(`can't get LockChange Event of ${upEvent.parentRoot}`);
+            }
+
+            let sn:BridgeSnapshoot = {
+                parentMerkleRoot:upEvent.parentRoot,
+                merkleRoot:upEvent.root,
+                chains:[{
+                    chainName:this.config.ethereum.chainName,
+                    chainId:this.config.ethereum.chainId,
+                    lockedBlockNum:targetLockEvent[0].blockNum,
+                    beginBlockNum:upEvent.from,endBlockNum:upEvent.blockNum
+                }]
+            }
+            result.data.push(sn);
+        }
+
         return result;
     }
 
@@ -168,8 +137,6 @@ export class EthereumBridgeHead implements IBridgeHead{
     }
 
     public async scanTxs(begin:number,end:number): Promise<ActionData<SwapTx[]>> {
-
-        
 
         let result = new ActionData<SwapTx[]>();
         result.data = new Array<SwapTx>();
@@ -203,6 +170,7 @@ export class EthereumBridgeHead implements IBridgeHead{
                         account:swapEvent.raw.topics[3],
                         token:swapEvent.raw.topics[1],
                         amount:BigInt(swapEvent.raw.data),
+                        reward:BigInt(0),
                         timestamp:blockCache.get(swapEvent.blockNumber)!.timestamp as number,
                         type:"swap"
                     };
@@ -228,6 +196,7 @@ export class EthereumBridgeHead implements IBridgeHead{
                         account:claimEvent.raw.topics[2],
                         token:claimEvent.raw.topics[1],
                         amount:BigInt(claimEvent.raw.data),
+                        reward:BigInt(0),
                         timestamp:blockCache.get(claimEvent.blockNumber)!.timestamp as number,
                         type:"claim"
                     };
@@ -243,9 +212,94 @@ export class EthereumBridgeHead implements IBridgeHead{
         return result;
     }
 
+    private async updateMerkleRootEvents(begin:number,end:number):Promise<ActionData<{blockNum:number,from:number,root:string,parentRoot:string}[]>>{
+        let result = new ActionData<any>();
+        result.data = Array();
+
+        let eventData = {blockNum:0,from:0,root:ZeroRoot(),parentRoot:ZeroRoot()}
+
+        for(let blockNum = end;blockNum >= begin;){
+            let from = blockNum - this.scanBlockStep >= begin ? blockNum - this.scanBlockStep : begin;
+            let to = blockNum;
+
+            const events = await this.e2vBridge.getPastEvents("UpdateMerkleRoot",{fromBlock:from,toBlock:to});
+            if(events.length > 0){
+                const sorted:Array<EventData> = sortArray(events,[
+                    {by:"blockNumber",order:"desc"},
+                    {by:"transactionIndex",order:"desc"}]);
+
+                eventData = {
+                    blockNum:sorted[0].blockNumber,
+                    from:parseInt(sorted[0].raw.topics[2],16),
+                    root:sorted[0].raw.topics[1],
+                    parentRoot:sorted[0].raw.topics[3]
+                }
+                break;
+            } else {
+                blockNum = from - 1;
+                continue;
+            }
+        }
+
+        if(eventData.root == ZeroRoot()){
+            return result;
+        }
+
+        result.data.push(eventData);
+
+        if(eventData.from > begin && eventData.parentRoot != ZeroRoot()){
+            let tagetBlock = eventData.from;
+            while(true){
+                const events = await this.e2vBridge.getPastEvents("UpdateMerkleRoot",{fromBlock:tagetBlock,toBlock:tagetBlock});
+                if(events.length == 0){
+                    result.error = new Error("can't found parent merkle root");
+                    return result;
+                }
+                let eventData = {
+                    blockNum:events[0].blockNumber,
+                    from:parseInt(events[0].raw.topics[2],16),
+                    root:events[0].raw.topics[1],
+                    parentRoot:events[0].raw.topics[3]
+                }
+                result.data.push(eventData);
+                if(eventData.from <= begin){
+                    break;
+                }
+                tagetBlock = eventData.from;
+            }
+        }
+        result.data = result.data.reverse();
+        return result;
+    }
+
+    private async lockChangeEvents(begin:number,end:number):Promise<ActionData<{blockNum:number,root:string,status:boolean}[]>>{
+        let result = new ActionData<{blockNum:number,root:string,status:boolean}[]>();
+        result.data = Array();
+
+        let eventData = {blockNum:0,root:ZeroRoot(),status:false}
+        for(let blockNum = end;blockNum >= begin;){
+            let from = blockNum - this.scanBlockStep >= begin ? blockNum - this.scanBlockStep : begin;
+            let to = blockNum;
+            const events = await this.e2vBridge.getPastEvents("BridgeLockChange",{fromBlock:from,toBlock:to});
+            if(events.length > 0){
+                for(const ev of events){
+                    eventData = {
+                        blockNum:ev.blockNumber,
+                        root:ev.raw.topics[1],
+                        status:Boolean(ev.raw.topics[2] != ZeroRoot() ? true : false)
+                    }
+                    result.data.push(eventData);
+                }
+            }
+            blockNum = from - 1;
+        }
+        result.data = result.data.reverse();
+        return result;
+    }
+
     private initE2VBridge(){
-        const filePath = path.join(this.env.contractdir,"/ethereum/Contract_E2VBridgeHead.sol");
-        const abi = JSON.parse(compileContract(filePath, "E2VBridgeHead", "abi"));
+        const filePath = path.join(this.env.contractdir,"/common/Contract_BridgeHead.sol");
+        const abi = JSON.parse(compileContract(filePath, "BridgeHead", "abi"));
         this.e2vBridge = new this.web3.eth.Contract(abi,this.config.ethereum.contracts.e2vBridge);
     }
 

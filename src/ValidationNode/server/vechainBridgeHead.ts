@@ -3,7 +3,7 @@ import { Contract } from "myvetools";
 import { compileContract } from "myvetools/dist/utils";
 import path from "path";
 import { abi } from "thor-devkit";
-import { ActionData } from "../utils/components/actionResult";
+import { ActionData, PromiseActionResult } from "../utils/components/actionResult";
 import { IBridgeHead } from "../utils/iBridgeHead";
 import { BridgeSnapshoot, ZeroRoot } from "../utils/types/bridgeSnapshoot";
 import { SwapTx } from "../utils/types/swapTx";
@@ -17,109 +17,48 @@ export class VeChainBridgeHead implements IBridgeHead {
         this.initV2EBridge();
     }
 
-    private readonly scanBlockStep = 100;
-    
-    private readonly UpdateMerkleRootEvent = new abi.Event({
-            type:"event",
-            name:"UpdateMerkleRoot",
-            inputs:[
-                {name:"_root",type:"bytes32",indexed:true},
-                {name:"_from",type:"uint",indexed:true},
-                {name:"_parentRoot",type:"bytes32",indexed:true}
-            ]
-    });
-
-    private readonly SwapEvent = new abi.Event({
-        type:"event",
-        name:"Swap",
-        inputs:[
-            {name:"_token",type:"address",indexed:true},
-            {name:"_from",type:"address",indexed:true},
-            {name:"_to",type:"address",indexed:true},
-            {name:"_amount",type:"uint256",indexed:false}
-        ]
-    });
-
-    private readonly ClaimEvent = new abi.Event({
-        type:"event",
-        name:"Claim",
-        inputs:[
-            {name:"_token",type:"address",indexed:true},
-            {name:"_to",type:"address",indexed:true},
-            {name:"_amount",type:"uint256",indexed:false}
-        ]
-    });
-
-    public async getSnapshoot(begin:number,end:number):Promise<ActionData<BridgeSnapshoot[]>>{
+    public async  getSnapshoot(begin:number,end:number):Promise<ActionData<BridgeSnapshoot[]>>{
         let result = new ActionData<BridgeSnapshoot[]>();
-        result.data = new Array<BridgeSnapshoot>();
-        let snapshoots = new Array<BridgeSnapshoot>();
+        result.data = new Array();
 
-        let filter = this.connex.thor.filter("event",[{
-            address:this.config.vechain.contracts.v2eBridge,
-            topic0:this.UpdateMerkleRootEvent.signature
-        }]).order("desc"); 
-
-        let snapShoot:BridgeSnapshoot = {
-            parentMerkleRoot:ZeroRoot(),
-            merkleRoot:ZeroRoot(),
-            chains:[
-                {
-                    chainName:this.config.vechain.chainName,chainId:this.config.vechain.chainId,beginBlockNum:0,endBlockNum:0}
-            ]
-        };
-
-        for(let blockNum = end;blockNum >= begin;){
-            let from = blockNum - this.scanBlockStep >= begin ? blockNum - this.scanBlockStep : begin;
-            let to = blockNum;
-            let events = await filter.range({unit:"block",from:from,to:to}).apply(0,1);
-            if(events.length == 1){
-                let ev = events[0];
-                snapShoot.merkleRoot = ev.topics[1];
-                snapShoot.parentMerkleRoot = ev.topics[3];
-                snapShoot.chains[0].beginBlockNum = parseInt(ev.topics[2],16);
-                snapShoot.chains[0].endBlockNum = ev.meta.blockNumber - 1;
-                break;
-            } else {
-                blockNum = from - 1;
-                continue;
-            }
-        }
-
-        if(snapShoot.merkleRoot == ZeroRoot()){
+        const upEventResult = await this.updateMerkleRootEvents(begin,end);
+        if(upEventResult.error != undefined){
+            result.copyBase(upEventResult);
             return result;
         }
+        let upEvents = upEventResult.data!;
+        let lockEvents = new Array<{blockNum:number,root:string,status:boolean}>();
 
-        snapshoots.push(snapShoot);
-        
-        if(snapShoot.chains[0].beginBlockNum > begin && snapShoot.parentMerkleRoot != ZeroRoot()){
-            let tagetBlock = snapShoot.chains[0].beginBlockNum;
-            while(true){
-                let events = await filter.range({unit:"block",from:tagetBlock,to:tagetBlock}).apply(0,1);
-                if(events.length == 0){
-                    result.error = "can't found parent merkle root";
-                    return result;
-                }
-                let ev = events[0];
-                let snap:BridgeSnapshoot = {
-                    merkleRoot:ev.topics[1],
-                    parentMerkleRoot:ev.topics[3],
-                    chains:[{
-                        chainName:this.config.vechain.chainName,
-                        chainId:this.config.vechain.chainId,
-                        beginBlockNum:parseInt(ev.topics[2],16),
-                        endBlockNum:ev.meta.blockNumber - 1
-                    }]
-                };
-                snapshoots.push(snap);
-                if(snap.chains[0].beginBlockNum < begin){
-                    break;
-                }
-                tagetBlock = snap.chains[0].beginBlockNum;
+        if(upEvents.length>0){
+            const lockEventsResult = await this.lockChangeEvents(upEvents[0].from,end);
+            if(lockEventsResult.error != undefined){
+                result.copyBase(lockEventsResult);
+                return result;
             }
+            lockEvents = lockEventsResult.data!;
         }
 
-        result.data = snapshoots.reverse();
+        for(const upEvent of upEvents){
+            const targetLockEvent = lockEvents.filter( event => {return event.root == upEvent.parentRoot && event.status == true && event.blockNum != upEvent.blockNum;})
+                .sort((a,b) => {return b.blockNum - a.blockNum;});
+            if(targetLockEvent.length == 0){
+                result.error = new Error(`can't get LockChange Event of ${upEvent.parentRoot}`);
+            }
+
+            let sn:BridgeSnapshoot = {
+                parentMerkleRoot:upEvent.parentRoot,
+                merkleRoot:upEvent.root,
+                chains:[{
+                    chainName:this.config.vechain.chainName,
+                    chainId:this.config.vechain.chainId,
+                    lockedBlockNum:targetLockEvent[0].blockNum,
+                    beginBlockNum:upEvent.from,
+                    endBlockNum:upEvent.blockNum
+                }]
+            }
+            result.data.push(sn);
+        }
+
         return result;
     }
 
@@ -138,8 +77,9 @@ export class VeChainBridgeHead implements IBridgeHead {
                 {
                     chainName:this.config.vechain.chainName,
                     chainId:this.config.vechain.chainId,
+                    lockedBlockNum:this.config.vechain.startBlockNum,
                     beginBlockNum:this.config.vechain.startBlockNum,
-                    endBlockNum:0
+                    endBlockNum:this.config.vechain.startBlockNum
                 }
             ]
         };
@@ -156,7 +96,20 @@ export class VeChainBridgeHead implements IBridgeHead {
                 snapShoot.merkleRoot = ev.topics[1];
                 snapShoot.parentMerkleRoot = ev.topics[3];
                 snapShoot.chains[0].beginBlockNum = parseInt(ev.topics[2],16);
-                snapShoot.chains[0].endBlockNum = ev.meta.blockNumber - 1;
+                snapShoot.chains[0].endBlockNum = ev.meta.blockNumber;
+
+                const lockevsResult = await this.lockChangeEvents(snapShoot.chains[0].beginBlockNum,snapShoot.chains[0].endBlockNum);
+                if(lockevsResult.error != undefined){
+                    result.copyBase(lockevsResult);
+                    return result;
+                }
+
+                const lockevs = lockevsResult.data!.filter(ev =>{return ev.root == snapShoot.parentMerkleRoot && ev.status == true; });
+                if(lockevs == undefined || lockevs.length == 0){
+                    result.error = new Error(`can't found lockchange event, root:${snapShoot.parentMerkleRoot}`);
+                    return result;
+                }
+                snapShoot.chains[0].lockedBlockNum = lockevs[0].blockNum;
                 break;
             } else {
                 blockNum = from - 1;
@@ -180,7 +133,7 @@ export class VeChainBridgeHead implements IBridgeHead {
             parentMerkleRoot:ZeroRoot(),
             merkleRoot:ZeroRoot(),
             chains:[
-                {chainName:this.config.vechain.chainName,chainId:this.config.vechain.chainId,beginBlockNum:0,endBlockNum:0}
+                {chainName:this.config.vechain.chainName,chainId:this.config.vechain.chainId,lockedBlockNum:0,beginBlockNum:0,endBlockNum:0}
             ]
         };
 
@@ -190,7 +143,7 @@ export class VeChainBridgeHead implements IBridgeHead {
             snapShoot.merkleRoot = ev.topics[1];
             snapShoot.parentMerkleRoot = ev.topics[3];
             snapShoot.chains[0].beginBlockNum = parseInt(ev.topics[2],16);
-            snapShoot.chains[0].endBlockNum = ev.meta.blockNumber - 1;
+            snapShoot.chains[0].endBlockNum = ev.meta.blockNumber;
         }
         result.data = snapShoot;
         return result;
@@ -261,12 +214,14 @@ export class VeChainBridgeHead implements IBridgeHead {
                             index:eventIndex,
                             account:event.topics[3],
                             token:event.topics[1],
-                            amount:BigInt(event.data),
+                            amount:BigInt('0x' + event.data.substring(2,64)),
+                            reward:BigInt('0x' + event.data.substring(66)),
                             timestamp:event.meta.blockTimestamp,
                             type:"swap"
                         }
-                        
-                    } else {
+                        result.data.push(swapTx);
+                        eventIndex++;
+                    } else if (event.topics[0] == this.ClaimEvent.signature){
                         swapTx = {
                             chainName:this.config.vechain.chainName,
                             chainId:this.config.vechain.chainId,
@@ -277,13 +232,13 @@ export class VeChainBridgeHead implements IBridgeHead {
                             account:event.topics[2],
                             token:event.topics[1],
                             amount:BigInt(event.data),
+                            reward:BigInt(0),
                             timestamp:event.meta.blockTimestamp,
                             type:"claim"
                         }
+                        result.data.push(swapTx);
+                        eventIndex++;
                     }
-    
-                    result.data.push(swapTx);
-                    eventIndex++;
                 }
 
                 if(events.length == limit){
@@ -298,14 +253,116 @@ export class VeChainBridgeHead implements IBridgeHead {
         return result;
     }
 
+    private async updateMerkleRootEvents(begin:number,end:number):Promise<ActionData<{blockNum:number,from:number,root:string,parentRoot:string}[]>>{
+        let result = new ActionData<any>();
+        result.data = Array();
+
+        let filter = this.connex.thor.filter("event",[{
+            address:this.v2eBridge.address,
+            topic0:this.UpdateMerkleRootEvent.signature
+        }]).order("desc"); 
+
+        let eventData = {blockNum:0,from:0,root:ZeroRoot(),parentRoot:ZeroRoot()}
+
+        for(let blockNum = end;blockNum >= begin;){
+            let from = blockNum - this.scanBlockStep >= begin ? blockNum - this.scanBlockStep : begin;
+            let to = blockNum;
+            let events = await filter.range({unit:"block",from:from,to:to}).apply(0,1);
+            if(events.length == 1){
+                let ev = events[0];
+                eventData = {
+                    blockNum:ev.meta.blockNumber,
+                    from:parseInt(ev.topics[2],16),
+                    root:ev.topics[1],
+                    parentRoot:ev.topics[3]
+                }
+                break;
+            } else {
+                blockNum = from - 1;
+                continue;
+            }
+        }
+
+        if(eventData.root == ZeroRoot()){
+            return result;
+        }
+
+        result.data.push(eventData);
+        
+        if(eventData.from > begin && eventData.parentRoot != ZeroRoot()){
+            let tagetBlock = eventData.from;
+            while(true){
+                let events = await filter.range({unit:"block",from:tagetBlock,to:tagetBlock}).apply(0,1);
+                if(events.length == 0){
+                    result.error = new Error("can't found parent merkle root");
+                    return result;
+                }
+                let ev = events[0];
+                let eventData = {
+                    blockNum:ev.meta.blockNumber,
+                    from:parseInt(ev.topics[2],16),
+                    root:ev.topics[1],
+                    parentRoot:ev.topics[3]
+                }
+                result.data.push(eventData);
+                if(eventData.from <= begin){
+                    break;
+                }
+                tagetBlock = eventData.from;
+            }
+        }
+        result.data = result.data.reverse();
+        return result;
+    }
+
+    private async lockChangeEvents(begin:number,end:number):Promise<ActionData<{blockNum:number,root:string,status:boolean}[]>>{
+        let result = new ActionData<{blockNum:number,root:string,status:boolean}[]>();
+        result.data = Array();
+
+        let filter = this.connex.thor.filter("event",[{
+            address:this.v2eBridge.address,
+            topic0:this.BridgeLockChangeEvent.signature
+        }]).order("desc");
+
+        let eventData = {blockNum:0,root:ZeroRoot(),status:false}
+
+        for(let blockNum = end;blockNum >= begin;){
+            let from = blockNum - this.scanBlockStep >= begin ? blockNum - this.scanBlockStep : begin;
+            let to = blockNum;
+            let events = await filter.range({unit:"block",from:from,to:to}).apply(0,100);
+            if(events.length > 0){
+                for(const ev of events){
+                    eventData = {
+                        blockNum:ev.meta.blockNumber,
+                        root:ev.topics[1],
+                        status:Boolean(ev.topics[2] != ZeroRoot() ? true : false)
+                    }
+                    result.data.push(eventData);
+                }
+            }
+            blockNum = from - 1;
+        }
+        result.data = result.data.reverse();
+        return result;
+    }
+
     private initV2EBridge(){
-        const filePath = path.join(this.env.contractdir,"/vechainthor/Contract_V2EBridgeHead.sol");
-        const abi = JSON.parse(compileContract(filePath, 'V2EBridgeHead', 'abi'));
-        this.v2eBridge = new Contract({abi:abi,connex:this.connex,address:this.config.vechain.contracts.v2eBridge});
+        const filePath = path.join(this.env.contractdir,"/common/Contract_BridgeHead.sol");
+        const bridgeAbi = JSON.parse(compileContract(filePath,"BridgeHead","abi"));
+        this.v2eBridge = new Contract({abi:bridgeAbi,connex:this.connex,address:this.config.vechain.contracts.v2eBridge});
+        this.UpdateMerkleRootEvent = new abi.Event(this.v2eBridge.ABI("UpdateMerkleRoot","event") as any);
+        this.SwapEvent = new abi.Event(this.v2eBridge.ABI("Swap","event") as any);
+        this.ClaimEvent = new abi.Event(this.v2eBridge.ABI("Claim","event") as any);
+        this.BridgeLockChangeEvent = new abi.Event(this.v2eBridge.ABI("BridgeLockChange","event") as any);
     }
 
     private env:any;
     private config:any;
-    private v2eBridge!:Contract;
     private connex!:Framework;
+    private readonly scanBlockStep = 100;
+    private v2eBridge!:Contract;
+    private UpdateMerkleRootEvent!:abi.Event;
+    private SwapEvent!:abi.Event;
+    private ClaimEvent!:abi.Event;
+    private BridgeLockChangeEvent!:abi.Event;
 }

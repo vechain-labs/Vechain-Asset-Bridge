@@ -16,6 +16,7 @@ export class BridgeSyncTaskTestCase{
     public web3!:Web3;
     public connex!: Framework;
     public task!:BridgeSyncTask;
+    public env:any;
 
     private privateKeys = [
         "0x99f0500549792796c14fed62011a51081dc5b5e68fe8bd8a13b86be829c4fd36",
@@ -100,7 +101,7 @@ export class BridgeSyncTaskTestCase{
                     await connection.synchronize();
                 }
 
-                let env = {
+                this.env = {
                     config:this.config,
                     connex:this.connex,
                     web3:this.web3,
@@ -108,9 +109,7 @@ export class BridgeSyncTaskTestCase{
                     contractdir:path.join(__dirname,"../../src/SmartContracts/contracts")
                 }
 
-                this.task = new BridgeSyncTask(env);
-                
-
+                this.task = new BridgeSyncTask(this.env);
             } catch (error) {
                 assert.fail(`init faild: ${JSON.stringify(error)}`);
             }
@@ -120,7 +119,10 @@ export class BridgeSyncTaskTestCase{
     }
 
     public async run(){
-        this.task.taskJob();
+        const result = await this.task.taskJob();
+        if(result.error){
+            assert.fail(JSON.stringify(result.error));
+        }
     }
 }
 

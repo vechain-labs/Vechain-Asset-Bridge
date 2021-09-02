@@ -3,6 +3,14 @@ import { keccak256 } from "thor-devkit";
 export default class MerkleTree {
 
     private dataNodes = new Array<TreeNode>();
+    private treeNode = new TreeNode();
+
+    private constructor(){}
+
+    public static createNewTree():MerkleTree{
+        let tree = new MerkleTree();
+        return tree;
+    }
 
     public addHash(hash:string){
         let newNode = new TreeNode();
@@ -15,22 +23,21 @@ export default class MerkleTree {
     }
 
     public buildTree():TreeNode {
-        let tree:TreeNode = TreeNode.EmptyTreeNode();
+        this.treeNode = TreeNode.EmptyTreeNode();
         let nodes = this.dataNodes;
 
         while(true){
             nodes = this.buildTreeNodes(nodes);
             if(nodes.length == 1){
-                tree = nodes[0];
+                this.treeNode = nodes[0];
                 break;
             }
         }
-        return tree;
+        return this.treeNode;
     }
 
     public getMerkleProof(leaf:string):Array<string>{
         let result = new Array();
-        this.buildTree();
         let targetNode = this.dataNodes.find(node => {return node.nodeHash.toLowerCase() == leaf.toLowerCase();});
         if(targetNode != undefined){
             while(targetNode.parentNode != undefined){
@@ -45,8 +52,7 @@ export default class MerkleTree {
     }
 
     public getRoot():string{
-        let tree = this.buildTree();
-        return tree.nodeHash;
+        return this.treeNode.nodeHash;
     }
 
     public static verificationMerkleProof(leaf:string,root:string,proof:Array<string>):boolean{

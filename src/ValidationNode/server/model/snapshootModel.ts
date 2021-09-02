@@ -16,8 +16,8 @@ export class SnapshootModel {
             parentMerkleRoot:"0x0000000000000000000000000000000000000000000000000000000000000000",
             merkleRoot:"0x0000000000000000000000000000000000000000000000000000000000000000",
             chains:[
-                {chainName:this.config.vechain.chainName,chainId:this.config.vechain.chainId,beginBlockNum:this.config.vechain.startBlockNum,endBlockNum:0},
-                {chainName:this.config.ethereum.chainName,chainId:this.config.ethereum.chainId,beginBlockNum:this.config.ethereum.startBlockNum,endBlockNum:0},
+                {chainName:this.config.vechain.chainName,chainId:this.config.vechain.chainId,lockedBlockNum:this.config.vechain.startBlockNum,beginBlockNum:this.config.vechain.startBlockNum,endBlockNum:0},
+                {chainName:this.config.ethereum.chainName,chainId:this.config.ethereum.chainId,lockedBlockNum:this.config.ethereum.startBlockNum,beginBlockNum:this.config.ethereum.startBlockNum,endBlockNum:0},
             ]
         }
 
@@ -25,7 +25,7 @@ export class SnapshootModel {
             let data = await getRepository(SnapshootEntity)
                 .createQueryBuilder("snapshoot")
                 .where("snapshoot.invalid = :invalid",{invalid:true})
-                .orderBy("snapshoot.index","DESC")
+                .orderBy("snapshoot.blocknum","DESC")
                 .getOne();
             if(data != undefined){
                 result.data = {
@@ -47,8 +47,18 @@ export class SnapshootModel {
             parentMerkleRoot:"0x0000000000000000000000000000000000000000000000000000000000000000",
             merkleRoot:"0x0000000000000000000000000000000000000000000000000000000000000000",
             chains:[
-                {chainName:this.config.vechain.chainName,chainId:this.config.vechain.chainId,beginBlockNum:this.config.vechain.startBlockNum,endBlockNum:0},
-                {chainName:this.config.ethereum.chainName,chainId:this.config.ethereum.chainId,beginBlockNum:this.config.ethereum.startBlockNum,endBlockNum:0},
+                {
+                    chainName:this.config.vechain.chainName,
+                    chainId:this.config.vechain.chainId,
+                    lockedBlockNum:this.config.vechain.startBlockNum,
+                    beginBlockNum:this.config.vechain.startBlockNum,
+                    endBlockNum:this.config.vechain.startBlockNum},
+                {
+                    chainName:this.config.ethereum.chainName,
+                    chainId:this.config.ethereum.chainId,
+                    lockedBlockNum:this.config.ethereum.startBlockNum,
+                    beginBlockNum:this.config.ethereum.startBlockNum,
+                    endBlockNum:this.config.ethereum.startBlockNum},
             ]
         }
 
@@ -91,9 +101,9 @@ export class SnapshootModel {
 
         try {
             let entity:SnapshootEntity = {
-                id:0,
                 merkleRoot:sn.merkleRoot,
                 parentMerkleRoot:sn.parentMerkleRoot,
+                blocknum:sn.chains.filter(chain => {return chain.chainName == this.config.vechain.chainName && chain.chainId == this.config.vechain.chainId;})[0]!.endBlockNum,
                 chains:sn.chains,
                 invalid:true
             }

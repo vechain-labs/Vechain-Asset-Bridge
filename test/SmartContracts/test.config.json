@@ -1,1 +1,31 @@
-{"mnemonic":"denial kitchen pet squirrel other broom bar gas better priority spoil cross","vechain":{"nodeHost":"http://47.57.94.244:8680","chainName":"vechain","chainId":"0xf6","startBlockNum":346691,"confirmHeight":12,"expiration":180,"contracts":{"vVet":"0x959deeb37b6363c4f71b07f22acf4b057eaf1199","vEth":"0xcecd2b2edc3ad35dd6c5a9148c406d72f3883909","v2eBridge":"0xf1c27b76f3800d07e68ec01945b3517253115485","v2eBridgeVerifier":"0xb14529617fcfc4174ad90fc85d73d8d0e0647fa5"}},"ethereum":{"nodeHost":"http://47.57.94.244:8545","chainName":"ethereum","chainId":"1337","startBlockNum":121206,"confirmHeight":6,"expiration":24,"contracts":{"wEth":"0x858f256BC1D53B9b6b34c990C6d5ADB1030de870","wVet":"0xc68582DF04c73b85E9f5b807432ECA47e043A4e2","e2vBridge":"0x21343fCF29797aC354c127eeAe384856cD6093B6","e2vBridgeVerifier":"0x3E5F1abDd2277833B22C530c32336D6f4289B209"}}}
+{
+    "mnemonic": "denial kitchen pet squirrel other broom bar gas better priority spoil cross",
+    "vechain": {
+        "nodeHost": "http://47.57.94.244:8680",
+        "chainName": "vechain",
+        "chainId": "0xf6",
+        "startBlockNum": 414970,
+        "confirmHeight": 12,
+        "expiration": 180,
+        "contracts": {
+            "vVet": "0xafff8b5a130ef65e73294ad3ef2a290d748905b1",
+            "vEth": "0x0f40792f6a7b285ddd8bf846790db72564d053fb",
+            "v2eBridge": "0x2cd4403dd5994aa68e60e80cc04ccedcc7ccd6f1",
+            "v2eBridgeVerifier": "0x5faeb6a5d6449f0a1c3c6990b5d0b641026c9b75"
+        }
+    },
+    "ethereum": {
+        "nodeHost": "http://47.57.94.244:8545",
+        "chainName": "ethereum",
+        "chainId": "1337",
+        "startBlockNum": 141052,
+        "confirmHeight": 6,
+        "expiration": 24,
+        "contracts": {
+            "wEth": "0x59c251b69423E033bf1B3B354F1627b179817CdD",
+            "wVet": "0xf9707d4D6415FCf4a8f2125b0e41dAF3Bb53740a",
+            "e2vBridge": "0x638fDaECef217Dc78701b320c457caB7D0f6F075",
+            "e2vBridgeVerifier": "0x8944cD4392867f8e832B2471fFC5611a5B7E1D40"
+        }
+    }
+}

@@ -53,8 +53,18 @@ export class BridgePackTask{
             parentMerkleRoot:ZeroRoot(),
             merkleRoot:ZeroRoot(),
             chains:[
-                {chainName:this.config.vechain.chainName,chainId:this.config.vechain.chainId,beginBlockNum:this.config.vechain.startBlockNum,endBlockNum:this.config.vechain.startBlockNum},
-                {chainName:this.config.ethereum.chainName,chainId:this.config.ethereum.chainId,beginBlockNum:this.config.ethereum.startBlockNum,endBlockNum:this.config.ethereum.startBlockNum},
+                {
+                    chainName:this.config.vechain.chainName,
+                    chainId:this.config.vechain.chainId,
+                    beginBlockNum:this.config.vechain.startBlockNum,
+                    lockedBlockNum:this.config.vechain.startBlockNum,
+                    endBlockNum:this.config.vechain.startBlockNum},
+                {
+                    chainName:this.config.ethereum.chainName,
+                    chainId:this.config.ethereum.chainId,
+                    beginBlockNum:this.config.ethereum.startBlockNum,
+                    lockedBlockNum:this.config.ethereum.startBlockNum,
+                    endBlockNum:this.config.ethereum.startBlockNum},
             ]
         }
 

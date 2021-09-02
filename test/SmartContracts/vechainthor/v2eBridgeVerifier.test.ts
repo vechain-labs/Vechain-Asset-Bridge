@@ -447,6 +447,7 @@ export class V2EBridgeVerifierTestCase {
             account:this.wallet.list[4].address,
             token:this.config.vechain.contracts.vVet,
             amount:BigInt(amount),
+            reward:BigInt(0),
             timestamp:receipt1.meta.blockTimestamp,
             type:"swap"
         }
@@ -466,6 +467,7 @@ export class V2EBridgeVerifierTestCase {
             account:this.wallet.list[4].address,
             token:this.config.vechain.contracts.vEth,
             amount:BigInt(amount),
+            reward:BigInt(0),
             timestamp:(new Date()).getTime(),
             type:"swap"
         }
@@ -479,8 +481,18 @@ export class V2EBridgeVerifierTestCase {
             parentMerkleRoot:"0x0000000000000000000000000000000000000000000000000000000000000000",
             merkleRoot:"0x0000000000000000000000000000000000000000000000000000000000000000",
             chains:[
-                {chainName:this.config.vechain.chainName,chainId:this.config.vechain.chainId,beginBlockNum:begin,endBlockNum:end},
-                {chainName:this.config.ethereum.chainName,chainId:this.config.ethereum.chainId,beginBlockNum:begin,endBlockNum:end}
+                {
+                    chainName:this.config.vechain.chainName,
+                    chainId:this.config.vechain.chainId,
+                    beginBlockNum:begin,
+                    lockedBlockNum:begin,
+                    endBlockNum:end},
+                {
+                    chainName:this.config.ethereum.chainName,
+                    chainId:this.config.ethereum.chainId,
+                    beginBlockNum:begin,
+                    lockedBlockNum:begin,
+                    endBlockNum:end}
             ]
         }
 
@@ -525,15 +537,15 @@ describe("V2E verifier test", ()=>{
         await testcase.initVETHToken();
     });
 
-    it('add verifiers', async() => {
-       await testcase.addVerifiers();         
-    });
+    // it('add verifiers', async() => {
+    //    await testcase.addVerifiers();         
+    // });
 
-    it('remove verifiers', async() => {
-        await testcase.removeVerifier();
-    });
+    // it('remove verifiers', async() => {
+    //     await testcase.removeVerifier();
+    // });
 
-    it('update Merkleroot', async() => {
-        await testcase.updateMerkleRoot();
-    });
+    // it('update Merkleroot', async() => {
+    //     await testcase.updateMerkleRoot();
+    // });
 });

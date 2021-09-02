@@ -14,12 +14,13 @@ describe('Merkle Tree',() =>{
         "0x7b5aba570d347d92b4576e23a8900732fa3461b86fe44134acaa656ac4a237f3",   //9
     ];
 
-    let tree = new MerkleTree();
+    let tree = MerkleTree.createNewTree();
 
     before("",() =>{
         data.forEach(data => {
             tree.addHash(data);
         });
+        tree.buildTree();
     });
 
     it("get root hash",() => {

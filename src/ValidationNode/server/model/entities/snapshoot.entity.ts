@@ -1,15 +1,15 @@
-import { Column, Entity, PrimaryGeneratedColumn } from "typeorm";
+import { Column, Entity, PrimaryColumn, PrimaryGeneratedColumn } from "typeorm";
 import { simpleJSON } from "../../../utils/extensions/transformers";
 import { ChainInfo } from "../../../utils/types/bridgeSnapshoot";
 
 @Entity("snapshoot")
 export class SnapshootEntity{
 
-    @PrimaryGeneratedColumn({name:"index"})
-    public id!:number;
-
-    @Column({name:"merkleroot",length:66})
+    @PrimaryColumn({name:"merkleroot",length:66})
     public merkleRoot!:string;
+
+    @Column({name:"blocknum"})
+    public blocknum!:number;
 
     @Column({name:"parent_merkleroot",length:66})
     public parentMerkleRoot!:string;

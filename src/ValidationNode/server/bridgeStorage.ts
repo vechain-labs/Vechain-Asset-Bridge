@@ -6,23 +6,27 @@ import { BridgeSnapshoot, ChainInfo } from "../utils/types/bridgeSnapshoot";
 import { SwapTx } from "../utils/types/swapTx";
 import { findTargetToken, TokenInfo } from "../utils/types/tokenInfo";
 const sortArray = require('sort-array');
+const Copy = require('object-copy');
 
 export default class BridgeStorage {
 
     public readonly ledgerCache = new Array<BridgeLedger>();
-    private tree = new MerkleTree();
+    private tree = MerkleTree.createNewTree();
     private snapshoot:BridgeSnapshoot;
     private merkleRootNode:TreeNode = new TreeNode();
+    private tokens = new Array<TokenInfo>();
 
-    public constructor(snapshoot:BridgeSnapshoot,ledgers?:BridgeLedger[]) {
-        this.snapshoot = snapshoot;
-        this.tree = new MerkleTree();
+    public constructor(snapshoot:BridgeSnapshoot,tokenInfo:TokenInfo[],ledgers?:BridgeLedger[]) {
+        this.snapshoot = {parentMerkleRoot:"",merkleRoot:"",chains:[]};
+        Copy(this.snapshoot,snapshoot);
+        this.tokens = tokenInfo;
+        this.tree = MerkleTree.createNewTree();
         if(ledgers != undefined && ledgers.length > 0){
-            this.ledgerCache = ledgers;
+            Copy(this.ledgerCache,ledgers);
         }
     }
 
-    public updateLedgers(txs:SwapTx[],tokenInfo:TokenInfo[]):ActionResult{
+    public updateLedgers(txs:SwapTx[]):ActionResult{
         let result = new ActionResult();
         const sorted:Array<SwapTx> = sortArray(txs,{
             by:["timestamp"],
@@ -30,7 +34,7 @@ export default class BridgeStorage {
         });
 
         for(const tx of sorted){
-            const targetToken = findTargetToken(tokenInfo,tx.chainName,tx.chainId,tx.token);
+            const targetToken = findTargetToken(this.tokens,tx.chainName,tx.chainId,tx.token);
             if(targetToken == undefined){
                 result.error = `not found target token, sourcetoken: chainName:${tx.chainName} chainId:${tx.chainId} token:${tx.token}`;
                 return result;
@@ -74,16 +78,16 @@ export default class BridgeStorage {
                 if(ledger.balance == BigInt(0)){
                     this.ledgerCache.splice(targetIndex,1);
                 } else {
-                    this.ledgerCache[targetIndex] = ledger;
+                    Copy(this.ledgerCache[targetIndex],ledger);
                 }
             } else {
-                this.ledgerCache.push(ledger);
+                this.ledgerCache.push(Object.assign(ledger));
             }
         }
     }
 
     public buildTree(newchains?:ChainInfo[],parentRoot?:string):TreeNode{
-        this.tree = new MerkleTree();
+        this.tree = MerkleTree.createNewTree();
         const sorted:Array<BridgeLedger> = sortArray(this.ledgerCache,{
             by:["ledgerid"],
             order:"asc"
@@ -117,7 +121,8 @@ export default class BridgeStorage {
 
     public getLedgers():BridgeLedger[]{
         let clone = new Array<BridgeLedger>();
-        return Object.assign(clone,this.ledgerCache);
+        clone = Copy(clone,this.ledgerCache);
+        return clone;
     }
 
     public getMerkleProof(ledger:BridgeLedger):Array<string> {
@@ -142,7 +147,7 @@ export default class BridgeStorage {
                 Buffer.from(chain.chainName),
                 Buffer.from(chain.chainId),
                 Buffer.from(BigInt(chain.beginBlockNum).toString(16),'hex'),
-                Buffer.from(BigInt(chain.endBlockNum).toString(16),'hex'),
+                Buffer.from(BigInt(chain.lockedBlockNum).toString(16),'hex'),
             ]);
             encode = Buffer.concat([encode,chainBuff]);
         });

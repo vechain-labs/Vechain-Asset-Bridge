@@ -37,6 +37,7 @@
     "level": "^7.0.0",
     "merkle-patricia-tree": "^4.2.0",
     "myvetools": "^1.5.0",
+    "object-copy": "^0.1.0",
     "oclif": "^1.18.1",
     "path": "^0.12.7",
     "sleep": "^6.3.0",

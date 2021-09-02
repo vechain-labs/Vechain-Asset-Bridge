@@ -8,6 +8,7 @@ export type SwapTx = {
     account:string;
     token:string;
     amount:bigint;
+    reward:bigint;
     timestamp:number;
     type:"swap"|"claim"
 }

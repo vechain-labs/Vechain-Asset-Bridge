@@ -264,8 +264,18 @@ export class E2VBridgeHeadTestCase{
             parentMerkleRoot:"0x0000000000000000000000000000000000000000000000000000000000000000",
             merkleRoot:"",
             chains:[
-                {chainName:this.config.ethereum.chainName,chainId:this.config.ethereum.chainId,beginBlockNum:100,endBlockNum:bestBlock},
-                {chainName:this.config.vechain.chainName,chainId:this.config.vechain.chainId,beginBlockNum:1000,endBlockNum:bestBlock}
+                {
+                    chainName:this.config.ethereum.chainName,
+                    chainId:this.config.ethereum.chainId,
+                    beginBlockNum:100,
+                    lockedBlockNum:100,
+                    endBlockNum:bestBlock},
+                {
+                    chainName:this.config.vechain.chainName,
+                    chainId:this.config.vechain.chainId,
+                    beginBlockNum:1000,
+                    lockedBlockNum:1000,
+                    endBlockNum:bestBlock}
             ]
         }
 
@@ -352,8 +362,18 @@ export class E2VBridgeHeadTestCase{
             parentMerkleRoot:"0x0000000000000000000000000000000000000000000000000000000000000000",
             merkleRoot:"",
             chains:[
-                {chainName:this.config.ethereum.chainName,chainId:this.config.ethereum.chainId,beginBlockNum:100,endBlockNum:bestBlock},
-                {chainName:this.config.vechain.chainName,chainId:this.config.vechain.chainId,beginBlockNum:1000,endBlockNum:bestBlock}
+                {
+                    chainName:this.config.ethereum.chainName,
+                    chainId:this.config.ethereum.chainId,
+                    beginBlockNum:100,
+                    lockedBlockNum:100,
+                    endBlockNum:bestBlock},
+                {
+                    chainName:this.config.vechain.chainName,
+                    chainId:this.config.vechain.chainId,
+                    beginBlockNum:1000,
+                    lockedBlockNum:1000,
+                    endBlockNum:bestBlock}
             ]
         }
 

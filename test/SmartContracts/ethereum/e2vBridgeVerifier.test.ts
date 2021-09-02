@@ -515,6 +515,7 @@ export class E2VBridgeVerifierTestCase{
             account:this.wallet.list[4].address,
             token:this.config.ethereum.wEth,
             amount:BigInt(amount),
+            reward:BigInt(0),
             timestamp:(await this.web3.eth.getBlock(receipt.blockNumber)).timestamp as number,
             type:"swap"
         }
@@ -535,6 +536,7 @@ export class E2VBridgeVerifierTestCase{
             account:this.wallet.list[4].address,
             token:this.config.ethereum.contracts.wVet,
             amount:BigInt(amount),
+            reward:BigInt(0),
             timestamp:(new Date()).getTime(),
             type:"swap"
         }
@@ -548,8 +550,18 @@ export class E2VBridgeVerifierTestCase{
             parentMerkleRoot:"0x0000000000000000000000000000000000000000000000000000000000000000",
             merkleRoot:"0x0000000000000000000000000000000000000000000000000000000000000000",
             chains:[
-                {chainName:this.config.vechain.chainName,chainId:this.config.vechain.chainId,beginBlockNum:begin,endBlockNum:end},
-                {chainName:this.config.ethereum.chainName,chainId:this.config.ethereum.chainId,beginBlockNum:begin,endBlockNum:end}
+                {
+                    chainName:this.config.vechain.chainName,
+                    chainId:this.config.vechain.chainId,
+                    beginBlockNum:begin,
+                    lockedBlockNum:begin,
+                    endBlockNum:end},
+                {
+                    chainName:this.config.ethereum.chainName,
+                    chainId:this.config.ethereum.chainId,
+                    beginBlockNum:begin,
+                    lockedBlockNum:begin,
+                    endBlockNum:end}
             ]
         }
 
@@ -593,15 +605,15 @@ describe("E2V verifier test", ()=>{
         await testcase.initWVETToken();
     });
 
-    it('add verifiers', async() => {
-       await testcase.addVerifiers();         
-    });
+    // it('add verifiers', async() => {
+    //    await testcase.addVerifiers();         
+    // });
 
-    it('remove verifiers', async() => {
-        await testcase.removeVerifier();
-    });
+    // it('remove verifiers', async() => {
+    //     await testcase.removeVerifier();
+    // });
 
-    it('update Merkleroot', async() => {
-        await testcase.updateMerkleRoot();
-    });
+    // it('update Merkleroot', async() => {
+    //     await testcase.updateMerkleRoot();
+    // });
 });
