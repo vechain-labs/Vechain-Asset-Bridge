@@ -1,6 +1,6 @@
 import { Column, Entity, PrimaryColumn, PrimaryGeneratedColumn } from "typeorm";
-import { simpleJSON } from "../../../utils/extensions/transformers";
-import { ChainInfo } from "../../../utils/types/bridgeSnapshoot";
+import { simpleJSON } from "../../../../common/utils/extensions/transformers";
+import { ChainInfo } from "../../../../common/utils/types/bridgeSnapshoot";
 
 @Entity("snapshoot")
 export class SnapshootEntity{

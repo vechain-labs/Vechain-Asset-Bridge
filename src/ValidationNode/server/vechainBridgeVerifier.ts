@@ -1,12 +1,13 @@
 import { Framework } from "@vechain/connex-framework";
 import { Contract } from "myvetools";
-import { ActionData } from "../utils/components/actionResult";
+import { ActionData } from "../../common/utils/components/actionResult";
 import path from "path";
 import { compileContract } from "myvetools/dist/utils";
-import { Proposal } from "../utils/types/proposal";
-import { Transaction } from "thor-devkit";
-import { ThorDevKitEx } from "../utils/extensions/thorDevkitExten";
+import { Proposal } from "../../common/utils/types/proposal";
+import { keccak256, Transaction } from "thor-devkit";
+import { ThorDevKitEx } from "../../common/utils/extensions/thorDevkitExten";
 import { SimpleWallet } from "@vechain/connex-driver";
+import { ZeroRoot } from "../../common/utils/types/bridgeSnapshoot";
 var sleep = require('sleep');
 
 export class VeChainBridgeVerifiter {
@@ -75,7 +76,11 @@ export class VeChainBridgeVerifiter {
         let result = new ActionData<string>();
 
         try {
-            const sign = await this.wallet.list[0].sign(Buffer.from(lastRoot.substr(2),"hex"));
+            const msgHash = this.signEncodePacked("lockBridge",lastRoot);
+            const sign = await this.wallet.list[0].sign(msgHash);
+
+            console.info(`signer ${this.wallet.list[0].address} sign: ${sign.toString('hex')}`);
+
             const clause = this.v2eVerifiter.send("lockBridge",0,lastRoot,sign);
             const txrep = await this.connex.vendor.sign("tx",[clause])
                 .signer(this.wallet.list[0].address)
@@ -91,7 +96,8 @@ export class VeChainBridgeVerifiter {
         let result = new ActionData<string>();
 
         try {
-            const sign = await this.wallet.list[0].sign(Buffer.from(newRoot.substr(2),"hex"));
+            const msgHash = this.signEncodePacked("updateBridgeMerkleRoot",newRoot);
+            const sign = await this.wallet.list[0].sign(msgHash);
             const clause = this.v2eVerifiter.send("updateBridgeMerkleRoot",0,lastRoot,newRoot,sign);
             const txrep = await this.connex.vendor.sign("tx",[clause])
                 .signer(this.wallet.list[0].address)
@@ -103,8 +109,8 @@ export class VeChainBridgeVerifiter {
         return result;
     }
 
-    public async confirmTx(txid:string):Promise<ActionData<"reverted"|"confirmed"|"timeout">>{
-        let result = new ActionData<"reverted"|"confirmed"|"timeout">();
+    public async confirmTx(txid:string):Promise<ActionData<"reverted"|"confirmed"|"expired">>{
+        let result = new ActionData<"reverted"|"confirmed"|"expired">();
         const blockRefNum = this.connex.thor.status.head.number;
         while(true){
             const bestBlock = this.connex.thor.status.head.number;
@@ -113,6 +119,7 @@ export class VeChainBridgeVerifiter {
                 if(receipt != null){
                     if(receipt.reverted){
                         result.data = "reverted";
+                        console.info(`transaction ${txid} reverted`);
                         break;
                     }
                     if(bestBlock - receipt.meta.blockNumber >= this.config.vechain.confirmHeight){
@@ -123,7 +130,7 @@ export class VeChainBridgeVerifiter {
                     }
                 } else {
                     if(bestBlock - blockRefNum > this.config.vechain.expiration){
-                        result.data = "timeout";
+                        result.data = "expired";
                         break;
                     }
                 }
@@ -139,8 +146,17 @@ export class VeChainBridgeVerifiter {
 
     private initV2eVerifiter(){
         const filePath = path.join(this.env.contractdir,"/vechainthor/Contract_V2EBridgeVerifier.sol");
-        const abi = JSON.parse(compileContract(filePath, 'V2EBridgeVerifier', 'abi'));
+        const abi = JSON.parse(compileContract(filePath, 'V2EBridgeVerifier', 'abi',[this.env.contractdir]));
         this.v2eVerifiter = new Contract({abi:abi,connex:this.connex,address:this.config.vechain.contracts.v2eBridgeVerifier});
+    }
+
+    private signEncodePacked(opertion:string,hash:string):Buffer{
+        let hashBuffer = hash != ZeroRoot() ? Buffer.from(hash.substring(2),'hex') : Buffer.alloc(32);
+        let encode = Buffer.concat([
+            Buffer.from(opertion),
+            hashBuffer
+        ]);
+        return keccak256(encode);
     }
 
     private env:any;

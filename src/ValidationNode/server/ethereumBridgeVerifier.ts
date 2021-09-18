@@ -1,9 +1,10 @@
 import Web3 from "web3";
-import { ActionData } from "../utils/components/actionResult";
+import { ActionData } from "../../common/utils/components/actionResult";
 import {Contract as EthContract} from 'web3-eth-contract';
 import path from "path";
 import { compileContract } from "myvetools/dist/utils";
 import { SimpleWallet } from "@vechain/connex-driver";
+var sleep = require('sleep');
 
 export class EthereumBridgeVerifier {
     constructor(env:any){
@@ -69,7 +70,6 @@ export class EthereumBridgeVerifier {
             const expirnum = this.config.ethereum.expiration as number;
             const gasprice = await this.web3.eth.getGasPrice();
             const gas = await this.e2vBridgeVerifier.methods.lockBridge(lastRoot,sigs,blockRef,expirnum).estimateGas();
-            
 
             const receipt = await this.e2vBridgeVerifier.methods.lockBridge(lastRoot,sigs,blockRef,expirnum).send({
                 from:this.wallet.list[0].address,
@@ -110,17 +110,36 @@ export class EthereumBridgeVerifier {
         while(true){
             const bestBlock = await this.web3.eth.getBlockNumber();
             try {
-                
+                const receipt = await this.web3.eth.getTransactionReceipt(txhash);
+                if(receipt != null){
+                    if(receipt.status == false){
+                        result.data = "reverted";
+                        break;
+                    }
+                    if(bestBlock - receipt.blockNumber >= this.config.vechain.confirmHeight){
+                        result.data = "confirmed";
+                        break;
+                    } else {
+                        continue;
+                    }
+                } else {
+                    if(bestBlock - blockRef > this.config.ethereum.expiration){
+                        result.data = "timeout";
+                        break;
+                    }
+                }
             } catch (error) {
-                
+                result.error = error;
+                break;
             }
+            sleep.sleep(10);
         }
         return result;
     }
 
     private initE2VBridgeVerifier(){
         const filePath = path.join(this.env.contractdir,"/ethereum/Contract_E2VBridgeVerifier.sol");
-        const abi = JSON.parse(compileContract(filePath,"E2VBridgeVerifier","abi"));
+        const abi = JSON.parse(compileContract(filePath,"E2VBridgeVerifier","abi",[this.env.contractdir]));
         this.e2vBridgeVerifier = new this.web3.eth.Contract(abi,this.config.ethereum.contracts.e2vBridgeVerifier);
     }
 

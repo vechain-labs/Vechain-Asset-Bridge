@@ -25,7 +25,7 @@ export function ledgerHash(ledger:BridgeLedger):string{
     return '0x' + keccak256(ledgerEncodePacked(ledger)).toString('hex');
 }
 
-export function ledgerID(chainName:string,chainId:string,token:string,account:string,):string{
+export function ledgerID(chainName:string,chainId:string,token:string,account:string):string{
     let encode = Buffer.concat([
         Buffer.from(chainName),
         Buffer.from(chainId),

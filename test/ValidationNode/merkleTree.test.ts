@@ -1,5 +1,5 @@
 import assert from "assert";
-import MerkleTree from "../../src/ValidationNode/utils/merkleTree";
+import MerkleTree from "../../src/common/utils/merkleTree";
 
 describe('Merkle Tree',() =>{
     let data = [

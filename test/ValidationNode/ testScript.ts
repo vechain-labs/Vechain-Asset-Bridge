@@ -1,14 +1,18 @@
-import { SimpleWallet } from "@vechain/connex-driver";
+import { Driver, SimpleNet, SimpleWallet } from "@vechain/connex-driver";
+import { Framework } from "@vechain/connex-framework";
+import path from "path";
 import { keccak256 } from "thor-devkit";
 import BridgeStorage from "../../src/ValidationNode/server/bridgeStorage";
-import { BridgeSnapshoot, ZeroRoot } from "../../src/ValidationNode/utils/types/bridgeSnapshoot";
-import { tokenid, TokenInfo } from "../../src/ValidationNode/utils/types/tokenInfo";
+import { VeChainBridgeHead } from "../../src/ValidationNode/server/vechainBridgeHead";
+import { BridgeSnapshoot, ZeroRoot } from "../../src/common/utils/types/bridgeSnapshoot";
+import { SwapTx } from "../../src/common/utils/types/swapTx";
+import { tokenid, TokenInfo } from "../../src/common/utils/types/tokenInfo";
 
 let root = ZeroRoot();
-root = "0x80e35de0e437ba03f342ff74280ea19cebc5e2388e59cbf9063373017cbce4e0";
+root = "0x6956f1e4b4036e2589b10871daf80818d6a384fac67f360b93b3c71d2e42a85d";
 const privatekey = "0x2dd2c5b5d65913214783a6bd5679d8c6ef29ca9f2e2eae98b4add061d0b85ea0";
 const signEncodePacked = function(opertion:string,hash:string){
-    let hashBuffer = hash != ZeroRoot() ? Buffer.from(hash.substr(2),'hex') : Buffer.alloc(32);
+    let hashBuffer = hash != ZeroRoot() ? Buffer.from(hash.substring(2),'hex') : Buffer.alloc(32);
     let encode = Buffer.concat([
         Buffer.from(opertion),
         hashBuffer
@@ -18,6 +22,8 @@ const signEncodePacked = function(opertion:string,hash:string){
 
 let wallet = new SimpleWallet();
 wallet.import(privatekey);
+
+const config = require("./test.config.json");
 
 wallet.list[0].sign(signEncodePacked("lockBridge",root)).then(value =>{
     // console.log('0x' + value.toString('hex'))
@@ -32,7 +38,8 @@ const initTokens = function() {
             tokenid:"",
             chainName:"vechain",
             chainId:"0xf6",
-            tokenAddr:"0x1ffe6f8e48f66163899c116ac15238d6bd4ba4e6",
+            tokenSymbol:"VVET",
+            tokenAddr:config.vechain.contracts.vVet,
             tokeType:"1",
             targetToken:""
         },
@@ -40,7 +47,8 @@ const initTokens = function() {
             tokenid:"",
             chainName:"vechain",
             chainId:"0xf6",
-            tokenAddr:"0xb832c81f29ba1c011b5109cf3aa38f8b2d64cfba",
+            tokenSymbol:"VETH",
+            tokenAddr:config.vechain.contracts.vEth,
             tokeType:"2",
             targetToken:""
         },
@@ -48,18 +56,20 @@ const initTokens = function() {
             tokenid:"",
             chainName:"ethereum",
             chainId:"1337",
-            tokenAddr:"0x5F2D03eBf427284bcf50C75818ee84a57bD295cD",
+            tokenSymbol:"WVET",
+            tokenAddr:config.ethereum.contracts.wVet,
+            tokeType:"2",
+            targetToken:""
+        },
+        {
+            tokenid:"",
+            chainName:"ethereum",
+            chainId:"1337",
+            tokenSymbol:"WETH",
+            tokenAddr:config.ethereum.contracts.wEth,
             tokeType:"1",
             targetToken:""
-        },
-        {
-            tokenid:"",
-            chainName:"ethereum",
-            chainId:"1337",
-            tokenAddr:"0xf94Ef3458890757aA5686B95eabe577b3608F030",
-            tokeType:"2",
-            targetToken:""
-        },
+        }
     ]
 
     for(let token of tokens){
@@ -93,47 +103,78 @@ const genesisSN = {
 }
 
 const parentSN = {
-    parentMerkleRoot:"0x0000000000000000000000000000000000000000000000000000000000000000",
-    merkleRoot:"0x80e35de0e437ba03f342ff74280ea19cebc5e2388e59cbf9063373017cbce4e0",
+    parentMerkleRoot:"0xa20fa93c20ca1f796eacc29d43a16e553e90c16d372f7f8ffede55439d0376c5",
+    merkleRoot:"0x6956f1e4b4036e2589b10871daf80818d6a384fac67f360b93b3c71d2e42a85d",
     chains:[
         {
             chainName:"vechain",
             chainId:"0xf6",
-            lockedBlockNum:415748,
-            beginBlockNum:414970,
-            endBlockNum:415765},
+            lockedBlockNum:560787,
+            beginBlockNum:560763,
+            endBlockNum:560814},
         {
             chainName:"ethereum",
             chainId:"1337",
-            lockedBlockNum:141338,
-            beginBlockNum:141052,
-            endBlockNum:141342
+            lockedBlockNum:28221,
+            beginBlockNum:28213,
+            endBlockNum:28229
         }
     ]
 }
 
 const sn:BridgeSnapshoot = {
-    parentMerkleRoot:"0x80e35de0e437ba03f342ff74280ea19cebc5e2388e59cbf9063373017cbce4e0",
+    parentMerkleRoot:"0x6956f1e4b4036e2589b10871daf80818d6a384fac67f360b93b3c71d2e42a85d",
     merkleRoot:"0x0000000000000000000000000000000000000000000000000000000000000000",
     chains:[
         {
             chainName:"vechain",
             chainId:"0xf6",
-            lockedBlockNum:415881,
-            beginBlockNum:415765,
-            endBlockNum:415765},
+            lockedBlockNum:561347,
+            beginBlockNum:560814,
+            endBlockNum:561347},
         {
             chainName:"ethereum",
             chainId:"1337",
-            lockedBlockNum:141387,
-            beginBlockNum:141342,
-            endBlockNum:141342
+            lockedBlockNum:28405,
+            beginBlockNum:28229,
+            endBlockNum:28405
         }
     ]
 }
 
+const swapTxs:SwapTx[] = [
+    {
+        chainName:"vechain",
+        chainId:"0xf6",
+        blockNumber:561168,
+        txid:"0x2ccd9bc1a3deb3e1973793477c90198314f2b3a385426b20c1361a0d379acecd",
+        clauseIndex:0,
+        index:0,
+        account:"0x361277D1b27504F36a3b33d3a52d1f8270331b8C",
+        token:"0x58f5152083df2227cfd16229d9aba4d0466564da",
+        amount:BigInt("0x00000000000000000000000000000000000000000000003635c9adc5dea00000"),
+        reward:BigInt(0),
+        timestamp:1631862143,
+        type:"swap"
+    },
+    {
+        chainName:"vechain",
+        chainId:"0xf6",
+        blockNumber:561301,
+        txid:"0xf20458256edc9df1c22f2c29845d206d5cb90f2aa28c1e0273ad9dbae58b664e",
+        clauseIndex:0,
+        index:0,
+        account:"0x361277D1b27504F36a3b33d3a52d1f8270331b8C",
+        token:"0x58f5152083df2227cfd16229d9aba4d0466564da",
+        amount:BigInt("0x00000000000000000000000000000000000000000000006c6b935b8bbd400000"),
+        reward:BigInt(0),
+        timestamp:1631863441,
+        type:"swap"
+    }
+]
+
 let storage = new BridgeStorage(parentSN,tokens,[]);
-storage.updateLedgers([]);
+storage.updateLedgers(swapTxs);
 storage.buildTree(sn.chains,sn.parentMerkleRoot);
 const newRoot = storage.getMerkleRoot();
 
@@ -144,5 +185,5 @@ wallet.list[0].sign(signEncodePacked("updateBridgeMerkleRoot",newRoot)).then(val
 })
 
 
-//0xee2dbd3d2693e373ad2e0adbc6b6f834e714c762c1b7f28fe91c5c65be99a11a
-//364349
+// 0xee2dbd3d2693e373ad2e0adbc6b6f834e714c762c1b7f28fe91c5c65be99a11a
+// 364349

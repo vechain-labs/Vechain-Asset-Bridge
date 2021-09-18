@@ -40,4 +40,8 @@ export module ThorDevKitEx{
         }
         return 0;
     }
+
+    export function Bytes32ToAddress(data:string):string{
+        return '0x' + BigInt(data).toString(16).padStart(40,'0');
+    }
 }

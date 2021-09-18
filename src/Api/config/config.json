@@ -1,0 +1,35 @@
+{
+    "vechain": {
+        "nodeHost": "http://47.57.94.244:8680",
+        "chainName": "vechain",
+        "chainId": "0xf6",
+        "startBlockNum": 363283,
+        "confirmHeight": 12,
+        "expiration": 180,
+        "contracts": {
+            "vVet": "0xffbf21d71875ffa2edd245188b9ac03391683d16",
+            "vEth": "0x5bd9930f22d0dc429fcff81d14a8983c1c1504ff",
+            "v2eBridge": "0x14b6336c44e2582983ab28c14b8fb86777a182ea",
+            "v2eBridgeVerifier": "0x1d029ff683748f5759c90b15ee73aaea0ebd0367"
+        }
+    },
+    "ethereum": {
+        "nodeHost": "http://47.57.94.244:8545",
+        "chainName": "ethereum",
+        "chainId": "1337",
+        "startBlockNum": 123900,
+        "confirmHeight": 6,
+        "expiration": 24,
+        "contracts": {
+            "wEth": "0x9b91fFC67321616Ca4290bb0312e20a7Ac2849c1",
+            "wVet": "0xD0Ff8517E0AfD97D481f4a2bc08169076a77a32a",
+            "e2vBridge": "0xd34E74eC4bF5956dF50aD5457d69f6F0B6431719",
+            "e2vBridgeVerifier": "0x9186B0c039b5393f18F34279c6eCf9d102dEF524"
+        }
+    },
+    "db":{
+        "type":"sqlite",
+        "database":"/Users/moglu/Developer/dataCenter/sqlite/bridge_data/asset_bridge_test.sqlite3",
+        "enableWAL":false
+    }
+}

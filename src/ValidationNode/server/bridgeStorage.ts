@@ -1,10 +1,10 @@
 import { keccak256 } from "thor-devkit";
-import { ActionResult } from "../utils/components/actionResult";
-import MerkleTree, { TreeNode } from "../utils/merkleTree";
-import { BridgeLedger, ledgerHash, ledgerID } from "../utils/types/bridgeLedger";
-import { BridgeSnapshoot, ChainInfo } from "../utils/types/bridgeSnapshoot";
-import { SwapTx } from "../utils/types/swapTx";
-import { findTargetToken, TokenInfo } from "../utils/types/tokenInfo";
+import { ActionResult } from "../../common/utils/components/actionResult";
+import MerkleTree, { TreeNode } from "../../common/utils/merkleTree";
+import { BridgeLedger, ledgerHash, ledgerID } from "../../common/utils/types/bridgeLedger";
+import { BridgeSnapshoot, ChainInfo } from "../../common/utils/types/bridgeSnapshoot";
+import { SwapTx } from "../../common/utils/types/swapTx";
+import { findTargetToken, TokenInfo } from "../../common/utils/types/tokenInfo";
 const sortArray = require('sort-array');
 const Copy = require('object-copy');
 
@@ -22,7 +22,7 @@ export default class BridgeStorage {
         this.tokens = tokenInfo;
         this.tree = MerkleTree.createNewTree();
         if(ledgers != undefined && ledgers.length > 0){
-            Copy(this.ledgerCache,ledgers);
+            this.ledgerCache = this.ledgerCache.concat(ledgers);
         }
     }
 
@@ -121,7 +121,7 @@ export default class BridgeStorage {
 
     public getLedgers():BridgeLedger[]{
         let clone = new Array<BridgeLedger>();
-        clone = Copy(clone,this.ledgerCache);
+        clone = clone.concat(this.ledgerCache);
         return clone;
     }
 

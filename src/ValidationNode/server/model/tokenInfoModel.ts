@@ -1,6 +1,6 @@
-import { getConnection, getRepository } from "typeorm";
-import { ActionData, ActionResult } from "../../utils/components/actionResult";
-import { TokenInfo } from "../../utils/types/tokenInfo";
+import { getRepository } from "typeorm";
+import { ActionData } from "../../../common/utils/components/actionResult";
+import { TokenInfo } from "../../../common/utils/types/tokenInfo";
 import { TokenEntity } from "./entities/tokenInfo.entity";
 
 
@@ -19,6 +19,7 @@ export default class TokenInfoModel {
                     tokenid:entity.tokenid,
                     chainName:entity.chainName,
                     chainId:entity.chainId,
+                    tokenSymbol:entity.tokenSymbol,
                     tokenAddr:entity.tokenAddr,
                     tokeType:entity.tokeType,
                     targetToken:entity.targetToken

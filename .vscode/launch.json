@@ -7,28 +7,8 @@
         {
             "type": "node",
             "request": "launch",
-            "name": "Mocha Testing",
-            "program": "${workspaceFolder}/node_modules/mocha/bin/_mocha",
-            "args": [
-                "-r",
-                "ts-node/register",
-                "--timeout",
-                "999999",
-                "--debug-brk",
-                "--colors",
-                "${workspaceFolder}/test/index.test.ts",
-                "--recursive"
-            ],
-            "console": "integratedTerminal",
-            "internalConsoleOptions": "neverOpen",
-            "protocol": "inspector",
-            "sourceMaps": true
-        },
-        {
-            "type": "node",
-            "request": "launch",
             "name": "Mocha Smart Contract",
-            "program": "${workspaceFolder}/node_modules/mocha/bin/_mocha",
+            "program": "${workspaceFolder}/node_modules/mocha/bin/mocha",
             "args": [
                 "-r",
                 "ts-node/register",
@@ -42,13 +22,14 @@
             "console": "integratedTerminal",
             "internalConsoleOptions": "neverOpen",
             "protocol": "inspector",
-            "sourceMaps": true
+            "sourceMaps": true,
+            "trace": true
         },
         {
             "type": "node",
             "request": "launch",
             "name": "Mocha Validation Node",
-            "program": "${workspaceFolder}/node_modules/mocha/bin/_mocha",
+            "program": "${workspaceFolder}/node_modules/mocha/bin/mocha",
             "args": [
                 "-r",
                 "ts-node/register",
@@ -62,7 +43,29 @@
             "console": "integratedTerminal",
             "internalConsoleOptions": "neverOpen",
             "protocol": "inspector",
-            "sourceMaps": true
+            "sourceMaps": true,
+            "trace": true
+        },
+        {
+            "type": "node",
+            "request": "launch",
+            "name": "Mocha Bridge API Backend",
+            "program": "${workspaceFolder}/node_modules/mocha/bin/mocha",
+            "args": [
+                "-r",
+                "ts-node/register",
+                "--timeout",
+                "999999",
+                "--debug-brk",
+                "--colors",
+                "${workspaceFolder}/test/ApiBackend/index.test.ts",
+                "--recursive"
+            ],
+            "console": "integratedTerminal",
+            "internalConsoleOptions": "neverOpen",
+            "protocol": "inspector",
+            "sourceMaps": true,
+            "trace": true
         }
     ]
 }

@@ -2,7 +2,6 @@
 pragma solidity ^0.8.0;
 
 import "./Interface_TokenExtension.sol";
-import "./Library_SafeMath.sol";
 
 contract BridgeWrappedToken is ITokenExtension{
 
@@ -35,11 +34,11 @@ contract BridgeWrappedToken is ITokenExtension{
                 allowance[_from][msg.sender] >= _amount,
                 "insufficient allowance"
             );
-            allowance[_from][msg.sender] = SafeMath.sub(allowance[_from][msg.sender], _amount);
+            allowance[_from][msg.sender] = allowance[_from][msg.sender] - _amount;
         }
 
-        balanceOf[_from] = SafeMath.sub(balanceOf[_from], _amount);
-        balanceOf[_to] = SafeMath.add(balanceOf[_to], _amount);
+        balanceOf[_from] = balanceOf[_from] - _amount;
+        balanceOf[_to] = balanceOf[_to] + _amount;
 
         emit Transfer(_from, _to, _amount);
         return true;
@@ -52,8 +51,8 @@ contract BridgeWrappedToken is ITokenExtension{
     }
 
     function mint(uint256 _amount) external override onlyBridge returns(bool){
-        balanceOf[msg.sender] = SafeMath.add(balanceOf[msg.sender], _amount);
-        totalSupply = SafeMath.add(totalSupply, _amount);
+        balanceOf[msg.sender] = balanceOf[msg.sender] + _amount;
+        totalSupply = totalSupply + _amount;
         emit Mint(_amount);
         emit Transfer(address(this),msg.sender,_amount);
         return true;
@@ -62,8 +61,8 @@ contract BridgeWrappedToken is ITokenExtension{
     function burn(uint256 _amount) external override onlyBridge returns(bool){
         require(balanceOf[msg.sender] >= _amount, "insufficient balance");
         require(totalSupply >= _amount, "insufficient total balance");
-        balanceOf[msg.sender] = SafeMath.sub(balanceOf[msg.sender], _amount);
-        totalSupply = SafeMath.sub(totalSupply, _amount);
+        balanceOf[msg.sender] = balanceOf[msg.sender] - _amount;
+        totalSupply = totalSupply - _amount;
         emit Transfer(msg.sender,address(this),_amount);
         emit Burn(_amount);
         return true;

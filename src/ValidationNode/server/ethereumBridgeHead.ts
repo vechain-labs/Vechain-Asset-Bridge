@@ -2,10 +2,10 @@ import { compileContract } from "myvetools/dist/utils";
 import path from "path";
 import Web3 from "web3";
 import Web3Eth from 'web3-eth';
-import { ActionData } from "../utils/components/actionResult";
-import { IBridgeHead } from "../utils/iBridgeHead";
-import { BridgeSnapshoot, ZeroRoot } from "../utils/types/bridgeSnapshoot";
-import { SwapTx } from "../utils/types/swapTx"; 
+import { ActionData } from "../../common/utils/components/actionResult";
+import { IBridgeHead } from "../../common/utils/iBridgeHead";
+import { BridgeSnapshoot, ZeroRoot } from "../../common/utils/types/bridgeSnapshoot";
+import { SwapTx } from "../../common/utils/types/swapTx"; 
 import {Contract as EthContract, EventData} from 'web3-eth-contract';
 const sortArray = require('sort-array');
 
@@ -136,16 +136,41 @@ export class EthereumBridgeHead implements IBridgeHead{
         return result;
     }
 
+    public async getLastLockedBlock():Promise<ActionData<{blocknum:number,root:string}>>{
+        let result = new ActionData<{blocknum:number,root:string}>();
+
+        try {
+            const begin = await this.web3.eth.getBlockNumber();
+            const end = this.config.ethereum.startBlockNum;
+
+            for(let blockNum = end;blockNum >= begin;){
+                let from = blockNum - this.scanBlockStep >= begin ? blockNum - this.scanBlockStep : begin;
+                let to = blockNum;
+
+                const evets = await this.e2vBridge.getPastEvents("BridgeLockChange",{fromBlock:from,toBlock:to});
+                if(evets.length == 0){
+                    blockNum = from - 1;
+                    continue;
+                }
+                const sorted:Array<EventData> = sortArray(evets,[
+                    {by:"blockNumber",order:"desc"},
+                    {by:"transactionIndex",order:"desc"}]);
+                const ev = sorted[0];
+                result.data = {blocknum:ev.blockNumber,root:ev.raw.topics[1]}
+                break;
+            }
+        } catch (error) {
+            result.error = error;
+        }
+
+        return result;
+    }
+
     public async scanTxs(begin:number,end:number): Promise<ActionData<SwapTx[]>> {
 
         let result = new ActionData<SwapTx[]>();
         result.data = new Array<SwapTx>();
-
-        // DEBUG
-        return result;
-
         let blockCache:Map<number,Web3Eth.BlockTransactionString> = new Map();
-        
 
         try {
             for(let block = begin; block <= end;){
@@ -169,8 +194,8 @@ export class EthereumBridgeHead implements IBridgeHead{
                         index:swapEvent.logIndex,
                         account:swapEvent.raw.topics[3],
                         token:swapEvent.raw.topics[1],
-                        amount:BigInt(swapEvent.raw.data),
-                        reward:BigInt(0),
+                        amount:BigInt('0x' + swapEvent.raw.data.substring(2,66)),
+                        reward:BigInt('0x' + swapEvent.raw.data.substring(66)),
                         timestamp:blockCache.get(swapEvent.blockNumber)!.timestamp as number,
                         type:"swap"
                     };

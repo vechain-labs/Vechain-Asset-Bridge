@@ -3,10 +3,11 @@ import { Contract } from "myvetools";
 import { compileContract } from "myvetools/dist/utils";
 import path from "path";
 import { abi } from "thor-devkit";
-import { ActionData, PromiseActionResult } from "../utils/components/actionResult";
-import { IBridgeHead } from "../utils/iBridgeHead";
-import { BridgeSnapshoot, ZeroRoot } from "../utils/types/bridgeSnapshoot";
-import { SwapTx } from "../utils/types/swapTx";
+import { ActionData, PromiseActionResult } from "../../common/utils/components/actionResult";
+import { ThorDevKitEx } from "../../common/utils/extensions/thorDevkitExten";
+import { IBridgeHead } from "../../common/utils/iBridgeHead";
+import { BridgeSnapshoot, ZeroRoot } from "../../common/utils/types/bridgeSnapshoot";
+import { SwapTx } from "../../common/utils/types/swapTx";
 
 export class VeChainBridgeHead implements IBridgeHead {
 
@@ -175,6 +176,35 @@ export class VeChainBridgeHead implements IBridgeHead {
         return result;
     }
 
+    public async getLastLockedBlock():Promise<ActionData<{txid:string,blocknum:number,root:string}>>{
+        let result = new ActionData<{txid:string,blocknum:number,root:string}>();
+
+        let filter = this.connex.thor.filter("event",[{
+            address:this.config.vechain.contracts.v2eBridge,
+            topic0:this.BridgeLockChangeEvent.signature,
+            topic2:"0x0000000000000000000000000000000000000000000000000000000000000001"
+        }]).order("desc"); 
+
+        let begin = this.config.vechain.startBlockNum;
+        let end = this.connex.thor.status.head.number;
+
+        for(let blockNum = end;blockNum >= begin;){
+            let from = blockNum - this.scanBlockStep >= begin ? blockNum - this.scanBlockStep : begin;
+            let to = blockNum;
+            const events = await filter.range({unit:"block",from:from,to:to}).apply(0,1);
+            if(events.length == 1){
+                let ev = events[0];
+                result.data = {txid:ev.meta.txID,blocknum:ev.meta.blockNumber,root:ev.topics[1]};
+                break;
+            } else {
+                blockNum = from - 1;
+                continue;
+            }
+        }
+
+        return result;
+    }
+
     public async scanTxs(begin:number,end:number): Promise<ActionData<SwapTx[]>> {
         let result = new ActionData<SwapTx[]>();
         result.data = new Array<SwapTx>();
@@ -212,9 +242,9 @@ export class VeChainBridgeHead implements IBridgeHead {
                             txid:event.meta.txID,
                             clauseIndex:clauseIndex,
                             index:eventIndex,
-                            account:event.topics[3],
-                            token:event.topics[1],
-                            amount:BigInt('0x' + event.data.substring(2,64)),
+                            account:ThorDevKitEx.Bytes32ToAddress(event.topics[3]),
+                            token:ThorDevKitEx.Bytes32ToAddress(event.topics[1]),
+                            amount:BigInt('0x' + event.data.substring(2,66)),
                             reward:BigInt('0x' + event.data.substring(66)),
                             timestamp:event.meta.blockTimestamp,
                             type:"swap"
@@ -229,8 +259,8 @@ export class VeChainBridgeHead implements IBridgeHead {
                             txid:event.meta.txID,
                             clauseIndex:clauseIndex,
                             index:eventIndex,
-                            account:event.topics[2],
-                            token:event.topics[1],
+                            account:ThorDevKitEx.Bytes32ToAddress(event.topics[2]),
+                            token:ThorDevKitEx.Bytes32ToAddress(event.topics[1]),
                             amount:BigInt(event.data),
                             reward:BigInt(0),
                             timestamp:event.meta.blockTimestamp,

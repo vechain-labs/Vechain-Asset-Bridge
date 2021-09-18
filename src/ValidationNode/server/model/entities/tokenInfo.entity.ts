@@ -12,6 +12,9 @@ export class TokenEntity{
     @Column({name:"chainid"})
     public chainId!:string;
 
+    @Column({name:"tokensymbol"})
+    public tokenSymbol!:string;
+
     @Column({name:"tokenaddr"})
     public tokenAddr!:string;
 

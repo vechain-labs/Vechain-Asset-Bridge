@@ -4,6 +4,7 @@ export type TokenInfo = {
     tokenid:string;
     chainName:string;
     chainId:string;
+    tokenSymbol:string;
     tokenAddr:string;
     tokeType:string;
     targetToken:string;

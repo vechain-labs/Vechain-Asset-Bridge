@@ -6,8 +6,8 @@ import { Contract } from "web3-eth-contract";
 import * as Devkit from 'thor-devkit';
 import assert from 'assert';
 import { compileContract } from "myvetools/dist/utils";
-import { BridgeLedger, ledgerHash, ledgerID } from "../../../src/ValidationNode/utils/types/bridgeLedger";
-import { BridgeSnapshoot } from "../../../src/ValidationNode/utils/types/bridgeSnapshoot";
+import { BridgeLedger, ledgerHash, ledgerID } from "../../../src/common/utils/types/bridgeLedger";
+import { BridgeSnapshoot } from "../../../src/common/utils/types/bridgeSnapshoot";
 import BridgeStorage from "../../../src/ValidationNode/server/bridgeStorage";
 
 export class E2VBridgeHeadTestCase{
@@ -279,7 +279,7 @@ export class E2VBridgeHeadTestCase{
             ]
         }
 
-        let storage:BridgeStorage = new BridgeStorage(genesisSnapshoot,ledgers);
+        let storage:BridgeStorage = new BridgeStorage(genesisSnapshoot,[],ledgers);
         storage.buildTree();
 
         let newRoot = storage.getMerkleRoot();
@@ -377,7 +377,7 @@ export class E2VBridgeHeadTestCase{
             ]
         }
 
-        let storage:BridgeStorage = new BridgeStorage(genesisSnapshoot,ledgers);
+        let storage:BridgeStorage = new BridgeStorage(genesisSnapshoot,[],ledgers);
         storage.buildTree();
 
         let newRoot = storage.getMerkleRoot();

@@ -137,6 +137,7 @@ contract E2VBridgeVerifier is BridgeVerifierControl{
             if (i + 1 >= limit) {
                 bri.lock(_lastRoot);
                 lockBridgeProposals[_lastRoot] == true;
+                unlockBridgeProposals[_lastRoot] == false;
                 emit ExecOperation(_lastRoot);
                 emit LockBridge(_lastRoot);
                 break;
@@ -174,6 +175,7 @@ contract E2VBridgeVerifier is BridgeVerifierControl{
             if (i + 1 >= limit) {
                 bri.lock(_lastRoot);
                 unlockBridgeProposals[_lastRoot] == true;
+                lockBridgeProposals[_lastRoot] == false;
                 emit ExecOperation(_lastRoot);
                 emit UnlockBridge(_lastRoot);
                 break;

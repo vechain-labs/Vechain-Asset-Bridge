@@ -1,6 +1,6 @@
 import { getManager, getRepository } from "typeorm";
-import { ActionData, ActionResult } from "../../utils/components/actionResult";
-import { BridgeLedger } from "../../utils/types/bridgeLedger";
+import { ActionData, ActionResult } from "../../../common/utils/components/actionResult";
+import { BridgeLedger } from "../../../common/utils/types/bridgeLedger";
 import { LedgerEntity } from "./entities/ledger.entity";
 
 export default class LedgerModel {

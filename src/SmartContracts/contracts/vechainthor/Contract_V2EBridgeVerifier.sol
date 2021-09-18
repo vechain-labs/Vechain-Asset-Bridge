@@ -163,6 +163,12 @@ contract V2EBridgeVerifier is BridgeVerifierControl {
         if (prop.signatures.length >= prop.quorum) {
             bri.lock(_lastRoot);
             prop.executed = true;
+
+            Proposal storage unlockprop = unlockBridgeProposals[_lastRoot];
+            unlockprop.executed = false;
+            unlockprop.signatures = new bytes[](0);
+            unlockprop.value = 0;
+
             emit ExecOpertion(_lastRoot, prop.signatures);
         }
         return true;
@@ -202,6 +208,12 @@ contract V2EBridgeVerifier is BridgeVerifierControl {
         if (prop.signatures.length >= prop.quorum) {
             bri.unlock(_lastRoot);
             prop.executed = true;
+
+            Proposal storage lockprop = lockBridgeProposals[_lastRoot];
+            lockprop.executed = false;
+            lockprop.signatures = new bytes[](0);
+            lockprop.value = 0;
+
             emit ExecOpertion(_lastRoot, prop.signatures);
         }
         return true;

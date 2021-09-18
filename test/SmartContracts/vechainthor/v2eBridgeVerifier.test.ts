@@ -7,9 +7,9 @@ import * as Devkit from 'thor-devkit';
 import { compileContract } from "myvetools/dist/utils";
 import assert from 'assert';
 import { getReceipt } from "myvetools/dist/connexUtils";
-import { tokenid, TokenInfo } from "../../../src/ValidationNode/utils/types/tokenInfo";
-import { BridgeSnapshoot, ZeroRoot } from "../../../src/ValidationNode/utils/types/bridgeSnapshoot";
-import { SwapTx } from "../../../src/ValidationNode/utils/types/swapTx";
+import { tokenid, TokenInfo } from "../../../src/common/utils/types/tokenInfo";
+import { BridgeSnapshoot, ZeroRoot } from "../../../src/common/utils/types/bridgeSnapshoot";
+import { SwapTx } from "../../../src/common/utils/types/swapTx";
 import BridgeStorage from "../../../src/ValidationNode/server/bridgeStorage";
 import { keccak256 } from "thor-devkit";
 
@@ -384,6 +384,7 @@ export class V2EBridgeVerifierTestCase {
                 tokenid:"",
                 chainName:this.config.vechain.chainName,
                 chainId:this.config.vechain.chainId,
+                tokenSymbol:"VVET",
                 tokenAddr:this.config.vechain.contracts.vVet,
                 tokeType:"1",
                 targetToken:""
@@ -392,6 +393,7 @@ export class V2EBridgeVerifierTestCase {
                 tokenid:"",
                 chainName:this.config.vechain.chainName,
                 chainId:this.config.vechain.chainId,
+                tokenSymbol:"VETH",
                 tokenAddr:this.config.vechain.contracts.vEth,
                 tokeType:"2",
                 targetToken:""
@@ -400,6 +402,7 @@ export class V2EBridgeVerifierTestCase {
                 tokenid:"",
                 chainName:this.config.ethereum.chainName,
                 chainId:this.config.ethereum.chainId,
+                tokenSymbol:"WETH",
                 tokenAddr:this.config.ethereum.contracts.wEth,
                 tokeType:"1",
                 targetToken:""
@@ -408,6 +411,7 @@ export class V2EBridgeVerifierTestCase {
                 tokenid:"",
                 chainName:this.config.ethereum.chainName,
                 chainId:this.config.ethereum.chainId,
+                tokenSymbol:"WVET",
                 tokenAddr:this.config.ethereum.contracts.wVet,
                 tokeType:"2",
                 targetToken:""
@@ -496,8 +500,8 @@ export class V2EBridgeVerifierTestCase {
             ]
         }
 
-        let storage = new BridgeStorage(sn);
-        storage.updateLedgers(swapTxs,this.tokens);
+        let storage = new BridgeStorage(sn,this.tokens);
+        storage.updateLedgers(swapTxs);
         storage.buildTree();
         result = storage.getMerkleRoot();
         return result;

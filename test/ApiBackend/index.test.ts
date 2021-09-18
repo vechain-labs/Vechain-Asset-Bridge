@@ -1,0 +1,1 @@
+require('./vechainSnapshootScan.test');

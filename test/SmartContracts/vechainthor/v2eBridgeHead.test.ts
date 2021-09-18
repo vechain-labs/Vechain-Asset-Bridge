@@ -7,8 +7,8 @@ import * as Devkit from 'thor-devkit';
 import { compileContract } from "myvetools/dist/utils";
 import assert from 'assert';
 import { getReceipt } from "myvetools/dist/connexUtils";
-import { BridgeLedger, ledgerHash, ledgerID } from "../../../src/ValidationNode/utils/types/bridgeLedger";
-import { BridgeSnapshoot, ZeroRoot } from "../../../src/ValidationNode/utils/types/bridgeSnapshoot";
+import { BridgeLedger, ledgerHash, ledgerID } from "../../../src/common/utils/types/bridgeLedger";
+import { BridgeSnapshoot, ZeroRoot } from "../../../src/common/utils/types/bridgeSnapshoot";
 import BridgeStorage from "../../../src/ValidationNode/server/bridgeStorage";
 import { keccak256 } from "thor-devkit";
 
@@ -238,12 +238,22 @@ export class V2EBridgeHeadTestCase {
             parentMerkleRoot:ZeroRoot(),
             merkleRoot:"",
             chains:[
-                {chainName:this.config.ethereum.chainName,chainId:this.config.ethereum.chainId,beginBlockNum:100,endBlockNum:150},
-                {chainName:this.config.vechain.chainName,chainId:this.config.vechain.chainId,beginBlockNum:1000,endBlockNum:3000}
+                {
+                    chainName:this.config.ethereum.chainName,
+                    chainId:this.config.ethereum.chainId,
+                    lockedBlockNum:150,
+                    beginBlockNum:100,
+                    endBlockNum:150},
+                {
+                    chainName:this.config.vechain.chainName,
+                    chainId:this.config.vechain.chainId,
+                    lockedBlockNum:3000,
+                    beginBlockNum:1000,
+                    endBlockNum:3000}
             ]
         }
 
-        let storage:BridgeStorage = new BridgeStorage(genesisSnapshoot,ledgers);
+        let storage:BridgeStorage = new BridgeStorage(genesisSnapshoot,[],ledgers);
         storage.buildTree();
 
         let newRoot = storage.getMerkleRoot();
@@ -327,12 +337,22 @@ export class V2EBridgeHeadTestCase {
             parentMerkleRoot:ZeroRoot(),
             merkleRoot:"",
             chains:[
-                {chainName:this.config.ethereum.chainName,chainId:this.config.ethereum.chainId,beginBlockNum:100,endBlockNum:this.connex.thor.status.head.number},
-                {chainName:this.config.vechain.chainName,chainId:this.config.vechain.chainId,beginBlockNum:1000,endBlockNum:this.connex.thor.status.head.number}
+                {
+                    chainName:this.config.ethereum.chainName,
+                    chainId:this.config.ethereum.chainId,
+                    lockedBlockNum:this.connex.thor.status.head.number,
+                    beginBlockNum:100,
+                    endBlockNum:this.connex.thor.status.head.number},
+                {
+                    chainName:this.config.vechain.chainName,
+                    chainId:this.config.vechain.chainId,
+                    lockedBlockNum:this.connex.thor.status.head.number,
+                    beginBlockNum:1000,
+                    endBlockNum:this.connex.thor.status.head.number}
             ]
         }
 
-        let storage:BridgeStorage = new BridgeStorage(genesisSnapshoot,ledgers);
+        let storage:BridgeStorage = new BridgeStorage(genesisSnapshoot,[],ledgers);
         storage.buildTree();
 
         let newRoot = storage.getMerkleRoot();
@@ -393,12 +413,22 @@ export class V2EBridgeHeadTestCase {
             parentMerkleRoot:ZeroRoot(),
             merkleRoot:"",
             chains:[
-                {chainName:this.config.ethereum.chainName,chainId:this.config.ethereum.chainId,beginBlockNum:100,endBlockNum:150},
-                {chainName:this.config.vechain.chainName,chainId:this.config.vechain.chainId,beginBlockNum:1000,endBlockNum:3000}
+                {
+                    chainName:this.config.ethereum.chainName,
+                    chainId:this.config.ethereum.chainId,
+                    lockedBlockNum:150,
+                    beginBlockNum:100,
+                    endBlockNum:150},
+                {
+                    chainName:this.config.vechain.chainName,
+                    chainId:this.config.vechain.chainId,
+                    lockedBlockNum:3000,
+                    beginBlockNum:1000,
+                    endBlockNum:3000}
             ]
         }
 
-        let storage:BridgeStorage = new BridgeStorage(genesisSnapshoot,ledgers);
+        let storage:BridgeStorage = new BridgeStorage(genesisSnapshoot,[],ledgers);
         storage.buildTree();
 
         let newRoot = storage.getMerkleRoot();

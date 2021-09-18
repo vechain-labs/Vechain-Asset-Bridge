@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-only
 pragma solidity ^0.8.0;
 
-import "./Library_SafeMath.sol";
 import "./Library_Merkle.sol";
 import "./Interface_Token.sol";
 import "./Interface_TokenExtension.sol";
@@ -15,7 +14,7 @@ interface INativeCoin is IToken {
 contract BridgeHeadControl {
     address public verifier;
     address public governance;
-    uint8 public reward = 0; //Range 0-1000 (0‰ - 100‰)
+    uint16 public reward = 0; //Range 0-1000 (0‰ - 100‰)
 
     mapping(address => uint8) public tokens;
     address public wrappedNativeCoin;
@@ -29,7 +28,7 @@ contract BridgeHeadControl {
     event GovernanceUpdated(address indexed _addr);
     event TokenUpdated(address indexed _token, uint8 indexed _type);
     event GovLockChanged(bool indexed _status);
-    event RewardChanged(uint256 indexed _reward);
+    event RewardChanged(uint16 indexed _reward);
 
     receive() external payable {}
 
@@ -50,10 +49,10 @@ contract BridgeHeadControl {
         emit TokenUpdated(_token, _type);
     }
 
-    function setReward(uint8 _reward) external onlyGovernance {
-        require(reward >= 0 && reward < 1000, "reward range is 0 to 1000");
+    function setReward(uint16 _reward) external onlyGovernance {
+        require(_reward >= 0 && _reward < 1000, "reward range is 0 to 1000");
         reward = _reward;
-        emit RewardChanged(_reward);
+        emit RewardChanged(reward);
     }
 
     function setWrappedNativeCoin(address _native) external onlyGovernance {
@@ -187,7 +186,7 @@ contract BridgeHead is BridgeHeadControl {
         uint256 afterBalance = token.balanceOf(address(this));
 
         require(
-            SafeMath.sub(afterBalance, beforeBlance) == msg.value,
+            afterBalance - beforeBlance == msg.value,
             "transfer balance check faild"
         );
 
@@ -281,15 +280,11 @@ contract BridgeHead is BridgeHeadControl {
         returns (uint256, uint256)
     {
         require(_amountIn >= 1000 || reward == 0, "The amount is too little");
-        uint256 amoutIn = SafeMath.mul(_amountIn, 1000);
+        uint256 amoutIn = _amountIn * 1000;
+        uint256 _amountOut = amoutIn - (_amountIn * reward);
+        _amountOut = _amountOut / 1000;
+        uint256 _reward = _amountIn - _amountOut;
 
-        uint256 _amountOut = SafeMath.sub(
-            amoutIn,
-            SafeMath.mul(_amountIn, reward)
-        );
-
-        _amountOut = SafeMath.div(_amountOut, 1000);
-        uint256 _reward = SafeMath.sub(_amountIn, _amountOut);
         return (_amountOut, _reward);
     }
 
@@ -311,7 +306,7 @@ contract BridgeHead is BridgeHeadControl {
         uint256 afterBalance = token.balanceOf(address(this));
 
         require(
-            SafeMath.sub(afterBalance, beforeBlance) == _amount,
+            afterBalance - beforeBlance == _amount,
             "transfer balance check faild"
         );
     }
@@ -329,7 +324,7 @@ contract BridgeHead is BridgeHeadControl {
         token.transferFrom(msg.sender, address(this), _amount);
         uint256 afterBalance = token.balanceOf(address(this));
         require(
-            SafeMath.sub(afterBalance, beforeBalance) == _amount,
+            afterBalance - beforeBalance == _amount,
             "transferFrom balance check faild"
         );
 
@@ -339,7 +334,7 @@ contract BridgeHead is BridgeHeadControl {
         uint256 afterBurn = token.balanceOf(address(this));
 
         require(
-            SafeMath.sub(beforeBurn, afterBurn) == _amount,
+            beforeBurn - afterBurn == _amount,
             "recovery balance check faild"
         );
     }
@@ -356,7 +351,7 @@ contract BridgeHead is BridgeHeadControl {
         uint256 afterBalance = token.balanceOf(address(this));
 
         require(
-            SafeMath.sub(beforeBalance, afterBalance) == _balance,
+            beforeBalance - afterBalance == _balance,
             "transfer balance check faild"
         );
     }
@@ -372,7 +367,7 @@ contract BridgeHead is BridgeHeadControl {
         token.mint(_balance);
         uint256 aftermint = token.balanceOf(address(this));
         require(
-            SafeMath.sub(aftermint, beforemint) == _balance,
+            aftermint - beforemint == _balance,
             "mint balance check faild"
         );
 
@@ -380,7 +375,7 @@ contract BridgeHead is BridgeHeadControl {
         token.transfer(_recipient, _balance);
         uint256 afterBalance = token.balanceOf(address(this));
         require(
-            SafeMath.sub(beforeBalance, afterBalance) == _balance,
+            beforeBalance - afterBalance == _balance,
             "transfer balance check faild"
         );
     }

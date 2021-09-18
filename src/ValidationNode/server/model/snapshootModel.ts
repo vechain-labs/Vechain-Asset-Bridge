@@ -1,6 +1,6 @@
-import { getConnection, getRepository } from "typeorm";
-import { ActionData, ActionResult } from "../../utils/components/actionResult";
-import { BridgeSnapshoot } from "../../utils/types/bridgeSnapshoot";
+import { getConnection, getManager, getRepository } from "typeorm";
+import { ActionData, ActionResult } from "../../../common/utils/components/actionResult";
+import { BridgeSnapshoot } from "../../../common/utils/types/bridgeSnapshoot";
 import { SnapshootEntity } from "./entities/snapshoot.entity";
 
 export class SnapshootModel {
@@ -96,21 +96,21 @@ export class SnapshootModel {
         return result;
     }
 
-    public async save(sn:BridgeSnapshoot):Promise<ActionResult>{
+    public async save(sns:BridgeSnapshoot[]):Promise<ActionResult>{
         let result = new ActionResult();
 
         try {
-            let entity:SnapshootEntity = {
-                merkleRoot:sn.merkleRoot,
-                parentMerkleRoot:sn.parentMerkleRoot,
-                blocknum:sn.chains.filter(chain => {return chain.chainName == this.config.vechain.chainName && chain.chainId == this.config.vechain.chainId;})[0]!.endBlockNum,
-                chains:sn.chains,
-                invalid:true
-            }
-
-            await getRepository(SnapshootEntity)
-                .save(entity);
-
+            await getManager().transaction(async transactionalEntityManager => {
+                for(const sn of sns){
+                    let entity = new SnapshootEntity();
+                    entity.merkleRoot = sn.merkleRoot,
+                    entity.parentMerkleRoot = sn.parentMerkleRoot,
+                    entity.blocknum = sn.chains.filter(chain => {return chain.chainName == this.config.vechain.chainName && chain.chainId == this.config.vechain.chainId;})[0]!.endBlockNum,
+                    entity.chains = sn.chains,
+                    entity.invalid = true
+                    await transactionalEntityManager.save(entity);
+                }
+            });
         } catch (error) {
             result.error = error;
         }

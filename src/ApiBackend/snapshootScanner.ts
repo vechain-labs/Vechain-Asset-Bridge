@@ -1,18 +1,18 @@
 import { Framework } from "@vechain/connex-framework";
 import Web3 from "web3";
-import BridgeStorage from "./server/bridgeStorage";
-import { EthereumBridgeHead } from "./server/ethereumBridgeHead";
-import LedgerModel from "./server/model/ledgerModel";
-import { SnapshootModel } from "./server/model/snapshootModel";
-import SwapTxModel from "./server/model/swapTxModel";
-import { VeChainBridgeHead } from "./server/vechainBridgeHead";
 import { ActionData, ActionResult, PromiseActionResult } from "../common/utils/components/actionResult";
 import { BridgeLedger } from "../common/utils/types/bridgeLedger";
 import { BridgeSnapshoot, ZeroRoot } from "../common/utils/types/bridgeSnapshoot";
 import { SwapTx } from "../common/utils/types/swapTx";
 import { TokenInfo } from "../common/utils/types/tokenInfo";
+import BridgeStorage from "../ValidationNode/server/bridgeStorage";
+import { EthereumBridgeHead } from "../ValidationNode/server/ethereumBridgeHead";
+import LedgerModel from "../ValidationNode/server/model/ledgerModel";
+import { SnapshootModel } from "../ValidationNode/server/model/snapshootModel";
+import SwapTxModel from "../ValidationNode/server/model/swapTxModel";
+import { VeChainBridgeHead } from "../ValidationNode/server/vechainBridgeHead";
 
-export class BridgeSyncTask{
+export class SnapshootScanner{
     constructor(env:any){
         this.env = env;
         this.config = env.config;
@@ -26,7 +26,7 @@ export class BridgeSyncTask{
         this.swapTxModel = new SwapTxModel(this.env);
     }
 
-    public async taskJob():Promise<ActionResult>{
+    public async run():Promise<ActionResult>{
         let result = new ActionResult();
 
         try {
@@ -146,6 +146,39 @@ export class BridgeSyncTask{
         return result;
     }
 
+    private async getNoSyncSnapshootList(sn:BridgeSnapshoot):Promise<ActionData<BridgeSnapshoot[]>>{
+        let result = new ActionData<BridgeSnapshoot[]>();
+        result.data = new Array();
+
+        const vechain_beginBlock = sn.chains.filter(chain =>{return chain.chainName == this.config.vechain.chainName && chain.chainId == this.config.vechain.chainId;})[0].endBlockNum + 1;
+        const vechain_endblock = this.connex.thor.status.head.number;
+        const ethereum_beginBlock = sn.chains.filter(chain =>{return chain.chainName == this.config.ethereum.chainName && chain.chainId == this.config.ethereum.chainId;})[0].endBlockNum + 1;
+        const ethereum_endblock = (await this.web3.eth.getBlock('latest')).number;
+
+        const vPromise = this.vechainBridge.getSnapshoot(vechain_beginBlock,vechain_endblock);
+        const ePromise = this.ethereumBridge.getSnapshoot(ethereum_beginBlock,ethereum_endblock);
+
+        const promiseResult = await PromiseActionResult.PromiseActionResult(Promise.all([vPromise,ePromise]));
+        if(promiseResult.error){
+            result.copyBase(promiseResult);
+            return result;
+        }
+
+        const vSn = (promiseResult.data!.succeed[0] as ActionData<BridgeSnapshoot[]>).data!;
+        const eSn = (promiseResult.data!.succeed[1] as ActionData<BridgeSnapshoot[]>).data!;
+
+        for(let sn of vSn){
+            const tSn = eSn.filter( esn => {return esn.merkleRoot == sn.merkleRoot})[0];
+            if(tSn == undefined){
+                result.error = new Error(`ethereum can't found snapshoot:${sn.merkleRoot}`);
+                return result;
+            }
+            sn.chains.push(tSn.chains[0]);
+        }
+        result.data = vSn;
+        return result;
+    }
+
     private async syncDataBySnapshoot(sn:BridgeSnapshoot):Promise<ActionResult>{
         let result = new ActionResult();
 
@@ -199,145 +232,6 @@ export class BridgeSyncTask{
         return result;
     }
 
-    private async checkSyncStatus():Promise<ActionData<boolean>>{
-        let result = new ActionData<boolean>();
-
-        const localResult = await this.snapshootModel.getLastSnapshoot();
-        const onchainResult = await this.vechainBridge.getLastSnapshoot();
-
-        if(localResult.error){
-            result.copyBase(localResult);
-            return result;
-        }
-
-        if(onchainResult.error){
-            result.copyBase(onchainResult);
-            return result;
-        }
-
-        result.data = localResult.data!.merkleRoot == onchainResult.data!.merkleRoot;
-        return result;
-    }
-
-    public async checkBridgeStatus():Promise<ActionData<boolean>>{
-        let result = new ActionData<boolean>();
-
-        const vechainResult = await this.vechainBridge.getLockedStatus();
-        if(vechainResult.error){
-            result.copyBase(vechainResult);
-            return result;
-        }
-        if(vechainResult.data){
-            return vechainResult;
-        }
-
-        const ethereumResult = await this.ethereumBridge.getLockedStatus();
-        if(ethereumResult.error){
-            result.copyBase(ethereumResult);
-            return result;
-        }
-        return ethereumResult;
-    }
-
-    public async getNoSyncBlockNum():Promise<ActionData<number>>{
-        let result = new ActionData<number>();
-        result.data = 0;
-
-        try {
-            const localPromise = this.snapshootModel.getLastSnapshoot();
-            const onchainPromise = this.vechainBridge.getLastSnapshoot();
-            const promiseResult = await PromiseActionResult.PromiseActionResult(Promise.all([localPromise,onchainPromise]));
-            if(promiseResult.error){
-                result.copyBase(promiseResult);
-            }
-
-            let localsnapshoot = (promiseResult.data!.succeed[0] as ActionData<BridgeSnapshoot>).data!;
-            let onchainsnapshoot = (promiseResult.data!.succeed[1] as ActionData<BridgeSnapshoot>).data!;
-
-            if(localsnapshoot.merkleRoot == onchainsnapshoot.merkleRoot){
-                return result;
-            }
-
-            const chainName = this.config.vechain.chainName;
-            const chainId = this.config.vechain.chainId;
-
-            while(true){
-                if(localsnapshoot.merkleRoot == onchainsnapshoot.merkleRoot){
-                    result.data = onchainsnapshoot.chains.filter( chain =>{return chain.chainName == chainName && chain.chainId == chainId})[0].endBlockNum;
-                    return result;
-                } else {
-                    let localFromNum = localsnapshoot.chains.filter( chain =>{return chain.chainName == chainName && chain.chainId == chainId})[0].beginBlockNum;
-                    let onchainFromeNum = onchainsnapshoot.chains.filter( chain =>{return chain.chainName == chainName && chain.chainId == chainId})[0].beginBlockNum;
-                    if(localFromNum <= onchainFromeNum){
-                        const lastSnapResult = await this.vechainBridge.getSnapshootByBlock(onchainFromeNum);
-                        if(lastSnapResult.error){
-                            result.copyBase(lastSnapResult);
-                            return result;
-                        }
-
-                        if(lastSnapResult.data!.merkleRoot == ZeroRoot()){
-                            result.data = this.config.vechain.startBlockNum;
-                            await this.snapshootModel.deleteSnapshoot(localsnapshoot.merkleRoot);
-                            return result;
-                        }
-                        onchainsnapshoot = lastSnapResult.data!;
-                        continue;
-
-                    } else {
-                        const lastSnapResult = await this.snapshootModel.getSnapshootByRoot(localsnapshoot.parentMerkleRoot);
-                        if(lastSnapResult.error){
-                            result.copyBase(lastSnapResult);
-                            return result;
-                        }
-                        if(lastSnapResult.data!.merkleRoot == ZeroRoot()){
-                            result.data = this.config.vechain.startBlockNum;
-                            return result;
-                        }
-                        await this.snapshootModel.deleteSnapshoot(localsnapshoot.merkleRoot);
-                        localsnapshoot = lastSnapResult.data!
-                        continue;
-                    }
-                }
-            }
-        } catch (error) {
-            result.error = error;
-        }
-        return result;
-    } 
-
-    private async getNoSyncSnapshootList(sn:BridgeSnapshoot):Promise<ActionData<BridgeSnapshoot[]>>{
-        let result = new ActionData<BridgeSnapshoot[]>();
-        result.data = new Array();
-
-        const vechain_beginBlock = sn.chains.filter(chain =>{return chain.chainName == this.config.vechain.chainName && chain.chainId == this.config.vechain.chainId;})[0].endBlockNum + 1;
-        const vechain_endblock = this.connex.thor.status.head.number;
-        const ethereum_beginBlock = sn.chains.filter(chain =>{return chain.chainName == this.config.ethereum.chainName && chain.chainId == this.config.ethereum.chainId;})[0].endBlockNum + 1;
-        const ethereum_endblock = (await this.web3.eth.getBlock('latest')).number;
-
-        const vPromise = this.vechainBridge.getSnapshoot(vechain_beginBlock,vechain_endblock);
-        const ePromise = this.ethereumBridge.getSnapshoot(ethereum_beginBlock,ethereum_endblock);
-
-        const promiseResult = await PromiseActionResult.PromiseActionResult(Promise.all([vPromise,ePromise]));
-        if(promiseResult.error){
-            result.copyBase(promiseResult);
-            return result;
-        }
-
-        const vSn = (promiseResult.data!.succeed[0] as ActionData<BridgeSnapshoot[]>).data!;
-        const eSn = (promiseResult.data!.succeed[1] as ActionData<BridgeSnapshoot[]>).data!;
-
-        for(let sn of vSn){
-            const tSn = eSn.filter( esn => {return esn.merkleRoot == sn.merkleRoot})[0];
-            if(tSn == undefined){
-                result.error = new Error(`ethereum can't found snapshoot:${sn.merkleRoot}`);
-                return result;
-            }
-            sn.chains.push(tSn.chains[0]);
-        }
-        result.data = vSn;
-        return result;
-    }
-
     private async getTxsBySnapshoot(sn:BridgeSnapshoot):Promise<ActionData<SwapTx[]>>{
         let result = new ActionData<SwapTx[]>();
         result.data = new Array();
@@ -377,7 +271,7 @@ export class BridgeSyncTask{
         result.data = {sn:snapshootResult.data!,ledgers:ledgersResult.data!};
         return result;
     }
- 
+
     private env:any;
     private config:any;
     private vechainBridge:VeChainBridgeHead;
