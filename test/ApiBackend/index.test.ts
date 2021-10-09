@@ -1,1 +1,1 @@
-require('./vechainSnapshootScan.test');
+require('./snapshootScanner.test');

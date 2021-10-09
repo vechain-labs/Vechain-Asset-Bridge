@@ -9,8 +9,8 @@ import assert from 'assert';
 import { getReceipt } from "myvetools/dist/connexUtils";
 import { BridgeLedger, ledgerHash, ledgerID } from "../../../src/common/utils/types/bridgeLedger";
 import { BridgeSnapshoot, ZeroRoot } from "../../../src/common/utils/types/bridgeSnapshoot";
-import BridgeStorage from "../../../src/ValidationNode/server/bridgeStorage";
 import { keccak256 } from "thor-devkit";
+import BridgeStorage from "../../../src/common/bridgeStorage";
 
 export class V2EBridgeHeadTestCase {
 
@@ -340,15 +340,17 @@ export class V2EBridgeHeadTestCase {
                 {
                     chainName:this.config.ethereum.chainName,
                     chainId:this.config.ethereum.chainId,
-                    lockedBlockNum:this.connex.thor.status.head.number,
+                    lockedBlockNum:(await this.connex.thor.block().get())!.number,
                     beginBlockNum:100,
-                    endBlockNum:this.connex.thor.status.head.number},
+                    endBlockNum:(await this.connex.thor.block().get())!.number
+                },
                 {
                     chainName:this.config.vechain.chainName,
                     chainId:this.config.vechain.chainId,
-                    lockedBlockNum:this.connex.thor.status.head.number,
+                    lockedBlockNum:(await this.connex.thor.block().get())!.number,
                     beginBlockNum:1000,
-                    endBlockNum:this.connex.thor.status.head.number}
+                    endBlockNum:(await this.connex.thor.block().get())!.number
+                }
             ]
         }
 

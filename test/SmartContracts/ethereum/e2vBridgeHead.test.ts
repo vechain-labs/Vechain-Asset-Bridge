@@ -8,7 +8,7 @@ import assert from 'assert';
 import { compileContract } from "myvetools/dist/utils";
 import { BridgeLedger, ledgerHash, ledgerID } from "../../../src/common/utils/types/bridgeLedger";
 import { BridgeSnapshoot } from "../../../src/common/utils/types/bridgeSnapshoot";
-import BridgeStorage from "../../../src/ValidationNode/server/bridgeStorage";
+import BridgeStorage from "../../../src/common/bridgeStorage";
 
 export class E2VBridgeHeadTestCase{
 
@@ -50,6 +50,7 @@ export class E2VBridgeHeadTestCase{
                 this.bridgeContract = new this.web3.eth.Contract(bridgeAbi,this.config.ethereum.contracts.e2vBridge.length == 42 ? this.config.ethereum.contracts.e2vBridge : undefined);
 
                 this.gasPrice = await this.web3.eth.getGasPrice();
+                console.info(this.gasPrice);
 
             } catch (error) {
                 assert.fail(`init faild`);

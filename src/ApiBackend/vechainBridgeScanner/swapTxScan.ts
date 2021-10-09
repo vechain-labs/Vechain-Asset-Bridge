@@ -1,8 +1,8 @@
 import { Framework } from "@vechain/connex-framework";
 import { ActionData, ActionResult } from "../../common/utils/components/actionResult";
 import { SwapTx } from "../../common/utils/types/swapTx";
-import SwapTxModel from "../../ValidationNode/server/model/swapTxModel";
-import { VeChainBridgeHead } from "../../ValidationNode/server/vechainBridgeHead";
+import SwapTxModel from "../../common/model/swapTxModel";
+import { VeChainBridgeHead } from "../../common/vechainBridgeHead";
 
 export class VeChainBridgeSwapTxScan{
 

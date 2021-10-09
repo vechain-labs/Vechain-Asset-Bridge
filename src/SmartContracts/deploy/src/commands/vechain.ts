@@ -22,10 +22,10 @@ export default class VeChain extends Command {
     const { args, flags } = this.parse(VeChain);
 
     if(flags.baseinfo){
-      console.log("----------BaseInfo----------");
-      console.log("BlockChain: VeChainThor");
-      console.log(`ChainTag: ${this.chainId}(${this.nettype})`);
-      console.log("-------------End------------");
+      console.info("----------BaseInfo----------");
+      console.info("BlockChain: VeChainThor");
+      console.info(`ChainTag: ${this.chainId}(${this.nettype})`);
+      console.info("-------------End------------");
       process.exit();
     }
 

@@ -5,12 +5,12 @@ import { BridgeLedger } from "../common/utils/types/bridgeLedger";
 import { BridgeSnapshoot, ZeroRoot } from "../common/utils/types/bridgeSnapshoot";
 import { SwapTx } from "../common/utils/types/swapTx";
 import { TokenInfo } from "../common/utils/types/tokenInfo";
-import BridgeStorage from "../ValidationNode/server/bridgeStorage";
-import { EthereumBridgeHead } from "../ValidationNode/server/ethereumBridgeHead";
-import LedgerModel from "../ValidationNode/server/model/ledgerModel";
-import { SnapshootModel } from "../ValidationNode/server/model/snapshootModel";
-import SwapTxModel from "../ValidationNode/server/model/swapTxModel";
-import { VeChainBridgeHead } from "../ValidationNode/server/vechainBridgeHead";
+import LedgerModel from "../common/model/ledgerModel";
+import { SnapshootModel } from "../common/model/snapshootModel";
+import SwapTxModel from "../common/model/swapTxModel";
+import { VeChainBridgeHead } from "../common/vechainBridgeHead";
+import { EthereumBridgeHead } from "../common/ethereumBridgeHead";
+import BridgeStorage from "../common/bridgeStorage";
 
 export class SnapshootScanner{
     constructor(env:any){
@@ -37,6 +37,11 @@ export class SnapshootScanner{
                 return result;
             }
             console.info(`LastSyncedSnapshoot is ${lastSyncSnRsult.data!.merkleRoot}`);
+
+            // if(lastSyncSnRsult.data!.merkleRoot == ZeroRoot()){
+            //     console.info(`Complete synchronization`);
+            //     return result;
+            // }
 
             console.info(`Get NoSyncSnapshootList`);
             const getNoSyncListResult = await this.getNoSyncSnapshootList(lastSyncSnRsult.data!);
@@ -89,15 +94,20 @@ export class SnapshootScanner{
         }
 
         try {
-            const localPromise = this.snapshootModel.getLastSnapshoot();
-            const onchainPromise = this.vechainBridge.getLastSnapshoot();
-            const promiseResult = await PromiseActionResult.PromiseActionResult(Promise.all([localPromise,onchainPromise]));
-            if(promiseResult.error){
-                result.copyBase(promiseResult);
+            const localResult = await this.snapshootModel.getLastSnapshoot();
+            if(localResult.error != undefined){
+                result.error = localResult.error;
+                return result;
+            }
+            
+            const onchainResult = await this.vechainBridge.getLastSnapshoot();
+            if(onchainResult.error != undefined){
+                result.error = onchainResult.error;
+                return result;
             }
 
-            let localsnapshoot = (promiseResult.data!.succeed[0] as ActionData<BridgeSnapshoot>).data!;
-            let onchainsnapshoot = (promiseResult.data!.succeed[1] as ActionData<BridgeSnapshoot>).data!;
+            let localsnapshoot = localResult.data!;
+            let onchainsnapshoot = onchainResult.data!.sn;
 
             if(localsnapshoot.merkleRoot == onchainsnapshoot.merkleRoot){
                 result.data = localsnapshoot;
@@ -151,7 +161,7 @@ export class SnapshootScanner{
         result.data = new Array();
 
         const vechain_beginBlock = sn.chains.filter(chain =>{return chain.chainName == this.config.vechain.chainName && chain.chainId == this.config.vechain.chainId;})[0].endBlockNum + 1;
-        const vechain_endblock = this.connex.thor.status.head.number;
+        const vechain_endblock = (await this.connex.thor.block().get())!.number;
         const ethereum_beginBlock = sn.chains.filter(chain =>{return chain.chainName == this.config.ethereum.chainName && chain.chainId == this.config.ethereum.chainId;})[0].endBlockNum + 1;
         const ethereum_endblock = (await this.web3.eth.getBlock('latest')).number;
 

@@ -4,3 +4,5 @@ dist/
 *.patch
 .nyc_output/
 memo.txt
+logs/
+config/

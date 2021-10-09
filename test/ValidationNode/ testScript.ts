@@ -1,84 +1,96 @@
-import { Driver, SimpleNet, SimpleWallet } from "@vechain/connex-driver";
-import { Framework } from "@vechain/connex-framework";
-import path from "path";
-import { keccak256 } from "thor-devkit";
-import BridgeStorage from "../../src/ValidationNode/server/bridgeStorage";
-import { VeChainBridgeHead } from "../../src/ValidationNode/server/vechainBridgeHead";
-import { BridgeSnapshoot, ZeroRoot } from "../../src/common/utils/types/bridgeSnapshoot";
-import { SwapTx } from "../../src/common/utils/types/swapTx";
-import { tokenid, TokenInfo } from "../../src/common/utils/types/tokenInfo";
+    import { Driver, SimpleNet, SimpleWallet } from "@vechain/connex-driver";
+    import { Framework } from "@vechain/connex-framework";
+    import path from "path";
+    import { keccak256 } from "thor-devkit";
+    import BridgeStorage from "../../src/common/bridgeStorage";
+    import { BridgeSnapshoot, ZeroRoot } from "../../src/common/utils/types/bridgeSnapshoot";
+    import { SwapTx } from "../../src/common/utils/types/swapTx";
+    import { tokenid, TokenInfo } from "../../src/common/utils/types/tokenInfo";
 
-let root = ZeroRoot();
-root = "0x6956f1e4b4036e2589b10871daf80818d6a384fac67f360b93b3c71d2e42a85d";
-const privatekey = "0x2dd2c5b5d65913214783a6bd5679d8c6ef29ca9f2e2eae98b4add061d0b85ea0";
-const signEncodePacked = function(opertion:string,hash:string){
-    let hashBuffer = hash != ZeroRoot() ? Buffer.from(hash.substring(2),'hex') : Buffer.alloc(32);
-    let encode = Buffer.concat([
-        Buffer.from(opertion),
-        hashBuffer
-    ]);
-    return keccak256(encode);
-}
+    let root = ZeroRoot();
+    root = "0xd220cc9e849e82258f80d28175091db722a4cb2d3d200b24618f9879c1195311";
+    const privatekey = "0x2dd2c5b5d65913214783a6bd5679d8c6ef29ca9f2e2eae98b4add061d0b85ea0";
+    const signEncodePacked = function(opertion:string,hash:string){
+        let hashBuffer = hash != ZeroRoot() ? Buffer.from(hash.substring(2),'hex') : Buffer.alloc(32);
+        let encode = Buffer.concat([
+            Buffer.from(opertion),
+            hashBuffer
+        ]);
+        return keccak256(encode);
+    }
 
-let wallet = new SimpleWallet();
-wallet.import(privatekey);
+    let wallet = new SimpleWallet();
+    wallet.import(privatekey);
 
-const config = require("./test.config.json");
+    const config = require("./test.config.json");
 
-wallet.list[0].sign(signEncodePacked("lockBridge",root)).then(value =>{
-    // console.log('0x' + value.toString('hex'))
-    // 0x47c5c3d3d30922b7ed43176afad8566655282dd3276ae57bc293ed857d2f1cb760c634d7db4ba0f2f4ac5d0d0b130a6df21a229956c8d96a75a6db1a8dbb174101
-})
+    wallet.list[0].sign(signEncodePacked("updateBridgeMerkleRoot",root)).then(value =>{
+        console.info('0x' + value.toString('hex'))
+        // lock     0x47c5c3d3d30922b7ed43176afad8566655282dd3276ae57bc293ed857d2f1cb760c634d7db4ba0f2f4ac5d0d0b130a6df21a229956c8d96a75a6db1a8dbb174101
+        // unlock   0x2cb11a676bb23b196f3c53b07daf5cfb43b65b1d4ad16755659883bed38d1a082feec399edd09239eb33bac6ab4ad90d8f781c3598529dd72f41c180b10112bf00
+    })
 
-let tokens:Array<TokenInfo> = new Array();
+let tokenInfo:Array<TokenInfo> = new Array();
 
 const initTokens = function() {
-    tokens = [
+    tokenInfo = [
         {
             tokenid:"",
             chainName:"vechain",
             chainId:"0xf6",
-            tokenSymbol:"VVET",
-            tokenAddr:config.vechain.contracts.vVet,
+            name:"VVET",
+            symbol:"VVET",
+            decimals:18,
+            address:config.vechain.contracts.vVet,
+            nativeCoin:false,
             tokeType:"1",
-            targetToken:""
+            targetTokenId:""
         },
         {
             tokenid:"",
             chainName:"vechain",
             chainId:"0xf6",
-            tokenSymbol:"VETH",
-            tokenAddr:config.vechain.contracts.vEth,
+            name:"VETH",
+            symbol:"VETH",
+            decimals:18,
+            address:config.vechain.contracts.vEth,
+            nativeCoin:false,
             tokeType:"2",
-            targetToken:""
+            targetTokenId:""
         },
         {
             tokenid:"",
             chainName:"ethereum",
             chainId:"1337",
-            tokenSymbol:"WVET",
-            tokenAddr:config.ethereum.contracts.wVet,
+            name:"WVET",
+            symbol:"WVET",
+            decimals:18,
+            address:config.ethereum.contracts.wVet,
+            nativeCoin:false,
             tokeType:"2",
-            targetToken:""
+            targetTokenId:""
         },
         {
             tokenid:"",
             chainName:"ethereum",
             chainId:"1337",
-            tokenSymbol:"WETH",
-            tokenAddr:config.ethereum.contracts.wEth,
+            name:"WETH",
+            symbol:"WETH",
+            decimals:18,
+            address:config.ethereum.contracts.wEth,
+            nativeCoin:false,
             tokeType:"1",
-            targetToken:""
+            targetTokenId:""
         }
     ]
 
-    for(let token of tokens){
-        token.tokenid = tokenid(token.chainName,token.chainId,token.tokenAddr);
+    for(let token of tokenInfo){
+        token.tokenid = tokenid(token.chainName,token.chainId,token.address);
     }
-    tokens[0].targetToken = tokens[2].tokenid;
-    tokens[2].targetToken = tokens[0].tokenid;
-    tokens[1].targetToken = tokens[3].tokenid;
-    tokens[3].targetToken = tokens[1].tokenid;
+    tokenInfo[0].targetTokenId = tokenInfo[2].tokenid;
+    tokenInfo[2].targetTokenId = tokenInfo[0].tokenid;
+    tokenInfo[1].targetTokenId = tokenInfo[3].tokenid;
+    tokenInfo[3].targetTokenId = tokenInfo[1].tokenid;
 }
 
 initTokens();
@@ -173,15 +185,15 @@ const swapTxs:SwapTx[] = [
     }
 ]
 
-let storage = new BridgeStorage(parentSN,tokens,[]);
+let storage = new BridgeStorage(parentSN,tokenInfo,[]);
 storage.updateLedgers(swapTxs);
 storage.buildTree(sn.chains,sn.parentMerkleRoot);
 const newRoot = storage.getMerkleRoot();
 
-console.log(newRoot);
+console.info(newRoot);
 
 wallet.list[0].sign(signEncodePacked("updateBridgeMerkleRoot",newRoot)).then(value =>{
-    console.log('0x' + value.toString('hex'))
+    console.info('0x' + value.toString('hex'))
 })
 
 

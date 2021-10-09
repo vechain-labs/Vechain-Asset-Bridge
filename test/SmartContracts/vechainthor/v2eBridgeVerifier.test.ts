@@ -10,8 +10,8 @@ import { getReceipt } from "myvetools/dist/connexUtils";
 import { tokenid, TokenInfo } from "../../../src/common/utils/types/tokenInfo";
 import { BridgeSnapshoot, ZeroRoot } from "../../../src/common/utils/types/bridgeSnapshoot";
 import { SwapTx } from "../../../src/common/utils/types/swapTx";
-import BridgeStorage from "../../../src/ValidationNode/server/bridgeStorage";
 import { keccak256 } from "thor-devkit";
+import BridgeStorage from "../../../src/common/bridgeStorage";
 
 export class V2EBridgeVerifierTestCase {
     public connex!: Framework;
@@ -25,7 +25,7 @@ export class V2EBridgeVerifierTestCase {
     public vVetContract!: Contract;
     public vEthContract!: Contract;
     public v2eBridgeVerifier!: Contract;
-    public tokens:Array<TokenInfo> = new Array();
+    public tokenInfo:Array<TokenInfo> = new Array();
     
     public async init() {
         if (fs.existsSync(this.configPath)) {
@@ -379,52 +379,64 @@ export class V2EBridgeVerifierTestCase {
     }
 
     private initTokens(){
-        this.tokens = [
+        this.tokenInfo = [
             {
                 tokenid:"",
                 chainName:this.config.vechain.chainName,
                 chainId:this.config.vechain.chainId,
-                tokenSymbol:"VVET",
-                tokenAddr:this.config.vechain.contracts.vVet,
+                name:"VVET",
+                symbol:"VVET",
+                decimals:18,
+                address:this.config.vechain.contracts.vVet,
+                nativeCoin:false,
                 tokeType:"1",
-                targetToken:""
+                targetTokenId:""
             },
             {
                 tokenid:"",
                 chainName:this.config.vechain.chainName,
                 chainId:this.config.vechain.chainId,
-                tokenSymbol:"VETH",
-                tokenAddr:this.config.vechain.contracts.vEth,
+                name:"VETH",
+                symbol:"VETH",
+                decimals:18,
+                address:this.config.vechain.contracts.vEth,
+                nativeCoin:false,
                 tokeType:"2",
-                targetToken:""
+                targetTokenId:""
             },
             {
                 tokenid:"",
                 chainName:this.config.ethereum.chainName,
                 chainId:this.config.ethereum.chainId,
-                tokenSymbol:"WETH",
-                tokenAddr:this.config.ethereum.contracts.wEth,
-                tokeType:"1",
-                targetToken:""
+                name:"WVET",
+                symbol:"WVET",
+                decimals:18,
+                address:this.config.ethereum.contracts.wVet,
+                nativeCoin:false,
+                tokeType:"2",
+                targetTokenId:""
             },
             {
                 tokenid:"",
                 chainName:this.config.ethereum.chainName,
                 chainId:this.config.ethereum.chainId,
-                tokenSymbol:"WVET",
-                tokenAddr:this.config.ethereum.contracts.wVet,
-                tokeType:"2",
-                targetToken:""
-            },
+                name:"WVET",
+                symbol:"WETH",
+                decimals:18,
+                address:this.config.ethereum.contracts.wEth,
+                nativeCoin:false,
+                tokeType:"1",
+                targetTokenId:""
+            }
         ]
 
-        for(let token of this.tokens){
-            token.tokenid = tokenid(token.chainName,token.chainId,token.tokenAddr);
+        for(let token of this.tokenInfo){
+            token.tokenid = tokenid(token.chainName,token.chainId,token.address);
         }
-        this.tokens[0].targetToken = this.tokens[2].tokenid;
-        this.tokens[2].targetToken = this.tokens[0].tokenid;
-        this.tokens[1].targetToken = this.tokens[3].tokenid;
-        this.tokens[3].targetToken = this.tokens[1].tokenid;
+        this.tokenInfo[0].targetTokenId = this.tokenInfo[2].tokenid;
+        this.tokenInfo[2].targetTokenId = this.tokenInfo[0].tokenid;
+        this.tokenInfo[1].targetTokenId = this.tokenInfo[3].tokenid;
+        this.tokenInfo[3].targetTokenId = this.tokenInfo[1].tokenid;
     }
 
     private async mockSwapVVET():Promise<SwapTx>{
@@ -500,7 +512,7 @@ export class V2EBridgeVerifierTestCase {
             ]
         }
 
-        let storage = new BridgeStorage(sn,this.tokens);
+        let storage = new BridgeStorage(sn,this.tokenInfo);
         storage.updateLedgers(swapTxs);
         storage.buildTree();
         result = storage.getMerkleRoot();

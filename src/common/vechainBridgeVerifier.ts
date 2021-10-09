@@ -1,14 +1,13 @@
 import { Framework } from "@vechain/connex-framework";
 import { Contract } from "myvetools";
-import { ActionData } from "../../common/utils/components/actionResult";
 import path from "path";
 import { compileContract } from "myvetools/dist/utils";
-import { Proposal } from "../../common/utils/types/proposal";
 import { keccak256, Transaction } from "thor-devkit";
-import { ThorDevKitEx } from "../../common/utils/extensions/thorDevkitExten";
 import { SimpleWallet } from "@vechain/connex-driver";
-import { ZeroRoot } from "../../common/utils/types/bridgeSnapshoot";
-var sleep = require('sleep');
+import { ActionData } from "./utils/components/actionResult";
+import { Proposal } from "./utils/types/proposal";
+import { ZeroRoot } from "./utils/types/bridgeSnapshoot";
+import { sleep } from "./utils/sleep";
 
 export class VeChainBridgeVerifiter {
     constructor(env:any){
@@ -25,7 +24,7 @@ export class VeChainBridgeVerifiter {
         let result = new ActionData<boolean>();
         try {
             const call = await this.v2eVerifiter.call("verifiers",address);
-            result.data = Boolean(call.decoded[0]);
+            result.data = Boolean(BigInt(call.decoded[0]));
         } catch (error) {
             result.error = error;
         }
@@ -40,9 +39,9 @@ export class VeChainBridgeVerifiter {
             let p:Proposal = {
                 hash:hash,
                 quorum:Number(call.decoded[0][0]),
-                executed:Boolean(call.decoded[0][2]),
-                value:String(call.decoded[0][3]),
-                signatures:(call.decoded[0][4] as Array<string>)
+                executed:Boolean(call.decoded[0][1]),
+                value:String(call.decoded[0][2]),
+                signatures:(call.decoded[0][3] as Array<string>)
             }
             result.data = p;
         } catch (error) {
@@ -60,9 +59,9 @@ export class VeChainBridgeVerifiter {
             let p:Proposal = {
                 hash:hash,
                 quorum:Number(call.decoded[0][0]),
-                executed:Boolean(call.decoded[0][2]),
-                value:String(call.decoded[0][3]),
-                signatures:(call.decoded[0][4] as Array<string>)
+                executed:Boolean(call.decoded[0][1]),
+                value:String(call.decoded[0][2]),
+                signatures:(call.decoded[0][3] as Array<string>)
             }
             result.data = p;
         } catch (error) {
@@ -109,11 +108,35 @@ export class VeChainBridgeVerifiter {
         return result;
     }
 
+    public async checkTxStatus(txid:string,blockRef:number):Promise<ActionData<"reverted"|"confirmed"|"expired"|"pendding">>{
+        let result = new ActionData<"reverted"|"confirmed"|"expired"|"pendding">();
+        const bestBlock = (await this.connex.thor.block().get())!.number;
+
+        try {
+            const receipt = await this.connex.thor.transaction(txid).getReceipt();
+            if(receipt != null && bestBlock - blockRef > this.config.vechain.confirmHeight){
+                if(receipt.reverted){
+                    result.data = "reverted";
+                } else {
+                    result.data = "confirmed";
+                }
+            } else if(bestBlock - blockRef > this.config.vechain.expiration) {
+                result.data = "expired";
+            } else {
+                console.debug(`pending ${bestBlock - blockRef}/${this.config.vechain.confirmHeight}`);
+                result.data = "pendding";
+            }
+        } catch (error) {
+            result.error = error;
+        }
+        return result;
+    }
+
     public async confirmTx(txid:string):Promise<ActionData<"reverted"|"confirmed"|"expired">>{
         let result = new ActionData<"reverted"|"confirmed"|"expired">();
-        const blockRefNum = this.connex.thor.status.head.number;
+        const blockRefNum = (await this.connex.thor.block().get())!.number;
         while(true){
-            const bestBlock = this.connex.thor.status.head.number;
+            const bestBlock = (await this.connex.thor.block().get())!.number;
             try {
                 const receipt = await this.connex.thor.transaction(txid).getReceipt();
                 if(receipt != null){
@@ -138,7 +161,7 @@ export class VeChainBridgeVerifiter {
                 result.error = error;
                 break;
             }
-            sleep.sleep(10);
+            await sleep(10 * 1000);
         }
         
         return result;

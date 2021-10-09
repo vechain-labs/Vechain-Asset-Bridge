@@ -8,7 +8,7 @@ class VeChainBridgeScanner {
         const configPath = path.join(__dirname,"../config/config.json");
 
         if(!fs.existsSync(configPath)){
-            console.log(`can't load config ${configPath}`);
+            console.info(`can't load config ${configPath}`);
             throw Error(`can't load config ${configPath}`);
         }
 

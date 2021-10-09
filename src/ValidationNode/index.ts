@@ -1,2 +1,2 @@
-require("./bridgePackTask");
+//require("./bridgePackTask");
 require("./bridgeSyncTask");

@@ -1,6 +1,6 @@
 import { getManager, getRepository } from "typeorm";
-import { ActionData, ActionResult } from "../../../common/utils/components/actionResult";
-import { BridgeLedger } from "../../../common/utils/types/bridgeLedger";
+import { ActionData, ActionResult } from "../utils/components/actionResult";
+import { BridgeLedger } from "../utils/types/bridgeLedger";
 import { LedgerEntity } from "./entities/ledger.entity";
 
 export default class LedgerModel {
@@ -17,6 +17,36 @@ export default class LedgerModel {
         try {
             let data = await getRepository(LedgerEntity)
                 .find({where:{merkleRoot:root.toLowerCase()}});
+            for(const item of data){
+                let ledger:BridgeLedger = {
+                    root:item.merkleRoot,
+                    ledgerid:item.ledgerid,
+                    chainName:item.chainName,
+                    chainId:item.chainId,
+                    account:item.account,
+                    token:item.token,
+                    balance:BigInt(item.balance)
+                };
+                result.data.push(ledger);
+            }
+        } catch (error) {
+            result.error = error;
+        }
+        return result;
+    }
+
+    public async loadSnByAccount(root:string,chainName:string,chainId:string,account:string):Promise<ActionData<BridgeLedger[]>>{
+        let result = new ActionData<BridgeLedger[]>();
+        result.data = new Array<BridgeLedger>();
+
+        try {
+            let data = await getRepository(LedgerEntity)
+                .find({where:{
+                    merkleRoot:root.toLowerCase(),
+                    chainName:chainName,
+                    chainId:chainId,
+                    account:account.toLowerCase()
+                }});
             for(const item of data){
                 let ledger:BridgeLedger = {
                     root:item.merkleRoot,

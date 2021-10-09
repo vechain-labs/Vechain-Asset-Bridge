@@ -6,11 +6,13 @@ import { Driver, SimpleNet } from "@vechain/connex-driver";
 import { tokenid, TokenInfo } from "../../src/common/utils/types/tokenInfo";
 import { createConnection } from "typeorm";
 import { SnapshootScanner } from "../../src/ApiBackend/snapshootScanner";
+import Web3 from "web3";
 
-export class VeChainSnapshootScanTestCase {
+export class SnapshootScanTestCase {
     public configPath = path.join(__dirname, './test.config.json');
     public config: any = {};
     public connex!: Framework;
+    public web3!:Web3;
     public env:any;
 
     public async init(){
@@ -20,53 +22,66 @@ export class VeChainSnapshootScanTestCase {
             try {
                 const driver = await Driver.connect(new SimpleNet(this.config.vechain.nodeHost as string));
                 this.connex = new Framework(driver);
+                this.web3 = new Web3(new Web3.providers.HttpProvider(this.config.ethereum.nodeHost));
 
-                let tokens:Array<TokenInfo> = [
+                let tokenInfo:Array<TokenInfo> = [
                     {
                         tokenid:"",
                         chainName:this.config.vechain.chainName,
                         chainId:this.config.vechain.chainId,
-                        tokenSymbol:"VVET",
-                        tokenAddr:this.config.vechain.contracts.vVet,
+                        name:"VVET",
+                        symbol:"VVET",
+                        decimals:18,
+                        address:this.config.vechain.contracts.vVet,
+                        nativeCoin:false,
                         tokeType:"1",
-                        targetToken:""
+                        targetTokenId:""
                     },
                     {
                         tokenid:"",
                         chainName:this.config.vechain.chainName,
                         chainId:this.config.vechain.chainId,
-                        tokenSymbol:"VETH",
-                        tokenAddr:this.config.vechain.contracts.vEth,
+                        name:"VETH",
+                        symbol:"VETH",
+                        decimals:18,
+                        address:this.config.vechain.contracts.vEth,
+                        nativeCoin:false,
                         tokeType:"2",
-                        targetToken:""
+                        targetTokenId:""
                     },
                     {
                         tokenid:"",
                         chainName:this.config.ethereum.chainName,
                         chainId:this.config.ethereum.chainId,
-                        tokenSymbol:"WVET",
-                        tokenAddr:this.config.ethereum.contracts.wVet,
+                        name:"WVET",
+                        symbol:"WVET",
+                        decimals:18,
+                        address:this.config.ethereum.contracts.wVet,
+                        nativeCoin:false,
                         tokeType:"2",
-                        targetToken:""
+                        targetTokenId:""
                     },
                     {
                         tokenid:"",
                         chainName:this.config.ethereum.chainName,
                         chainId:this.config.ethereum.chainId,
-                        tokenSymbol:"WETH",
-                        tokenAddr:this.config.ethereum.contracts.wEth,
+                        name:"WVET",
+                        symbol:"WETH",
+                        decimals:18,
+                        address:this.config.ethereum.contracts.wEth,
+                        nativeCoin:false,
                         tokeType:"1",
-                        targetToken:""
+                        targetTokenId:""
                     }
                 ]
 
-                for(let token of tokens){
-                    token.tokenid = tokenid(token.chainName,token.chainId,token.tokenAddr);
+                for(let token of tokenInfo){
+                    token.tokenid = tokenid(token.chainName,token.chainId,token.address);
                 }
-                tokens[0].targetToken = tokens[2].tokenid;
-                tokens[2].targetToken = tokens[0].tokenid;
-                tokens[1].targetToken = tokens[3].tokenid;
-                tokens[3].targetToken = tokens[1].tokenid;
+                tokenInfo[0].targetTokenId = tokenInfo[2].tokenid;
+                tokenInfo[2].targetTokenId = tokenInfo[0].tokenid;
+                tokenInfo[1].targetTokenId = tokenInfo[3].tokenid;
+                tokenInfo[3].targetTokenId = tokenInfo[1].tokenid;
 
                 const dbConfig = {
                     type:"sqlite",
@@ -74,7 +89,7 @@ export class VeChainSnapshootScanTestCase {
                     enableWAL:false
                 }
 
-                const entitiesDir = path.join(__dirname,"../../src/ValidationNode/server/model/entities/**.entity{.ts,.js}");
+                const entitiesDir = path.join(__dirname,"../../src/common/model/entities/**.entity{.ts,.js}");
                 const connectionOptions:any = dbConfig;
                 connectionOptions.entities = [entitiesDir];
                 const connection = await createConnection(connectionOptions);
@@ -86,7 +101,8 @@ export class VeChainSnapshootScanTestCase {
                 this.env = {
                     config:this.config,
                     connex:this.connex,
-                    tokenInfo:tokens,
+                    web3:this.web3,
+                    tokenInfo:tokenInfo,
                     contractdir:path.join(__dirname,"../../src/SmartContracts/contracts")
                 }
                 
@@ -109,7 +125,7 @@ export class VeChainSnapshootScanTestCase {
 }
 
 describe("VeChainSnapshootScan task", ()=>{
-    let testcase = new VeChainSnapshootScanTestCase();
+    let testcase = new SnapshootScanTestCase();
 
     before(async() =>{
         await testcase.init();

@@ -1,8 +1,8 @@
 import { Framework } from "@vechain/connex-framework";
 import { ActionData, ActionResult, PromiseActionResult } from "../../common/utils/components/actionResult";
 import { BridgeSnapshoot, ZeroRoot } from "../../common/utils/types/bridgeSnapshoot";
-import { SnapshootModel } from "../../ValidationNode/server/model/snapshootModel";
-import { VeChainBridgeHead } from "../../ValidationNode/server/vechainBridgeHead";
+import { SnapshootModel } from "../../common/model/snapshootModel";
+import { VeChainBridgeHead } from "../../common/vechainBridgeHead";
 
 export class VeChainBridgeSnapshootScan{
     public async run(env:any):Promise<ActionResult>{

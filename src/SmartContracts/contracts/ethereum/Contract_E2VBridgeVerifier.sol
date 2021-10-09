@@ -166,7 +166,7 @@ contract E2VBridgeVerifier is BridgeVerifierControl{
         require(_sigs.length >= limit, "Insufficient number of signatures");
 
         address[] memory signers = new address[](_sigs.length);
-        bytes32 msgHash = keccak256(abi.encodePacked("lockBridge",_lastRoot));
+        bytes32 msgHash = keccak256(abi.encodePacked("unlockBridge",_lastRoot));
         for (uint8 i = 0; i < _sigs.length; i++) {
             address signer = ECVerify.ecrecovery(msgHash, _sigs[i]);
             require(verifiers[signer], "signer isn't a verifier");

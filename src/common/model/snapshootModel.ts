@@ -1,6 +1,7 @@
 import { getConnection, getManager, getRepository } from "typeorm";
-import { ActionData, ActionResult } from "../../../common/utils/components/actionResult";
-import { BridgeSnapshoot } from "../../../common/utils/types/bridgeSnapshoot";
+import { ActionData, ActionResult } from "../utils/components/actionResult";
+import { BridgeSnapshoot, ZeroRoot } from "../utils/types/bridgeSnapshoot";
+import { SwapTx } from "../utils/types/swapTx";
 import { SnapshootEntity } from "./entities/snapshoot.entity";
 
 export class SnapshootModel {
@@ -13,11 +14,11 @@ export class SnapshootModel {
     public async getLastSnapshoot():Promise<ActionData<BridgeSnapshoot>>{
         let result = new ActionData<BridgeSnapshoot>();
         result.data = {
-            parentMerkleRoot:"0x0000000000000000000000000000000000000000000000000000000000000000",
-            merkleRoot:"0x0000000000000000000000000000000000000000000000000000000000000000",
+            parentMerkleRoot:ZeroRoot(),
+            merkleRoot:ZeroRoot(),
             chains:[
-                {chainName:this.config.vechain.chainName,chainId:this.config.vechain.chainId,lockedBlockNum:this.config.vechain.startBlockNum,beginBlockNum:this.config.vechain.startBlockNum,endBlockNum:0},
-                {chainName:this.config.ethereum.chainName,chainId:this.config.ethereum.chainId,lockedBlockNum:this.config.ethereum.startBlockNum,beginBlockNum:this.config.ethereum.startBlockNum,endBlockNum:0},
+                {chainName:this.config.vechain.chainName,chainId:this.config.vechain.chainId,lockedBlockNum:this.config.vechain.startBlockNum,beginBlockNum:this.config.vechain.startBlockNum,endBlockNum:this.config.vechain.startBlockNum},
+                {chainName:this.config.ethereum.chainName,chainId:this.config.ethereum.chainId,lockedBlockNum:this.config.ethereum.startBlockNum,beginBlockNum:this.config.ethereum.startBlockNum,endBlockNum:this.config.ethereum.startBlockNum},
             ]
         }
 
@@ -44,8 +45,8 @@ export class SnapshootModel {
     public async getSnapshootByRoot(root:string):Promise<ActionData<BridgeSnapshoot>>{
         let result = new ActionData<BridgeSnapshoot>();
         result.data = {
-            parentMerkleRoot:"0x0000000000000000000000000000000000000000000000000000000000000000",
-            merkleRoot:"0x0000000000000000000000000000000000000000000000000000000000000000",
+            parentMerkleRoot:ZeroRoot(),
+            merkleRoot:ZeroRoot(),
             chains:[
                 {
                     chainName:this.config.vechain.chainName,

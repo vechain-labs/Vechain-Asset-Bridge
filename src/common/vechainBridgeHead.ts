@@ -3,11 +3,11 @@ import { Contract } from "myvetools";
 import { compileContract } from "myvetools/dist/utils";
 import path from "path";
 import { abi } from "thor-devkit";
-import { ActionData, PromiseActionResult } from "../../common/utils/components/actionResult";
-import { ThorDevKitEx } from "../../common/utils/extensions/thorDevkitExten";
-import { IBridgeHead } from "../../common/utils/iBridgeHead";
-import { BridgeSnapshoot, ZeroRoot } from "../../common/utils/types/bridgeSnapshoot";
-import { SwapTx } from "../../common/utils/types/swapTx";
+import { ActionData } from "./utils/components/actionResult";
+import { ThorDevKitEx } from "./utils/extensions/thorDevkitExten";
+import { IBridgeHead } from "./utils/iBridgeHead";
+import { BridgeSnapshoot, ZeroRoot } from "./utils/types/bridgeSnapshoot";
+import { SwapTx } from "./utils/types/swapTx";
 
 export class VeChainBridgeHead implements IBridgeHead {
 
@@ -18,7 +18,7 @@ export class VeChainBridgeHead implements IBridgeHead {
         this.initV2EBridge();
     }
 
-    public async  getSnapshoot(begin:number,end:number):Promise<ActionData<BridgeSnapshoot[]>>{
+    public async getSnapshoot(begin:number,end:number):Promise<ActionData<BridgeSnapshoot[]>>{
         let result = new ActionData<BridgeSnapshoot[]>();
         result.data = new Array();
 
@@ -63,8 +63,8 @@ export class VeChainBridgeHead implements IBridgeHead {
         return result;
     }
 
-    public async getLastSnapshoot():Promise<ActionData<BridgeSnapshoot>>{
-        let result = new ActionData<BridgeSnapshoot>();
+    public async getLastSnapshoot():Promise<ActionData<{sn:BridgeSnapshoot,txid:string,blocknum:number}>>{
+        let result = new ActionData<{sn:BridgeSnapshoot,txid:string,blocknum:number}>();
 
         let filter = this.connex.thor.filter("event",[{
             address:this.config.vechain.contracts.v2eBridge,
@@ -84,9 +84,11 @@ export class VeChainBridgeHead implements IBridgeHead {
                 }
             ]
         };
+        let txid:string = "";
+        let blocknum:number = 0;
 
         let begin = this.config.vechain.startBlockNum;
-        let end = this.connex.thor.status.head.number;
+        let end = (await this.connex.thor.block().get())!.number;
 
         for(let blockNum = end;blockNum >= begin;){
             let from = blockNum - this.scanBlockStep >= begin ? blockNum - this.scanBlockStep : begin;
@@ -111,14 +113,15 @@ export class VeChainBridgeHead implements IBridgeHead {
                     return result;
                 }
                 snapShoot.chains[0].lockedBlockNum = lockevs[0].blockNum;
+                txid = ev.meta.txID;
+                blocknum = ev.meta.blockNumber;
                 break;
             } else {
                 blockNum = from - 1;
                 continue;
             }
         }
-
-        result.data = snapShoot;
+        result.data = {sn:snapShoot,txid:txid,blocknum:blocknum};
         return result;
     }
 
@@ -155,7 +158,7 @@ export class VeChainBridgeHead implements IBridgeHead {
         
         try {
             const call = await this.v2eBridge.call("locked");
-            result.data = Boolean(call.decoded[0]);
+            result.data = Boolean(BigInt(call.decoded[0]));
         } catch (error) {
             result.error = error;
         }
@@ -176,7 +179,7 @@ export class VeChainBridgeHead implements IBridgeHead {
         return result;
     }
 
-    public async getLastLockedBlock():Promise<ActionData<{txid:string,blocknum:number,root:string}>>{
+    public async getLastLocked():Promise<ActionData<{txid:string,blocknum:number,root:string}>>{
         let result = new ActionData<{txid:string,blocknum:number,root:string}>();
 
         let filter = this.connex.thor.filter("event",[{
@@ -186,7 +189,8 @@ export class VeChainBridgeHead implements IBridgeHead {
         }]).order("desc"); 
 
         let begin = this.config.vechain.startBlockNum;
-        let end = this.connex.thor.status.head.number;
+        let end = (await this.connex.thor.block().get())!.number;
+
 
         for(let blockNum = end;blockNum >= begin;){
             let from = blockNum - this.scanBlockStep >= begin ? blockNum - this.scanBlockStep : begin;
@@ -212,8 +216,10 @@ export class VeChainBridgeHead implements IBridgeHead {
         for(let block = begin; block <= end;){
             let from = block;
             let to = block + this.scanBlockStep > end ? end:block + this.scanBlockStep;
+
+            console.debug(`scan vechain swaptxs blocknum: ${from} - ${to}`);
             
-            let filter = await this.connex.thor.filter("event",[
+            let filter = this.connex.thor.filter("event",[
                 {address:this.config.vechain.v2eBridge,topic0:this.SwapEvent.signature},
                 {address:this.config.vechain.v2eBridge,topic0:this.ClaimEvent.signature}
             ]).order("asc").range({unit:"block",from:from,to:to});
@@ -224,58 +230,60 @@ export class VeChainBridgeHead implements IBridgeHead {
             let blockNum = 0;
             let clauseIndex = 0;
 
-            while(true){
-                let events = await filter.apply(offset,limit);
-                for(const event of events){
-                    if(blockNum != event.meta.blockNumber || clauseIndex != event.meta.clauseIndex){
-                        eventIndex = 0;
-                        blockNum = event.meta.blockNumber;
-                        clauseIndex = event.meta.clauseIndex;
-                    }
-
-                    let swapTx:SwapTx;
-                    if(event.topics[0] == this.SwapEvent.signature){
-                        swapTx = {
-                            chainName:this.config.vechain.chainName,
-                            chainId:this.config.vechain.chainId,
-                            blockNumber:blockNum,
-                            txid:event.meta.txID,
-                            clauseIndex:clauseIndex,
-                            index:eventIndex,
-                            account:ThorDevKitEx.Bytes32ToAddress(event.topics[3]),
-                            token:ThorDevKitEx.Bytes32ToAddress(event.topics[1]),
-                            amount:BigInt('0x' + event.data.substring(2,66)),
-                            reward:BigInt('0x' + event.data.substring(66)),
-                            timestamp:event.meta.blockTimestamp,
-                            type:"swap"
+            if(filter != undefined){
+                while(true){
+                    let events = await filter.apply(offset,limit);
+                    for(const event of events){
+                        if(blockNum != event.meta.blockNumber || clauseIndex != event.meta.clauseIndex){
+                            eventIndex = 0;
+                            blockNum = event.meta.blockNumber;
+                            clauseIndex = event.meta.clauseIndex;
                         }
-                        result.data.push(swapTx);
-                        eventIndex++;
-                    } else if (event.topics[0] == this.ClaimEvent.signature){
-                        swapTx = {
-                            chainName:this.config.vechain.chainName,
-                            chainId:this.config.vechain.chainId,
-                            blockNumber:blockNum,
-                            txid:event.meta.txID,
-                            clauseIndex:clauseIndex,
-                            index:eventIndex,
-                            account:ThorDevKitEx.Bytes32ToAddress(event.topics[2]),
-                            token:ThorDevKitEx.Bytes32ToAddress(event.topics[1]),
-                            amount:BigInt(event.data),
-                            reward:BigInt(0),
-                            timestamp:event.meta.blockTimestamp,
-                            type:"claim"
+    
+                        let swapTx:SwapTx;
+                        if(event.topics[0] == this.SwapEvent.signature){
+                            swapTx = {
+                                chainName:this.config.vechain.chainName,
+                                chainId:this.config.vechain.chainId,
+                                blockNumber:blockNum,
+                                txid:event.meta.txID,
+                                clauseIndex:clauseIndex,
+                                index:eventIndex,
+                                account:ThorDevKitEx.Bytes32ToAddress(event.topics[3]),
+                                token:ThorDevKitEx.Bytes32ToAddress(event.topics[1]),
+                                amount:BigInt('0x' + event.data.substring(2,66)),
+                                reward:BigInt('0x' + event.data.substring(66)),
+                                timestamp:event.meta.blockTimestamp,
+                                type:"swap"
+                            }
+                            result.data.push(swapTx);
+                            eventIndex++;
+                        } else if (event.topics[0] == this.ClaimEvent.signature){
+                            swapTx = {
+                                chainName:this.config.vechain.chainName,
+                                chainId:this.config.vechain.chainId,
+                                blockNumber:blockNum,
+                                txid:event.meta.txID,
+                                clauseIndex:clauseIndex,
+                                index:eventIndex,
+                                account:ThorDevKitEx.Bytes32ToAddress(event.topics[2]),
+                                token:ThorDevKitEx.Bytes32ToAddress(event.topics[1]),
+                                amount:BigInt(event.data),
+                                reward:BigInt(0),
+                                timestamp:event.meta.blockTimestamp,
+                                type:"claim"
+                            }
+                            result.data.push(swapTx);
+                            eventIndex++;
                         }
-                        result.data.push(swapTx);
-                        eventIndex++;
                     }
-                }
-
-                if(events.length == limit){
-                    offset = offset + limit;
-                    continue;
-                } else {
-                    break;
+    
+                    if(events.length == limit){
+                        offset = offset + limit;
+                        continue;
+                    } else {
+                        break;
+                    }
                 }
             }
             block = to + 1;

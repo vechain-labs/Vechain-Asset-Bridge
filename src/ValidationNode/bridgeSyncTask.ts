@@ -1,16 +1,16 @@
 import { Framework } from "@vechain/connex-framework";
 import Web3 from "web3";
-import BridgeStorage from "./server/bridgeStorage";
-import { EthereumBridgeHead } from "./server/ethereumBridgeHead";
-import LedgerModel from "./server/model/ledgerModel";
-import { SnapshootModel } from "./server/model/snapshootModel";
-import SwapTxModel from "./server/model/swapTxModel";
-import { VeChainBridgeHead } from "./server/vechainBridgeHead";
+import BridgeStorage from "../common/bridgeStorage";
+import { EthereumBridgeHead } from "../common/ethereumBridgeHead";
+import LedgerModel from "../common/model/ledgerModel";
+import { SnapshootModel } from "../common/model/snapshootModel";
+import SwapTxModel from "../common/model/swapTxModel";
 import { ActionData, ActionResult, PromiseActionResult } from "../common/utils/components/actionResult";
 import { BridgeLedger } from "../common/utils/types/bridgeLedger";
 import { BridgeSnapshoot, ZeroRoot } from "../common/utils/types/bridgeSnapshoot";
 import { SwapTx } from "../common/utils/types/swapTx";
 import { TokenInfo } from "../common/utils/types/tokenInfo";
+import { VeChainBridgeHead } from "../common/vechainBridgeHead";
 
 export class BridgeSyncTask{
     constructor(env:any){
@@ -97,7 +97,7 @@ export class BridgeSyncTask{
             }
 
             let localsnapshoot = (promiseResult.data!.succeed[0] as ActionData<BridgeSnapshoot>).data!;
-            let onchainsnapshoot = (promiseResult.data!.succeed[1] as ActionData<BridgeSnapshoot>).data!;
+            let onchainsnapshoot = (promiseResult.data!.succeed[1] as ActionData<{sn:BridgeSnapshoot,txid:string,blocknum:number}>).data!.sn;
 
             if(localsnapshoot.merkleRoot == onchainsnapshoot.merkleRoot){
                 result.data = localsnapshoot;
@@ -215,7 +215,7 @@ export class BridgeSyncTask{
             return result;
         }
 
-        result.data = localResult.data!.merkleRoot == onchainResult.data!.merkleRoot;
+        result.data = localResult.data!.merkleRoot == onchainResult.data!.sn.merkleRoot;
         return result;
     }
 
@@ -310,7 +310,7 @@ export class BridgeSyncTask{
         result.data = new Array();
 
         const vechain_beginBlock = sn.chains.filter(chain =>{return chain.chainName == this.config.vechain.chainName && chain.chainId == this.config.vechain.chainId;})[0].endBlockNum + 1;
-        const vechain_endblock = this.connex.thor.status.head.number;
+        const vechain_endblock = (await this.connex.thor.block().get())!.number;
         const ethereum_beginBlock = sn.chains.filter(chain =>{return chain.chainName == this.config.ethereum.chainName && chain.chainId == this.config.ethereum.chainId;})[0].endBlockNum + 1;
         const ethereum_endblock = (await this.web3.eth.getBlock('latest')).number;
 
@@ -344,8 +344,8 @@ export class BridgeSyncTask{
         const vechain = sn.chains.filter( chain => {return chain.chainName == this.config.vechain.chainName && chain.chainId == this.config.vechain.chainId;})[0];
         const ethereum = sn.chains.filter( chain => {return chain.chainName == this.config.ethereum.chainName && chain.chainId == this.config.ethereum.chainId;})[0];
         
-        const scanVeChainTxsPromise = this.vechainBridge.scanTxs(vechain.beginBlockNum,vechain.endBlockNum - 1);
-        const scanEthereumTxsPromise = this.ethereumBridge.scanTxs(ethereum.beginBlockNum,ethereum.endBlockNum -1);
+        const scanVeChainTxsPromise = this.vechainBridge.scanTxs(vechain.beginBlockNum,vechain.lockedBlockNum - 1);
+        const scanEthereumTxsPromise = this.ethereumBridge.scanTxs(ethereum.beginBlockNum,ethereum.lockedBlockNum -1);
         
         const scanResult = await PromiseActionResult.PromiseActionResult(Promise.all([scanVeChainTxsPromise,scanEthereumTxsPromise]));
         if(scanResult.error){

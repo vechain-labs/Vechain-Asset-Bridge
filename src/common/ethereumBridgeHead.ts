@@ -2,12 +2,12 @@ import { compileContract } from "myvetools/dist/utils";
 import path from "path";
 import Web3 from "web3";
 import Web3Eth from 'web3-eth';
-import { ActionData } from "../../common/utils/components/actionResult";
-import { IBridgeHead } from "../../common/utils/iBridgeHead";
-import { BridgeSnapshoot, ZeroRoot } from "../../common/utils/types/bridgeSnapshoot";
-import { SwapTx } from "../../common/utils/types/swapTx"; 
 import {Contract as EthContract, EventData} from 'web3-eth-contract';
-const sortArray = require('sort-array');
+import { ActionData } from "./utils/components/actionResult";
+import { ThorDevKitEx } from "./utils/extensions/thorDevkitExten";
+import { IBridgeHead } from "./utils/iBridgeHead";
+import { BridgeSnapshoot, ZeroRoot } from "./utils/types/bridgeSnapshoot";
+import { SwapTx } from "./utils/types/swapTx";
 
 export class EthereumBridgeHead implements IBridgeHead{
 
@@ -20,8 +20,8 @@ export class EthereumBridgeHead implements IBridgeHead{
 
     private readonly scanBlockStep = 100;
 
-    public async getLastSnapshoot(): Promise<ActionData<BridgeSnapshoot>> {
-        let result = new ActionData<BridgeSnapshoot>();
+    public async getLastSnapshoot(): Promise<ActionData<{sn:BridgeSnapshoot,txid:string,blocknum:number}>>{
+        let result = new ActionData<{sn:BridgeSnapshoot,txid:string,blocknum:number}>();
 
         try {
 
@@ -38,31 +38,47 @@ export class EthereumBridgeHead implements IBridgeHead{
                     }
                 ]
             };
+            let txid:string = "";
+            let blocknum:number = 0;
 
-            const begin = await this.web3.eth.getBlockNumber();
-            const end = this.config.ethereum.startBlockNum;
+            const begin = this.config.ethereum.startBlockNum;
+            const end = await this.web3.eth.getBlockNumber();
+
 
             for(let blockNum = end;blockNum >= begin;){
                 let from = blockNum - this.scanBlockStep >= begin ? blockNum - this.scanBlockStep : begin;
                 let to = blockNum;
 
-                const evets = await this.e2vBridge.getPastEvents("UpdateMerkleRoot",{fromBlock:from,toBlock:to});
-                if(evets.length == 0){
+                const events = await this.e2vBridge.getPastEvents("UpdateMerkleRoot",{fromBlock:from,toBlock:to});
+                if(events.length == 0){
                     blockNum = from - 1;
                     continue;
                 }
-                const sorted:Array<EventData> = sortArray(evets,[
-                    {by:"blockNumber",order:"desc"},
-                    {by:"transactionIndex",order:"desc"}]);
 
-                const ev = sorted[0];
+                const ev = events[events.length - 1];
                 snapshoot.merkleRoot = ev.raw.topics[1];
                 snapshoot.parentMerkleRoot = ev.raw.topics[3];
                 snapshoot.chains[0].beginBlockNum = parseInt(ev.raw.topics[2],16);
                 snapshoot.chains[0].endBlockNum = ev.blockNumber;
+
+                const lockevsResult = await this.lockChangeEvents(snapshoot.chains[0].beginBlockNum,snapshoot.chains[0].endBlockNum);
+                if(lockevsResult.error != undefined){
+                    result.copyBase(lockevsResult);
+                    return result;
+                }
+
+                const lockevs = lockevsResult.data!.filter(ev =>{return ev.root == snapshoot.parentMerkleRoot && ev.status == true; });
+                if(lockevs == undefined || lockevs.length == 0){
+                    result.error = new Error(`can't found lockchange event, root:${snapshoot.parentMerkleRoot}`);
+                    return result;
+                }
+                snapshoot.chains[0].lockedBlockNum = lockevs[0].blockNum;
+                txid = ev.transactionHash;
+                blocknum = ev.blockNumber;
+                
                 break;
             }
-            result.data = snapshoot;
+            result.data = {sn:snapshoot,txid:txid,blocknum:blocknum};
         } catch (error) {
             result.error = error;
         }
@@ -136,27 +152,24 @@ export class EthereumBridgeHead implements IBridgeHead{
         return result;
     }
 
-    public async getLastLockedBlock():Promise<ActionData<{blocknum:number,root:string}>>{
-        let result = new ActionData<{blocknum:number,root:string}>();
+    public async getLastLocked():Promise<ActionData<{txhash:string,blocknum:number,root:string}>>{
+        let result = new ActionData<{txhash:string,blocknum:number,root:string}>();
 
         try {
-            const begin = await this.web3.eth.getBlockNumber();
-            const end = this.config.ethereum.startBlockNum;
+            const begin = this.config.ethereum.startBlockNum;
+            const end = await this.web3.eth.getBlockNumber();
 
             for(let blockNum = end;blockNum >= begin;){
                 let from = blockNum - this.scanBlockStep >= begin ? blockNum - this.scanBlockStep : begin;
                 let to = blockNum;
 
-                const evets = await this.e2vBridge.getPastEvents("BridgeLockChange",{fromBlock:from,toBlock:to});
-                if(evets.length == 0){
+                const events = await this.e2vBridge.getPastEvents("BridgeLockChange",{fromBlock:from,toBlock:to});
+                if(events.length == 0){
                     blockNum = from - 1;
                     continue;
                 }
-                const sorted:Array<EventData> = sortArray(evets,[
-                    {by:"blockNumber",order:"desc"},
-                    {by:"transactionIndex",order:"desc"}]);
-                const ev = sorted[0];
-                result.data = {blocknum:ev.blockNumber,root:ev.raw.topics[1]}
+                const ev = events[events.length - 1];
+                result.data = {txhash:ev.transactionHash,blocknum:ev.blockNumber,root:ev.raw.topics[1]}
                 break;
             }
         } catch (error) {
@@ -176,6 +189,8 @@ export class EthereumBridgeHead implements IBridgeHead{
             for(let block = begin; block <= end;){
                 let from = block;
                 let to = block + this.scanBlockStep > end ? end:block + this.scanBlockStep;
+
+                console.debug(`scan ethereum swaptxs blocknum: ${from} - ${to}`);
     
                 const swapEvents = await this.e2vBridge.getPastEvents("Swap",{fromBlock:from,toBlock:to});
                 for(const swapEvent of swapEvents){
@@ -192,8 +207,8 @@ export class EthereumBridgeHead implements IBridgeHead{
                         txid:swapEvent.transactionHash,
                         clauseIndex:0,
                         index:swapEvent.logIndex,
-                        account:swapEvent.raw.topics[3],
-                        token:swapEvent.raw.topics[1],
+                        account:ThorDevKitEx.Bytes32ToAddress(swapEvent.raw.topics[3]),
+                        token:ThorDevKitEx.Bytes32ToAddress(swapEvent.raw.topics[1]),
                         amount:BigInt('0x' + swapEvent.raw.data.substring(2,66)),
                         reward:BigInt('0x' + swapEvent.raw.data.substring(66)),
                         timestamp:blockCache.get(swapEvent.blockNumber)!.timestamp as number,
@@ -218,8 +233,8 @@ export class EthereumBridgeHead implements IBridgeHead{
                         txid:claimEvent.transactionHash,
                         clauseIndex:0,
                         index:claimEvent.logIndex,
-                        account:claimEvent.raw.topics[2],
-                        token:claimEvent.raw.topics[1],
+                        account:ThorDevKitEx.Bytes32ToAddress(claimEvent.raw.topics[2]),
+                        token:ThorDevKitEx.Bytes32ToAddress(claimEvent.raw.topics[1]),
                         amount:BigInt(claimEvent.raw.data),
                         reward:BigInt(0),
                         timestamp:blockCache.get(claimEvent.blockNumber)!.timestamp as number,
@@ -249,15 +264,12 @@ export class EthereumBridgeHead implements IBridgeHead{
 
             const events = await this.e2vBridge.getPastEvents("UpdateMerkleRoot",{fromBlock:from,toBlock:to});
             if(events.length > 0){
-                const sorted:Array<EventData> = sortArray(events,[
-                    {by:"blockNumber",order:"desc"},
-                    {by:"transactionIndex",order:"desc"}]);
-
+                const lastEvent = events[events.length - 1];
                 eventData = {
-                    blockNum:sorted[0].blockNumber,
-                    from:parseInt(sorted[0].raw.topics[2],16),
-                    root:sorted[0].raw.topics[1],
-                    parentRoot:sorted[0].raw.topics[3]
+                    blockNum:lastEvent.blockNumber,
+                    from:parseInt(lastEvent.raw.topics[2],16),
+                    root:lastEvent.raw.topics[1],
+                    parentRoot:lastEvent.raw.topics[3]
                 }
                 break;
             } else {
