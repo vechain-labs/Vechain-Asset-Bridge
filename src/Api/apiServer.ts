@@ -12,6 +12,7 @@ export default class ApiServer extends Koa
         let rootRouter = new RootRouter(env);
         this.use(cors({
             origin(ctx: Koa.Context) {
+                ctx.set("Access-Control-Allow-Origin","*");
                 return '*';
             },
             exposeHeaders: ['WWW-Authenticate', 'Server-Authorization'],
