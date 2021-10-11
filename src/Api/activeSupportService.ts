@@ -46,7 +46,7 @@ export default class ActiveSupportServices implements IActiveSupportServices{
                 decimals:18,
                 address:environment.config.vechain.contracts.vVet,
                 nativeCoin:true,
-                tokeType:"1",
+                tokenType:"1",
                 targetTokenId:""
             },
             {
@@ -58,7 +58,7 @@ export default class ActiveSupportServices implements IActiveSupportServices{
                 decimals:18,
                 address:environment.config.vechain.contracts.vEth,
                 nativeCoin:false,
-                tokeType:"2",
+                tokenType:"2",
                 targetTokenId:""
             },
             {
@@ -70,7 +70,7 @@ export default class ActiveSupportServices implements IActiveSupportServices{
                 decimals:18,
                 address:environment.config.ethereum.contracts.wVet,
                 nativeCoin:false,
-                tokeType:"2",
+                tokenType:"2",
                 targetTokenId:""
             },
             {
@@ -82,7 +82,7 @@ export default class ActiveSupportServices implements IActiveSupportServices{
                 decimals:18,
                 address:environment.config.ethereum.contracts.wEth,
                 nativeCoin:true,
-                tokeType:"1",
+                tokenType:"1",
                 targetTokenId:""
             }
         ]

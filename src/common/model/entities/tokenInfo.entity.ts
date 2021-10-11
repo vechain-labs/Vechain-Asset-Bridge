@@ -19,7 +19,7 @@ export class TokenEntity{
     public tokenAddr!:string;
 
     @Column({name:"tokentype"})
-    public tokeType!:string;
+    public tokenType!:string;
 
     @Column({name:"targettoken"})
     public targetToken!:string;

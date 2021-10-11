@@ -64,7 +64,7 @@ export default class BridgeController extends BaseMiddleware{
                     decimals:meta.from.decimals,
                     address:meta.from.address,
                     nativeCoin:meta.from.nativeCoin,
-                    tokeType:meta.from.tokeType
+                    tokenType:meta.from.tokenType
                 },
                 to:{
                     chainName:meta.to.chainName,
@@ -74,7 +74,7 @@ export default class BridgeController extends BaseMiddleware{
                     decimals:meta.to.decimals,
                     address:meta.to.address,
                     nativeCoin:meta.to.nativeCoin,
-                    tokeType:meta.to.tokeType
+                    tokenType:meta.to.tokenType
                 },
                 sendingTxs:meta.sendingTxs,
                 receivingTx:meta.receivingTx,

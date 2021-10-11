@@ -9,7 +9,7 @@ export type TokenInfo = {
     decimals:number,
     address:string;
     nativeCoin:boolean,
-    tokeType:string;
+    tokenType:string;
     targetTokenId:string;
 }
 

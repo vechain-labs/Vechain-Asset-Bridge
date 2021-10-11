@@ -21,7 +21,7 @@ export default class TokenInfoModel {
             //         chainId:entity.chainId,
             //         symbol:entity.tokenSymbol,
             //         address:entity.tokenAddr,
-            //         tokeType:entity.tokeType,
+            //         tokenType:entity.tokenType,
             //         targetToken:entity.targetToken
             //     };
             //     result.data!.push(token);

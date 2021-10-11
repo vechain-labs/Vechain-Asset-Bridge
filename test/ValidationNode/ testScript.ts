@@ -43,7 +43,7 @@ const initTokens = function() {
             decimals:18,
             address:config.vechain.contracts.vVet,
             nativeCoin:false,
-            tokeType:"1",
+            tokenType:"1",
             targetTokenId:""
         },
         {
@@ -55,7 +55,7 @@ const initTokens = function() {
             decimals:18,
             address:config.vechain.contracts.vEth,
             nativeCoin:false,
-            tokeType:"2",
+            tokenType:"2",
             targetTokenId:""
         },
         {
@@ -67,7 +67,7 @@ const initTokens = function() {
             decimals:18,
             address:config.ethereum.contracts.wVet,
             nativeCoin:false,
-            tokeType:"2",
+            tokenType:"2",
             targetTokenId:""
         },
         {
@@ -79,7 +79,7 @@ const initTokens = function() {
             decimals:18,
             address:config.ethereum.contracts.wEth,
             nativeCoin:false,
-            tokeType:"1",
+            tokenType:"1",
             targetTokenId:""
         }
     ]

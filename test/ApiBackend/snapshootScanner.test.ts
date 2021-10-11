@@ -34,7 +34,7 @@ export class SnapshootScanTestCase {
                         decimals:18,
                         address:this.config.vechain.contracts.vVet,
                         nativeCoin:false,
-                        tokeType:"1",
+                        tokenType:"1",
                         targetTokenId:""
                     },
                     {
@@ -46,7 +46,7 @@ export class SnapshootScanTestCase {
                         decimals:18,
                         address:this.config.vechain.contracts.vEth,
                         nativeCoin:false,
-                        tokeType:"2",
+                        tokenType:"2",
                         targetTokenId:""
                     },
                     {
@@ -58,7 +58,7 @@ export class SnapshootScanTestCase {
                         decimals:18,
                         address:this.config.ethereum.contracts.wVet,
                         nativeCoin:false,
-                        tokeType:"2",
+                        tokenType:"2",
                         targetTokenId:""
                     },
                     {
@@ -70,7 +70,7 @@ export class SnapshootScanTestCase {
                         decimals:18,
                         address:this.config.ethereum.contracts.wEth,
                         nativeCoin:false,
-                        tokeType:"1",
+                        tokenType:"1",
                         targetTokenId:""
                     }
                 ]
