@@ -5,7 +5,6 @@ import { ActionData } from "../../../common/utils/components/actionResult";
 import ConvertJSONResponeMiddleware from "../../middleware/convertJSONResponeMiddleware";
 import { SnapshootModel } from "../../../common/model/snapshootModel";
 import LedgerModel from "../../../common/model/ledgerModel";
-import { SwapTx } from "../../../common/utils/types/swapTx";
 import { BridgeSnapshoot, ZeroRoot } from "../../../common/utils/types/bridgeSnapshoot";
 import { BridgeLedger } from "../../../common/utils/types/bridgeLedger";
 import SwapTxModel from "../../../common/model/swapTxModel";
@@ -36,7 +35,7 @@ export default class BridgeController extends BaseMiddleware{
         this.merkleproof = async (ctx:Router.IRouterContext,next: () => Promise<any>) => {
             let chainName = String(ctx.query.chainname).toLowerCase();
             let chainId = String(ctx.query.chainid).toLowerCase();
-            let token = String(ctx.query.token).toLowerCase();
+            let token = String(ctx.query.token || "").toLowerCase();
             let account = String(ctx.query.address).toLowerCase();
 
             const getMerkleProofResult = await this.getMerkleProof(chainName,chainId,account,token);
@@ -81,6 +80,31 @@ export default class BridgeController extends BaseMiddleware{
                 totalAmount:"0x"+meta.totalAmount.toString(16),
                 status:meta.status
             }
+
+            if(data.from.nativeCoin == true){
+                if(data.from.symbol == "VVET"){
+                    data.from.symbol = "VET";
+                    data.from.name = "VET";
+                    data.from.address = "";
+                } else if(data.from.symbol == "WETH"){
+                    data.from.symbol = "ETH";
+                    data.from.name = "ETH";
+                    data.from.address = "";
+                }
+            }
+
+            if(data.to.nativeCoin == true){
+                if(data.to.symbol == "VVET"){
+                    data.to.symbol = "VET";
+                    data.to.name = "VET";
+                    data.to.address = "";
+                } else if(data.to.symbol == "WETH"){
+                    data.to.symbol = "ETH";
+                    data.to.name = "ETH";
+                    data.to.address = "";
+                }
+            }
+
             body.claimList.push(data);
         }
 
@@ -267,8 +291,8 @@ export default class BridgeController extends BaseMiddleware{
         return result;
     }
 
-    private async getMerkleProof(chainName:string,chainId:string,account:string,token:string):Promise<ActionData<{ledger:BridgeLedger,proof:string[]}>>{
-        let result = new ActionData<{ledger:BridgeLedger,proof:string[]}>();
+    private async getMerkleProof(chainName:string,chainId:string,account:string,token:string):Promise<ActionData<{ledger?:BridgeLedger,proof?:string[]}>>{
+        let result = new ActionData<{ledger?:BridgeLedger,proof?:string[]}>();
 
         const getLastSnapshootResult = await (new SnapshootModel(this.environment)).getLastSnapshoot();
         if(getLastSnapshootResult.error){
@@ -311,8 +335,18 @@ export default class BridgeController extends BaseMiddleware{
             return result;
         }
 
+        let tokenAdd = token;
+        if(tokenAdd == ""){
+            let nativeCoinToken = (this.environment.tokenInfo as Array<TokenInfo>).find(token => {return token.chainId == chainId && token.chainName == chainName && token.nativeCoin == true;});
+            if(nativeCoinToken == undefined){
+                result.error = `Can't found nativecoin on ChainName:${chainName} ChainId:${chainId}`;
+                return result;
+            }
+            tokenAdd = nativeCoinToken.address;
+        }
+
         const targetLedger = storage.ledgerCache.find(ledger => {return ledger.chainName == chainName 
-            && ledger.chainId == chainId && ledger.account.toLowerCase() == account.toLowerCase()});
+            && ledger.chainId == chainId && ledger.account.toLowerCase() == account.toLowerCase() && ledger.token.toLowerCase() == tokenAdd.toLowerCase()});
         if(targetLedger != undefined){
             targetLedger.root = sn.merkleRoot;
             const proof = storage.getMerkleProof(targetLedger);
@@ -321,20 +355,28 @@ export default class BridgeController extends BaseMiddleware{
                 result.error = `Merkleproof invalid`;
                 return result;
             }
+            if(token == ""){
+                targetLedger.token = "";
+            }
             result.data = {ledger:targetLedger,proof:proof};
+        } else {
+            result.data = {};
         }
         return result;
     }
 
-    private async convertToMerkleProofToJson(ctx:Router.IRouterContext,data:{ledger:BridgeLedger,proof:string[]}){
-        let body = {
-            merkleRoot:data.ledger.root || "",
-            chainName:data.ledger.chainName,
-            chainId:data.ledger.chainId,
-            account:data.ledger.account,
-            token:data.ledger.token,
-            balance:"0x" + data.ledger.balance.toString(16),
-            merkleProof:data.proof
+    private async convertToMerkleProofToJson(ctx:Router.IRouterContext,data:{ledger?:BridgeLedger,proof?:string[]}){
+        let body = {};
+        if(data.ledger != undefined && data.proof != undefined){
+            body = {
+                merkleRoot:data.ledger.root || "",
+                chainName:data.ledger.chainName,
+                chainId:data.ledger.chainId,
+                account:data.ledger.account,
+                token:data.ledger.token,
+                balance:"0x" + data.ledger.balance.toString(16),
+                merkleProof:data.proof
+            }
         }
         ConvertJSONResponeMiddleware.bodyToJSONResponce(ctx,body);
     }

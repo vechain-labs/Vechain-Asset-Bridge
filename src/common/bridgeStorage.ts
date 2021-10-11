@@ -76,39 +76,6 @@ export default class BridgeStorage {
                     return result;
                 }
             }
-            // const targetToken = findTargetToken(this.tokenInfo,tx.chainName,tx.chainId,tx.token);
-            // if(targetToken == undefined){
-            //     result.error = `not found target token, sourcetoken: chainName:${tx.chainName} chainId:${tx.chainId} token:${tx.token}`;
-            //     return result;
-            // }
-
-            // const ledgerid = ledgerID(targetToken.chainName,targetToken.chainId,targetToken.address,tx.account);
-            // const targetIndex = this.ledgerCache.findIndex(item =>{return item.ledgerid == ledgerid});
-            // if(targetIndex != -1){
-            //     let ledger = this.ledgerCache[targetIndex];
-            //     if(tx.type == "swap"){
-            //         ledger.balance = ledger.balance + tx.amount;
-            //     } else {
-            //         ledger.balance = ledger.balance - tx.amount;
-            //     }
-            //     if(ledger.balance == BigInt(0)){
-            //         this.ledgerCache.splice(targetIndex,1);
-            //     }
-            // } else if(tx.type == "swap"){
-            //     let newLedger:BridgeLedger = {
-            //         root:"",
-            //         ledgerid:ledgerid,
-            //         chainName:targetToken.chainName,
-            //         chainId:targetToken.chainId,
-            //         account:tx.account,
-            //         token:targetToken.address,
-            //         balance:tx.amount
-            //     }
-            //     this.ledgerCache.push(newLedger);
-            // } else {
-            //     result.error = `update ledger error: empty ledger can't to claim,chainName:${targetToken.chainName} chainId:${targetToken.chainId} account:${tx.account} token:${targetToken.address}`;
-            //     return result;
-            // }
         }
         return result;
     }

@@ -30,7 +30,10 @@ export class QueryParamtsMiddleware extends BaseMiddleware{
 
     public async tokenAddrValidation(ctx:Router.IRouterContext,next:()=>Promise<any>){
         let token = String(ctx.query.token || "").toLowerCase();
-        if(token.length == 42 && /^(-0x|0x)?[0-9a-f]*$/i.test(token)){
+        if(token == ""){
+            await next();
+        }
+        else if(token.length == 42 && /^(-0x|0x)?[0-9a-f]*$/i.test(token)){
             await next();
         } else {
             ConvertJSONResponeMiddleware.errorJSONResponce(ctx,ParamtsError.ADDRESSINVALID);
