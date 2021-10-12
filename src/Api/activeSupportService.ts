@@ -4,6 +4,10 @@ import path from "path";
 import IActiveSupportServices from "./utils/iActiveSupportService";
 import { ActionResult } from "../common/utils/components/actionResult";
 import { tokenid, TokenInfo } from "../common/utils/types/tokenInfo";
+import * as Devkit from 'thor-devkit';
+import Web3 from "web3";
+import { Driver, SimpleNet, SimpleWallet } from "@vechain/connex-driver";
+import { Framework } from "@vechain/connex-framework";
 
 export default class ActiveSupportServices implements IActiveSupportServices{
     public async activieSupportServices():Promise<ActionResult> {
@@ -29,6 +33,7 @@ export default class ActiveSupportServices implements IActiveSupportServices{
             return result;
         }
         this.initTokenList();
+        this.initBridgeEnv();
 
         return result;
     }
@@ -94,5 +99,22 @@ export default class ActiveSupportServices implements IActiveSupportServices{
         environment.tokenInfo[2].targetTokenId = environment.tokenInfo[0].tokenid;
         environment.tokenInfo[1].targetTokenId = environment.tokenInfo[3].tokenid;
         environment.tokenInfo[3].targetTokenId = environment.tokenInfo[1].tokenid;
+    }
+
+    private async initBridgeEnv(){
+        const masterNode = Devkit.HDNode.fromMnemonic((environment.config.mnemonic as string).split(' '));
+        const account = masterNode.derive(5);
+        const web3 = new Web3(new Web3.providers.HttpProvider(environment.config.ethereum.nodeHost));
+        web3.eth.accounts.wallet.add(account.privateKey!.toString('hex'));
+        const wallet = new SimpleWallet();
+        wallet.import(account.privateKey!.toString('hex'));
+        const driver = await Driver.connect(new SimpleNet(environment.config.vechain.nodeHost as string), wallet);
+        const connex = new Framework(driver);
+
+        environment.connex = connex;
+        environment.web3 = web3;
+        environment.contractdir = path.join(__dirname,"../../../src/SmartContracts/contracts");
+        environment.wallet = wallet;
+        environment.bridgePack = false;
     }
 }

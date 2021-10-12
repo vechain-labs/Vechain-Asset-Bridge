@@ -21,5 +21,12 @@ export default class BridgeRouter extends BaseRouter{
             (ctx,next) => paramtsMiddleware.tokenAddrValidation(ctx,next),
             (ctx,next) => controller.merkleproof(ctx,next)
         );
+
+        this.get("/pack",
+            (ctx,next) => controller.pack(ctx,next)
+        );
+
+        this.get("/pack/status",
+            (ctx,next) => controller.packStatus(ctx,next));
     }
 }

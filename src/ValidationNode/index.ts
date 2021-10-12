@@ -1,2 +1,3 @@
-//require("./bridgePackTask");
-require("./bridgeSyncTask");
+class BridgeValidationNode{
+    
+}

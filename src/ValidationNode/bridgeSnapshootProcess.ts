@@ -108,7 +108,7 @@ export class BridgeSnapshootProcess{
                 case STATUS.Finished:
                     console.info(`Bridge update merkelroot process end at ${(new Date()).getTime()} (${(new Date()).toString()})`);
                     this.status = STATUS.Entry;
-                    break;
+                    return result;
             }
             if(runResult.error != undefined){
                 console.debug(`run result error ${runResult.error}`)
@@ -527,15 +527,6 @@ export class BridgeSnapshootProcess{
         result.data = new Array();
         const vechain = sn.chains.filter( chain => {return chain.chainName == this.config.vechain.chainName && chain.chainId == this.config.vechain.chainId;})[0];
         const ethereum = sn.chains.filter( chain => {return chain.chainName == this.config.ethereum.chainName && chain.chainId == this.config.ethereum.chainId;})[0];
-        
-        // const scanVeChainTxsPromise = this.vechainBridge.scanTxs(vechain.beginBlockNum,vechain.lockedBlockNum - 1);
-        // const scanEthereumTxsPromise = this.ethereumBridge.scanTxs(ethereum.beginBlockNum,ethereum.lockedBlockNum -1);
-        
-        // const scanResult = await PromiseActionResult.PromiseActionResult(Promise.all([scanVeChainTxsPromise,scanEthereumTxsPromise]));
-        // if(scanResult.error){
-        //     result.copyBase(scanResult);
-        //     return result;
-        // }
 
         const scanVeChainResult = await this.vechainBridge.scanTxs(vechain.beginBlockNum,vechain.lockedBlockNum - 1);
         if(scanVeChainResult.error){

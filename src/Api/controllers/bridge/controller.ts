@@ -11,10 +11,14 @@ import SwapTxModel from "../../../common/model/swapTxModel";
 import { TokenInfo } from "../../../common/utils/types/tokenInfo";
 import { SystemDefaultError } from "../../utils/error";
 import BridgeStorage from "../../../common/bridgeStorage";
+import { BridgeSyncTask } from "../../../ValidationNode/bridgeSyncTask";
+import { BridgePackTask } from "../../../ValidationNode/bridgePackTask";
 
 export default class BridgeController extends BaseMiddleware{
     public claimList:Router.IMiddleware;
     public merkleproof:Router.IMiddleware;
+    public pack:Router.IMiddleware;
+    public packStatus:Router.IMiddleware;
 
     constructor(env:any){
         super(env);
@@ -44,6 +48,31 @@ export default class BridgeController extends BaseMiddleware{
             }else{
                 this.convertToMerkleProofToJson(ctx,getMerkleProofResult.data!);
             }
+        }
+
+        this.pack = async (ctx:Router.IRouterContext,next: () => Promise<any>) => {
+            if(this.environment.bridgePack == false){
+                const syncTask = new BridgeSyncTask(this.environment);
+                const packTask = new BridgePackTask(this.environment);
+                this.environment.bridgePack = true;
+                syncTask.taskJob().then( action => {
+                    console.info(`Sync Bridge Data Finish`);
+                    packTask.taskJob().then( action1 => {
+                        console.info(`Pack Bridge Data Finish`);
+                        this.environment.bridgePack = false;
+                    }).catch(error => {
+                        console.error(`Pack Bridge Data Faild, ${error}`);
+                    });
+                }
+                ).catch(error => {
+                    console.error(`Sync Bridge Data Faild, ${error}`);
+                });
+            }
+            ConvertJSONResponeMiddleware.bodyToJSONResponce(ctx,{});
+        }
+
+        this.packStatus = async (ctx:Router.IRouterContext,next: () => Promise<any>) => {
+            ConvertJSONResponeMiddleware.bodyToJSONResponce(ctx,{packing:this.environment.bridgePack});
         }
     }
 
