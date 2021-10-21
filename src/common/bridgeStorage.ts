@@ -3,7 +3,7 @@ import { ActionResult } from "./utils/components/actionResult";
 import MerkleTree, { TreeNode } from "./utils/merkleTree";
 import { BridgeLedger, ledgerHash, ledgerID } from "./utils/types/bridgeLedger";
 import { BridgeSnapshoot, ChainInfo } from "./utils/types/bridgeSnapshoot";
-import { SwapTx } from "./utils/types/swapTx";
+import { BridgeTx } from "./utils/types/bridgeTx";
 import { findTargetToken, TokenInfo } from "./utils/types/tokenInfo";
 const sortArray = require('sort-array');
 const Copy = require('object-copy');
@@ -26,9 +26,9 @@ export default class BridgeStorage {
         }
     }
 
-    public updateLedgers(txs:SwapTx[]):ActionResult{
+    public updateLedgers(txs:BridgeTx[]):ActionResult{
         let result = new ActionResult();
-        const sorted:Array<SwapTx> = sortArray(txs,{
+        const sorted:Array<BridgeTx> = sortArray(txs,{
             by:["timestamp"],
             order:"asc"
         });

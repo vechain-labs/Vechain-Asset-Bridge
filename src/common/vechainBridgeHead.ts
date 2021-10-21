@@ -7,7 +7,7 @@ import { ActionData } from "./utils/components/actionResult";
 import { ThorDevKitEx } from "./utils/extensions/thorDevkitExten";
 import { IBridgeHead } from "./utils/iBridgeHead";
 import { BridgeSnapshoot, ZeroRoot } from "./utils/types/bridgeSnapshoot";
-import { SwapTx } from "./utils/types/swapTx";
+import { BridgeTx } from "./utils/types/bridgeTx";
 
 export class VeChainBridgeHead implements IBridgeHead {
 
@@ -209,9 +209,9 @@ export class VeChainBridgeHead implements IBridgeHead {
         return result;
     }
 
-    public async scanTxs(begin:number,end:number): Promise<ActionData<SwapTx[]>> {
-        let result = new ActionData<SwapTx[]>();
-        result.data = new Array<SwapTx>();
+    public async scanTxs(begin:number,end:number): Promise<ActionData<BridgeTx[]>> {
+        let result = new ActionData<BridgeTx[]>();
+        result.data = new Array<BridgeTx>();
 
         for(let block = begin; block <= end;){
             let from = block;
@@ -220,8 +220,8 @@ export class VeChainBridgeHead implements IBridgeHead {
             console.debug(`scan vechain swaptxs blocknum: ${from} - ${to}`);
             
             let filter = this.connex.thor.filter("event",[
-                {address:this.config.vechain.v2eBridge,topic0:this.SwapEvent.signature},
-                {address:this.config.vechain.v2eBridge,topic0:this.ClaimEvent.signature}
+                {address:this.config.vechain.contracts.v2eBridge,topic0:this.SwapEvent.signature},
+                {address:this.config.vechain.contracts.v2eBridge,topic0:this.ClaimEvent.signature}
             ]).order("asc").range({unit:"block",from:from,to:to});
 
             const limit = 200;
@@ -240,7 +240,7 @@ export class VeChainBridgeHead implements IBridgeHead {
                             clauseIndex = event.meta.clauseIndex;
                         }
     
-                        let swapTx:SwapTx;
+                        let swapTx:BridgeTx;
                         if(event.topics[0] == this.SwapEvent.signature){
                             swapTx = {
                                 chainName:this.config.vechain.chainName,

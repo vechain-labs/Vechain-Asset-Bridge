@@ -1,4 +1,4 @@
-export type SwapTx = {
+export type BridgeTx = {
     chainName:string;
     chainId:string;
     blockNumber:number;

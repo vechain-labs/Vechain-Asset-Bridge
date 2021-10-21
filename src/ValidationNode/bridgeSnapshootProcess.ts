@@ -7,12 +7,12 @@ import { EthereumBridgeHead } from "../common/ethereumBridgeHead";
 import { EthereumBridgeVerifier } from "../common/ethereumBridgeVerifier";
 import LedgerModel from "../common/model/ledgerModel";
 import { SnapshootModel } from "../common/model/snapshootModel";
-import SwapTxModel from "../common/model/swapTxModel";
+import BridgeTxModel from "../common/model/bridgeTxModel";
 import { ActionData, ActionResult, PromiseActionResult } from "../common/utils/components/actionResult";
 import { sleep } from "../common/utils/sleep";
 import { BridgeLedger } from "../common/utils/types/bridgeLedger";
 import { BridgeSnapshoot, ChainInfo, ZeroRoot } from "../common/utils/types/bridgeSnapshoot";
-import { SwapTx } from "../common/utils/types/swapTx";
+import { BridgeTx } from "../common/utils/types/bridgeTx";
 import { VeChainBridgeHead } from "../common/vechainBridgeHead";
 import { VeChainBridgeVerifiter } from "../common/vechainBridgeVerifier";
 
@@ -28,7 +28,7 @@ export class BridgeSnapshootProcess{
         this.ethereumBridge = new EthereumBridgeHead(this.env);
         this.ethereumVerifier = new EthereumBridgeVerifier(this.env);
         this.ledgerModel = new LedgerModel(this.env);
-        this.swapTxModel = new SwapTxModel(this.env);
+        this.BridgeTxModel = new BridgeTxModel(this.env);
         this.status = STATUS.Entry;
     }
 
@@ -465,7 +465,7 @@ export class BridgeSnapshootProcess{
 
         const snsaveResult = await this.snapshootModel.save([newSnapshoot]);
         const ledgersaveResult = await this.ledgerModel.save(newSnapshoot.merkleRoot,storage.ledgerCache);
-        const swaptxsaveResult = await this.swapTxModel.saveSwapTx(getTxsResult.data || []);
+        const swaptxsaveResult = await this.BridgeTxModel.saveBridgeTxs(getTxsResult.data || []);
 
         if(snsaveResult.error){
             result.copyBase(snsaveResult);
@@ -522,8 +522,8 @@ export class BridgeSnapshootProcess{
         return result;
     }
 
-    private async getTxsBySnapshoot(sn:BridgeSnapshoot):Promise<ActionData<SwapTx[]>>{
-        let result = new ActionData<SwapTx[]>();
+    private async getTxsBySnapshoot(sn:BridgeSnapshoot):Promise<ActionData<BridgeTx[]>>{
+        let result = new ActionData<BridgeTx[]>();
         result.data = new Array();
         const vechain = sn.chains.filter( chain => {return chain.chainName == this.config.vechain.chainName && chain.chainId == this.config.vechain.chainId;})[0];
         const ethereum = sn.chains.filter( chain => {return chain.chainName == this.config.ethereum.chainName && chain.chainId == this.config.ethereum.chainId;})[0];
@@ -540,8 +540,8 @@ export class BridgeSnapshootProcess{
             return result;
         }
 
-        const vechainTxs = (scanVeChainResult as ActionData<SwapTx[]>).data!;
-        const ethereumTxs = (scanEthereumResult as ActionData<SwapTx[]>).data!;
+        const vechainTxs = (scanVeChainResult as ActionData<BridgeTx[]>).data!;
+        const ethereumTxs = (scanEthereumResult as ActionData<BridgeTx[]>).data!;
 
         result.data = result.data.concat(vechainTxs,ethereumTxs);
         return result;
@@ -566,7 +566,7 @@ export class BridgeSnapshootProcess{
     private vechainVerifier:VeChainBridgeVerifiter;
     private ethereumVerifier:EthereumBridgeVerifier;
     private ledgerModel:LedgerModel;
-    private swapTxModel:SwapTxModel;
+    private BridgeTxModel:BridgeTxModel;
     private connex:Framework;
     private status:STATUS;
 }

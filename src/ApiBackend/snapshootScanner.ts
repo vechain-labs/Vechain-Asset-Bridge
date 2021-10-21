@@ -3,11 +3,11 @@ import Web3 from "web3";
 import { ActionData, ActionResult, PromiseActionResult } from "../common/utils/components/actionResult";
 import { BridgeLedger } from "../common/utils/types/bridgeLedger";
 import { BridgeSnapshoot, ZeroRoot } from "../common/utils/types/bridgeSnapshoot";
-import { SwapTx } from "../common/utils/types/swapTx";
+import { BridgeTx } from "../common/utils/types/bridgeTx";
 import { TokenInfo } from "../common/utils/types/tokenInfo";
 import LedgerModel from "../common/model/ledgerModel";
 import { SnapshootModel } from "../common/model/snapshootModel";
-import SwapTxModel from "../common/model/swapTxModel";
+import BridgeTxModel from "../common/model/bridgeTxModel";
 import { VeChainBridgeHead } from "../common/vechainBridgeHead";
 import { EthereumBridgeHead } from "../common/ethereumBridgeHead";
 import BridgeStorage from "../common/bridgeStorage";
@@ -23,7 +23,7 @@ export class SnapshootScanner{
         this.ethereumBridge = new EthereumBridgeHead(this.env);
         this.snapshootModel = new SnapshootModel(this.env);
         this.ledgerModel = new LedgerModel(this.env);
-        this.swapTxModel = new SwapTxModel(this.env);
+        this.BridgeTxModel = new BridgeTxModel(this.env);
     }
 
     public async run():Promise<ActionResult>{
@@ -222,7 +222,7 @@ export class SnapshootScanner{
         
         const snsaveResult = await this.snapshootModel.save([sn]);
         const ledgersaveResult = await this.ledgerModel.save(sn.merkleRoot,bridgeStorage.ledgerCache);
-        const swaptxsaveResult = await this.swapTxModel.saveSwapTx(getTxsResult.data || []);
+        const swaptxsaveResult = await this.BridgeTxModel.saveBridgeTxs(getTxsResult.data || []);
 
         if(snsaveResult.error){
             result.copyBase(snsaveResult);
@@ -242,8 +242,8 @@ export class SnapshootScanner{
         return result;
     }
 
-    private async getTxsBySnapshoot(sn:BridgeSnapshoot):Promise<ActionData<SwapTx[]>>{
-        let result = new ActionData<SwapTx[]>();
+    private async getTxsBySnapshoot(sn:BridgeSnapshoot):Promise<ActionData<BridgeTx[]>>{
+        let result = new ActionData<BridgeTx[]>();
         result.data = new Array();
         const vechain = sn.chains.filter( chain => {return chain.chainName == this.config.vechain.chainName && chain.chainId == this.config.vechain.chainId;})[0];
         const ethereum = sn.chains.filter( chain => {return chain.chainName == this.config.ethereum.chainName && chain.chainId == this.config.ethereum.chainId;})[0];
@@ -257,8 +257,8 @@ export class SnapshootScanner{
             return result;
         }
 
-        const vechainTxs = (scanResult.data!.succeed[0] as ActionData<SwapTx[]>).data!;
-        const ethereumTxs = (scanResult.data!.succeed[1] as ActionData<SwapTx[]>).data!;
+        const vechainTxs = (scanResult.data!.succeed[0] as ActionData<BridgeTx[]>).data!;
+        const ethereumTxs = (scanResult.data!.succeed[1] as ActionData<BridgeTx[]>).data!;
 
         result.data = result.data.concat(vechainTxs,ethereumTxs);
         return result;
@@ -291,5 +291,5 @@ export class SnapshootScanner{
     private tokenInfo!:Array<TokenInfo>;
     private snapshootModel!:SnapshootModel;
     private ledgerModel!:LedgerModel;
-    private swapTxModel!:SwapTxModel;
+    private BridgeTxModel!:BridgeTxModel;
 }

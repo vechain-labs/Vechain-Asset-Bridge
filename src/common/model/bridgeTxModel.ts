@@ -1,22 +1,22 @@
 import { Between, Equal, getManager, getRepository } from "typeorm";
 import { ActionData, ActionResult } from "../utils/components/actionResult";
 import { BridgeSnapshoot } from "../utils/types/bridgeSnapshoot";
-import { SwapTx } from "../utils/types/swapTx";
-import { swapID, SwapTxEntity } from "./entities/swapTx.entity";
+import { BridgeTx } from "../utils/types/bridgeTx";
+import { swapID, BridgeTxEntity } from "./entities/bridgeTx.entity";
 
-export default class SwapTxModel{
+export default class BridgeTxModel{
     constructor(env:any){
         this.env = env;
         this.config = env.config;
     }
 
-    public async saveSwapTx(txs:SwapTx[]):Promise<ActionResult>{
+    public async saveBridgeTxs(txs:BridgeTx[]):Promise<ActionResult>{
         let result = new ActionResult();
 
         try {
             await getManager().transaction(async transactionalEntityManager => {
                 for(const swapTx of txs){
-                    let entity = new SwapTxEntity();
+                    let entity = new BridgeTxEntity();
                     entity.swapid = swapID(swapTx.chainName,swapTx.chainId,swapTx.blockNumber,swapTx.txid,swapTx.clauseIndex,swapTx.index,swapTx.account,swapTx.token);
                     entity.chainName = swapTx.chainName,
                     entity.chainId = swapTx.chainId,
@@ -39,11 +39,11 @@ export default class SwapTxModel{
         return result;
     }
 
-    public async getLastSwapTx(chainName:string,chainId:string):Promise<ActionData<SwapTx>>{
-        let result = new ActionData<SwapTx>();
+    public async getLastBridgeTx(chainName:string,chainId:string):Promise<ActionData<BridgeTx>>{
+        let result = new ActionData<BridgeTx>();
 
         try {
-            let data = await getRepository(SwapTxEntity)
+            let data = await getRepository(BridgeTxEntity)
             .findOne({
                 chainName:Equal(chainName),
                 chainId:Equal(chainId)
@@ -53,7 +53,7 @@ export default class SwapTxModel{
                 }
             });
             if(data != undefined){
-                let swap:SwapTx = {
+                let swap:BridgeTx = {
                     chainName:data.chainName,
                     chainId:data.chainId,
                     blockNumber:data.blockNumber,
@@ -76,17 +76,18 @@ export default class SwapTxModel{
         return result;
     }
 
-    public async getClaimTxs(chainName:string,chainId:string,account:string,token?:string,begin?:number,end?:number,limit:number = 50,offset:number = 0):Promise<ActionData<SwapTx[]>>{
-        let result = new ActionData<SwapTx[]>();
+    public async getClaimTxs(chainName:string,chainId:string,account:string,token?:string,begin?:number,end?:number,limit:number = 50,offset:number = 0):Promise<ActionData<BridgeTx[]>>{
+        let result = new ActionData<BridgeTx[]>();
         result.data = new Array();
 
         try {
-            let query = getRepository(SwapTxEntity)
+            let query = getRepository(BridgeTxEntity)
             .createQueryBuilder()
             .where("chainname = :name",{name:chainName})
             .andWhere("chainid = :id",{id:chainId})
             .andWhere("account = :account",{account:account.toLowerCase()})
             .andWhere("type = 2")
+            .orderBy("timestamp","DESC")
             .offset(offset)
             .limit(limit);
 
@@ -105,7 +106,7 @@ export default class SwapTxModel{
             const data = await query.getMany();
         
             for(const item of data){
-                let swaptx:SwapTx = {
+                let swaptx:BridgeTx = {
                     chainName:item.chainName,
                     chainId:item.chainId,
                     blockNumber:item.blockNumber,
@@ -128,12 +129,12 @@ export default class SwapTxModel{
         return result;
     }
 
-    public async getSwapTxs(chainName:string,chainId:string,account:string,token?:string,begin?:number,end?:number,limit:number = 50,offset:number = 0):Promise<ActionData<SwapTx[]>>{
-        let result = new ActionData<SwapTx[]>();
+    public async getSwapTxs(chainName:string,chainId:string,account:string,token?:string,begin?:number,end?:number,limit?:number,offset:number = 0):Promise<ActionData<BridgeTx[]>>{
+        let result = new ActionData<BridgeTx[]>();
         result.data = new Array();
 
         try {
-            let query = getRepository(SwapTxEntity)
+            let query = getRepository(BridgeTxEntity)
             .createQueryBuilder()
             .where("chainname = :name",{name:chainName})
             .andWhere("chainid = :id",{id:chainId})
@@ -158,7 +159,7 @@ export default class SwapTxModel{
             const data = await query.getMany();
 
             for(const item of data){
-                let swaptx:SwapTx = {
+                let swaptx:BridgeTx = {
                     chainName:item.chainName,
                     chainId:item.chainId,
                     blockNumber:item.blockNumber,
@@ -181,21 +182,23 @@ export default class SwapTxModel{
         return result;
     }
 
-    public async getSwapTxsBySnapshoot(sn:BridgeSnapshoot):Promise<ActionData<SwapTx[]>>{
-        let result = new ActionData<SwapTx[]>();
+    public async getSwapTxsBySnapshoot(sn:BridgeSnapshoot,limit?:number,offset:number = 0):Promise<ActionData<BridgeTx[]>>{
+        let result = new ActionData<BridgeTx[]>();
         result.data = new Array();
 
         try {
             for(const chain of sn.chains){
-                let query = getRepository(SwapTxEntity)
+                let query = getRepository(BridgeTxEntity)
                 .createQueryBuilder()
                 .where("chainname = :name",{name:chain.chainName})
                 .andWhere("chainid = :id",{id:chain.chainId})
                 .andWhere("blocknumber >= :begin",{begin:chain.beginBlockNum})
                 .andWhere("blocknumber <= :end",{end:chain.endBlockNum - 1})
+                .limit(limit)
+                .offset(offset)
                 const data = await query.getMany();
                 for(const item of data){
-                    let swaptx:SwapTx = {
+                    let swaptx:BridgeTx = {
                         chainName:item.chainName,
                         chainId:item.chainId,
                         blockNumber:item.blockNumber,

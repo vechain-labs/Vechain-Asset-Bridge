@@ -1,7 +1,7 @@
 import { Framework } from "@vechain/connex-framework";
 import { ActionData, ActionResult } from "../../common/utils/components/actionResult";
-import { SwapTx } from "../../common/utils/types/swapTx";
-import SwapTxModel from "../../common/model/swapTxModel";
+import { BridgeTx } from "../../common/utils/types/bridgeTx";
+import BridgeTxModel from "../../common/model/bridgeTxModel";
 import { VeChainBridgeHead } from "../../common/vechainBridgeHead";
 
 export class VeChainBridgeSwapTxScan{
@@ -33,7 +33,7 @@ export class VeChainBridgeSwapTxScan{
         }
 
         if(getSwapTxsResult.data && getSwapTxsResult.data.length>0){
-            const saveResult = await (new SwapTxModel(env)).saveSwapTx(getSwapTxsResult.data);
+            const saveResult = await (new BridgeTxModel(env)).saveBridgeTxs(getSwapTxsResult.data);
             if(saveResult.error){
                 result.error = getSwapTxsResult.error;
                 return result;
@@ -47,7 +47,7 @@ export class VeChainBridgeSwapTxScan{
         let result = new ActionData<number>();
         result.data = env.config.vechain.startBlockNum;
         try {
-            const lastSwapTxResult = await (new SwapTxModel(env)).getLastSwapTx(env.config.vechain.chainName,env.config.vechain.chainId);
+            const lastSwapTxResult = await (new BridgeTxModel(env)).getLastBridgeTx(env.config.vechain.chainName,env.config.vechain.chainId);
             if(lastSwapTxResult.error){
                 result.error = lastSwapTxResult.error;
                 return result;
@@ -62,8 +62,8 @@ export class VeChainBridgeSwapTxScan{
         return result;
     }
 
-    private async getSwapTxs(env:any,begin:number,end:number):Promise<ActionData<SwapTx[]>>{
-        let result = new ActionData<SwapTx[]>();
+    private async getSwapTxs(env:any,begin:number,end:number):Promise<ActionData<BridgeTx[]>>{
+        let result = new ActionData<BridgeTx[]>();
         result.data = new Array();
         const scanBlockStep = 100;
 

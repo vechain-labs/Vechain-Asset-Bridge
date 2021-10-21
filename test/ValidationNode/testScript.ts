@@ -4,7 +4,7 @@
     import { keccak256 } from "thor-devkit";
     import BridgeStorage from "../../src/common/bridgeStorage";
     import { BridgeSnapshoot, ZeroRoot } from "../../src/common/utils/types/bridgeSnapshoot";
-    import { SwapTx } from "../../src/common/utils/types/swapTx";
+    import { BridgeTx } from "../../src/common/utils/types/bridgeTx";
     import { tokenid, TokenInfo } from "../../src/common/utils/types/tokenInfo";
 
     let root = ZeroRoot();
@@ -154,7 +154,7 @@ const sn:BridgeSnapshoot = {
     ]
 }
 
-const swapTxs:SwapTx[] = [
+const swapTxs:BridgeTx[] = [
     {
         chainName:"vechain",
         chainId:"0xf6",

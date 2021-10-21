@@ -7,12 +7,14 @@ import { SnapshootModel } from "../../../common/model/snapshootModel";
 import LedgerModel from "../../../common/model/ledgerModel";
 import { BridgeSnapshoot, ZeroRoot } from "../../../common/utils/types/bridgeSnapshoot";
 import { BridgeLedger } from "../../../common/utils/types/bridgeLedger";
-import SwapTxModel from "../../../common/model/swapTxModel";
 import { TokenInfo } from "../../../common/utils/types/tokenInfo";
 import { SystemDefaultError } from "../../utils/error";
 import BridgeStorage from "../../../common/bridgeStorage";
 import { BridgeSyncTask } from "../../../ValidationNode/bridgeSyncTask";
 import { BridgePackTask } from "../../../ValidationNode/bridgePackTask";
+import { BridgeTx } from "../../../common/utils/types/bridgeTx";
+import BridgeTxModel from "../../../common/model/bridgeTxModel";
+const sortArray = require('sort-array');
 
 export default class BridgeController extends BaseMiddleware{
     public claimList:Router.IMiddleware;
@@ -104,10 +106,25 @@ export default class BridgeController extends BaseMiddleware{
                     nativeCoin:meta.to.nativeCoin,
                     tokenType:meta.to.tokenType
                 },
-                sendingTxs:meta.sendingTxs,
-                receivingTx:meta.receivingTx,
+                sendingTxs:new Array(),
+                receivingTx:{},
                 totalAmount:"0x"+meta.totalAmount.toString(16),
                 status:meta.status
+            }
+
+            for(const sendingTx of meta.sendingTxs){
+                data.sendingTxs.push({
+                    txId:sendingTx.txid,
+                    amount:"0x" + sendingTx.amount.toString(16),
+                    timestamp:sendingTx.timestamp
+                });
+            }
+
+            if(meta.receivingTx != undefined){
+                data.receivingTx = {
+                    txId:meta.receivingTx.txid,
+                    timestamp:meta.receivingTx.timestamp
+                }
             }
 
             if(data.from.nativeCoin == true){
@@ -158,13 +175,19 @@ export default class BridgeController extends BaseMiddleware{
             return result;
         }
 
-        const getClaimListResult = await this.getClaimList(sn,ledgers);
-        if(getClaimListResult.error){
-            result.error = getClaimListResult.error;
+        const getWattingClaimListResult = await this.getWattingClaimList(chainName,chainId,account,sn,10,0);
+        if(getWattingClaimListResult.error){
+            result.error = getWattingClaimListResult.error;
             return result;
         }
 
-        result.data = result.data.concat(getInProcessListResult.data!,getClaimListResult.data!);
+        const getClaimedListResult = await this.getClaimedList(chainName,chainId,account,sn,5,0);
+        if(getClaimedListResult.error){
+            result.error = getClaimedListResult.error;
+            return result;
+        }
+
+        result.data = result.data.concat(getInProcessListResult.data!,getWattingClaimListResult.data!,getClaimedListResult.data!);
         return result;
     }
 
@@ -185,138 +208,6 @@ export default class BridgeController extends BaseMiddleware{
             return result;
         }
         result.data.ledgers = getLedgersResult.data!;
-        return result;
-    }
-
-    private async getInProcessClaimList(chainName:string,chainId:string,account:string,sn:BridgeSnapshoot,limit:number = 50,offset:number = 0):Promise<ActionData<ClaimMeta[]>>{
-        let result = new ActionData<ClaimMeta[]>();
-        result.data = new Array<ClaimMeta>();
-
-        const sourceChainInfo = sn.chains.find(chain => {return chain.chainName != chainName && chain.chainId != chainId})!;
-        const getSwapTxsResult = await (new SwapTxModel(this.environment)).getSwapTxs(sourceChainInfo.chainName,sourceChainInfo.chainId,account,undefined,sourceChainInfo.endBlockNum,undefined,limit,offset);
-        if(getSwapTxsResult.error){
-            result.error = getSwapTxsResult.error;
-            return result;
-        }
-
-        let claimList = new Array<ClaimMeta>();
-        for(const swapTx of getSwapTxsResult.data!){
-            let targetMeta = claimList.find(target =>{ return target.to.chainName == chainName && target.to.chainId == chainId && target.from.address.toLowerCase() == swapTx.token.toLowerCase();});
-            if(targetMeta == undefined){
-                let fromToken = (this.environment.tokenInfo as Array<TokenInfo>).find(token => {return token.chainName == sourceChainInfo.chainName && token.chainId == sourceChainInfo.chainId && token.address.toLowerCase() == swapTx.token.toLowerCase()})!;
-                let toToken = (this.environment.tokenInfo as Array<TokenInfo>).find(token => {return token.tokenid == fromToken.targetTokenId;})!;
-                let newMeta:ClaimMeta = {
-                    merkleRoot:"",
-                    from:fromToken,
-                    to:toToken,
-                    sendingTxs:[swapTx.txid],
-                    receivingTx:"",
-                    totalAmount:swapTx.amount,
-                    status:0
-                }
-                claimList.push(newMeta);
-            } else {
-                targetMeta.sendingTxs.push(swapTx.txid);
-                targetMeta.totalAmount = targetMeta.totalAmount + swapTx.amount;
-            }
-        }
-        result.data = claimList;
-        return result;
-    }
-
-    private async getClaimList(sn:BridgeSnapshoot,ledgers:BridgeLedger[]):Promise<ActionData<ClaimMeta[]>>{
-        let result = new ActionData<ClaimMeta[]>();
-        result.data = new Array<ClaimMeta>();
-
-        let claimList = new Array<ClaimMeta>();
-        for(const ledger of ledgers){
-            const toToken = (this.environment.tokenInfo as Array<TokenInfo>).find(token => {return token.chainName == ledger.chainName && token.chainId == ledger.chainId && token.address.toLowerCase() == ledger.token.toLowerCase()})!;
-            const fromToken = (this.environment.tokenInfo as Array<TokenInfo>).find(token => {return token.tokenid == toToken.targetTokenId;})!;
-            const toChainInfo = sn.chains.find(chain =>{return chain.chainName == toToken.chainName && chain.chainId == toToken.chainId})!;
-            const fromChainInfo = sn.chains.find(chain =>{return chain.chainName == fromToken.chainName && chain.chainId == fromToken.chainId})!;
-            let newMeta:ClaimMeta = {
-                merkleRoot:sn.merkleRoot,
-                from:fromToken,
-                to:toToken,
-                sendingTxs:[],
-                receivingTx:"",
-                totalAmount:ledger.balance,
-                status:1
-            }
-
-            const getClaimTxsResult = await (new SwapTxModel(this.environment)).getClaimTxs(ledger.chainName,ledger.chainId,ledger.account,ledger.token,undefined,undefined,2,0);
-            if(getClaimTxsResult.error){
-                result.error = getClaimTxsResult.error;
-                return result;
-            }
-
-            if(getClaimTxsResult.data!.length == 0){
-                const getSwapTxResult = await (new SwapTxModel(this.environment)).getSwapTxs(fromToken.chainName,fromToken.chainId,ledger.account,fromToken.address,undefined,undefined,10,0);
-                if(getSwapTxResult.error){
-                    result.error = getSwapTxResult.error;
-                    return result;
-                }
-                for(const swaptx of getSwapTxResult.data!){
-                    newMeta.sendingTxs.push(swaptx.txid);
-                    newMeta.status = 1;
-                }
-            } else if(getClaimTxsResult.data!.length == 1){
-                const claimTx = getClaimTxsResult.data![0];
-                if(claimTx.blockNumber >= toChainInfo.endBlockNum){
-                    const getSwapTxResult = await (new SwapTxModel(this.environment)).getSwapTxs(fromToken.chainName,fromToken.chainId,ledger.account,fromToken.address,undefined,fromChainInfo.endBlockNum,10,0);
-                    if(getSwapTxResult.error){
-                        result.error = getSwapTxResult.error;
-                        return result;
-                    }
-                    for(const swaptx of getSwapTxResult.data!){
-                        newMeta.sendingTxs.push(swaptx.txid);
-                    }
-                    newMeta.receivingTx = claimTx.txid;
-                    newMeta.status = 2;
-                } else {
-                    const getSwapTxResult = await (new SwapTxModel(this.environment)).getSwapTxs(fromToken.chainName,fromToken.chainId,ledger.account,fromToken.address,fromChainInfo.beginBlockNum,fromChainInfo.endBlockNum,10,0);
-                    if(getSwapTxResult.error){
-                        result.error = getSwapTxResult.error;
-                        return result;
-                    }
-                    for(const swaptx of getSwapTxResult.data!){
-                        newMeta.sendingTxs.push(swaptx.txid);
-                    }
-                    newMeta.receivingTx = "";
-                    newMeta.status = 1;
-                }
-            } else if(getClaimTxsResult.data!.length == 2){
-                const claimTx1 = getClaimTxsResult.data![0];
-                const claimTx2 = getClaimTxsResult.data![1];
-
-                if(claimTx1.blockNumber >= toChainInfo.endBlockNum){
-                    const getSwapTxResult = await (new SwapTxModel(this.environment)).getSwapTxs(fromToken.chainName,fromToken.chainId,ledger.account,fromToken.address,undefined,fromChainInfo.endBlockNum,10,0);
-                    if(getSwapTxResult.error){
-                        result.error = getSwapTxResult.error;
-                        return result;
-                    }
-                    const swaptxs = getSwapTxResult.data!.filter(tx => {return tx.timestamp >= claimTx2.timestamp;});
-                    for(const swaptx of swaptxs){
-                        newMeta.sendingTxs.push(swaptx.txid);
-                    }
-                    newMeta.receivingTx = claimTx1.txid;
-                    newMeta.status = 2;
-                } else {
-                    const getSwapTxResult = await (new SwapTxModel(this.environment)).getSwapTxs(fromToken.chainName,fromToken.chainId,ledger.account,fromToken.address,fromChainInfo.beginBlockNum,fromChainInfo.endBlockNum,10,0);
-                    if(getSwapTxResult.error){
-                        result.error = getSwapTxResult.error;
-                        return result;
-                    }
-                    for(const swaptx of getSwapTxResult.data!){
-                        newMeta.sendingTxs.push(swaptx.txid);
-                    }
-                    newMeta.receivingTx = "";
-                    newMeta.status = 1;
-                }
-            }
-            claimList.push(newMeta);
-        }
-        result.data = claimList;
         return result;
     }
 
@@ -344,7 +235,7 @@ export default class BridgeController extends BaseMiddleware{
         }
         const ledgers = getLedgersResult.data!;
 
-        const getSwapTxsResult = await (new SwapTxModel(this.environment)).getSwapTxsBySnapshoot(sn);
+        const getSwapTxsResult = await (new BridgeTxModel(this.environment)).getSwapTxsBySnapshoot(sn);
         if(getSwapTxsResult.error){
             result.error = getSwapTxsResult.error;
             return result;
@@ -408,5 +299,244 @@ export default class BridgeController extends BaseMiddleware{
             }
         }
         ConvertJSONResponeMiddleware.bodyToJSONResponce(ctx,body);
+    }
+
+    private async getInProcessClaimList(chainName:string,chainId:string,account:string,sn:BridgeSnapshoot,limit?:number,offset:number = 0):Promise<ActionData<ClaimMeta[]>>{
+        let result = new ActionData<ClaimMeta[]>();
+        result.data = new Array<ClaimMeta>();
+
+        const swapChainInfo = sn.chains.find(chain => {return chain.chainName != chainName && chain.chainId != chainId})!;
+        const getSwapTxsResult = await (new BridgeTxModel(this.environment)).getSwapTxs(swapChainInfo.chainName,swapChainInfo.chainId,account,undefined,swapChainInfo.endBlockNum,undefined,limit,offset);
+        if(getSwapTxsResult.error){
+            result.error = getSwapTxsResult.error;
+            return result;
+        }
+
+        let claimList = new Array<ClaimMeta>();
+        for(const swapTx of getSwapTxsResult.data!){
+            let targetMeta = claimList.find(target =>{ return target.to.chainName == chainName && target.to.chainId == chainId && target.from.address.toLowerCase() == swapTx.token.toLowerCase();});
+            if(targetMeta == undefined){
+                let fromToken = (this.environment.tokenInfo as Array<TokenInfo>).find(token => {return token.chainName == swapChainInfo.chainName && token.chainId == swapChainInfo.chainId && token.address.toLowerCase() == swapTx.token.toLowerCase()})!;
+                let toToken = (this.environment.tokenInfo as Array<TokenInfo>).find(token => {return token.tokenid == fromToken.targetTokenId;})!;
+                let newMeta:ClaimMeta = {
+                    merkleRoot:"",
+                    from:fromToken,
+                    to:toToken,
+                    sendingTxs:[swapTx],
+                    receivingTx:undefined,
+                    totalAmount:swapTx.amount,
+                    status:0
+                }
+                claimList.push(newMeta);
+            } else {
+                targetMeta.sendingTxs.push(swapTx);
+                targetMeta.totalAmount = targetMeta.totalAmount + swapTx.amount;
+            }
+        }
+        result.data = claimList;
+        return result;
+    }
+
+    private async getWattingClaimList(chainName:string,chainId:string,account:string,sn:BridgeSnapshoot,limit?:number,offset:number = 0):Promise<ActionData<ClaimMeta[]>>{
+        let result = new ActionData<ClaimMeta[]>();
+        result.data = new Array<ClaimMeta>();
+
+        const targetTokenList = (this.environment.tokenInfo as Array<TokenInfo>).filter(token => {return token.chainName == chainName && token.chainId == chainId});
+        for(const token of targetTokenList){
+            const getWattingClaimByTokenResult = await this.getWattingClaimByToken(token,account,sn,limit,offset);
+            if(getWattingClaimByTokenResult.error){
+                result.error = getWattingClaimByTokenResult.error;
+                return result;
+            }
+            if(getWattingClaimByTokenResult.data != undefined){
+                result.data.push(getWattingClaimByTokenResult.data);
+            }
+        }
+        result.data = sortArray(result.data,{
+            by:["extension.latestTs"],
+            order:"desc"
+        });
+
+        return result;
+    }
+
+    private async getWattingClaimByToken(token:TokenInfo,account:string,sn:BridgeSnapshoot,limit?:number,offset:number = 0):Promise<ActionData<ClaimMeta>>{
+        let result = new ActionData<ClaimMeta>();
+        const bridgeTxModel = new BridgeTxModel(this.environment);
+        const snapshootModel = new SnapshootModel(this.environment);
+        
+        const swapChainInfo = sn.chains.find(chain => {return chain.chainName != token.chainName && chain.chainId != token.chainId})!;
+        const claimChainInfo = sn.chains.find(chain => {return chain.chainName == token.chainName && chain.chainId == token.chainId})!;
+
+        const getLastClaimTxResult = await bridgeTxModel.getClaimTxs(claimChainInfo.chainName,claimChainInfo.chainId,account,token.address,undefined,undefined,1,0);
+        if(getLastClaimTxResult.error){
+            result.error = getLastClaimTxResult.error;
+            return result;
+        }
+        let beginBlock = undefined;
+        if(getLastClaimTxResult.data!.length == 1){
+            const lastClaimTx = getLastClaimTxResult.data![0];
+            const getLastClaimedSNResult = await snapshootModel.getSnapshootByClaimTx(lastClaimTx,1,0);
+
+            if(getLastClaimedSNResult.error){
+                result.error = getLastClaimedSNResult.error;
+                return result;
+            }
+
+            const lastClaimedSN = getLastClaimedSNResult.data![0];
+
+            if(lastClaimedSN.merkleRoot == sn.merkleRoot){
+                return result;
+            }
+
+            beginBlock = (lastClaimedSN.chains.find(chain => {return chain.chainName == swapChainInfo.chainName && chain.chainId == swapChainInfo.chainId})!.endBlockNum) - 1;
+        }
+        const originToken = (this.environment.tokenInfo as Array<TokenInfo>).find(t => {return t.targetTokenId == token.tokenid})!;
+        const getSwapTxsResult = await bridgeTxModel.getSwapTxs(swapChainInfo.chainName,swapChainInfo.chainId,account,originToken.address,beginBlock,swapChainInfo.endBlockNum -1,limit,offset);
+        if(getSwapTxsResult.data!.length == 0){
+            return result;
+        }
+
+        let newClaimMeta:ClaimMeta = {
+            merkleRoot:sn.merkleRoot,
+            from:originToken,
+            to:token,
+            sendingTxs:[],
+            receivingTx:undefined,
+            totalAmount:BigInt(0),
+            status:1,
+            extension:{
+                latestTs:0
+            }
+        }
+
+        for(const swaptx of getSwapTxsResult.data!){
+            newClaimMeta.sendingTxs.push(swaptx);
+            newClaimMeta.totalAmount = newClaimMeta.totalAmount + swaptx.amount;
+            newClaimMeta.extension.latestTs = newClaimMeta.extension.latestTs <= swaptx.timestamp ? swaptx.timestamp : newClaimMeta.extension.latestTs;
+        }
+        result.data = newClaimMeta;
+        return result;
+    }
+
+    private async getClaimedList(chainName:string,chainId:string,account:string,sn:BridgeSnapshoot,limit?:number,offset:number = 0):Promise<ActionData<ClaimMeta[]>>{
+        let result = new ActionData<ClaimMeta[]>();
+        result.data = new Array<ClaimMeta>();
+
+        const targetTokenList = (this.environment.tokenInfo as Array<TokenInfo>).filter(token => {return token.chainName == chainName && token.chainId == chainId});
+        for(const token of targetTokenList){
+            const getWattingClaimByTokenResult = await this.getClaimedListByToken(token,account,sn,limit,offset);
+            if(getWattingClaimByTokenResult.error){
+                result.error = getWattingClaimByTokenResult.error;
+                return result;
+            }
+            if(getWattingClaimByTokenResult.data != undefined && getWattingClaimByTokenResult.data.length > 0){
+                result.data = result.data.concat(getWattingClaimByTokenResult.data);
+            }
+        }
+
+        result.data = sortArray(result.data,{
+            by:["extension.latestTs"],
+            order:"desc"
+        });
+
+        return result;
+    }
+
+    private async getClaimedListByToken(token:TokenInfo,account:string,sn:BridgeSnapshoot,limit?:number,offset:number = 0):Promise<ActionData<ClaimMeta[]>>{
+        let result = new ActionData<ClaimMeta[]>();
+        result.data = new Array<ClaimMeta>();
+
+        const bridgeTxModel = new BridgeTxModel(this.environment);
+        const swapChainInfo = sn.chains.find(chain => {return chain.chainName != token.chainName && chain.chainId != token.chainId})!;
+        const claimChainInfo = sn.chains.find(chain => {return chain.chainName == token.chainName && chain.chainId == token.chainId})!;
+
+        const getClaimTxsResult = await bridgeTxModel.getClaimTxs(claimChainInfo.chainName,claimChainInfo.chainId,account,token.address,undefined,undefined,limit,offset);
+        if(getClaimTxsResult.error){
+            result.error = getClaimTxsResult.error;
+            return result;
+        }
+
+        if(getClaimTxsResult.data != undefined && getClaimTxsResult.data.length > 0){
+            for(let index = getClaimTxsResult.data.length - 1; index >= 0; index--){
+                let endClaimTx = getClaimTxsResult.data[index];
+                let beginClaimTx = index > 0 ? getClaimTxsResult.data[index] : undefined;
+                const getClaimedListResult = await this.getClaimedListByTokenAndClaim(token,account,beginClaimTx,endClaimTx,10,0);
+                if(getClaimedListResult.error){
+                    result.error = getClaimedListResult.error;
+                    return result;
+                }
+                if(getClaimedListResult.data != undefined){
+                    result.data.push(getClaimedListResult.data);
+                }
+            }
+        }
+
+
+        return result;
+    }
+
+    private async getClaimedListByTokenAndClaim(token:TokenInfo,account:string,beginClaimTx:BridgeTx|undefined,endClaimTx:BridgeTx,limit?:number,offset:number = 0):Promise<ActionData<ClaimMeta>>{
+        let result = new ActionData<ClaimMeta>();
+        const bridgeTxModel = new BridgeTxModel(this.environment);
+        const snapshootModel = new SnapshootModel(this.environment);
+
+        let beginBlock = undefined;
+        let endBlock = undefined;
+
+        if(beginClaimTx != undefined){
+            const getBeginSNResult = await snapshootModel.getSnapshootByClaimTx(beginClaimTx,1,0);
+            if(getBeginSNResult.error){
+                result.error = getBeginSNResult.error;
+                return result;
+            }
+            beginBlock = getBeginSNResult.data![0].chains.find(chain => {return chain.chainName != token.chainName && chain.chainId != token.chainId})!.endBlockNum;
+        }
+        const getEndSNResult = await snapshootModel.getSnapshootByClaimTx(endClaimTx,1,0);
+        if(getEndSNResult.error){
+            result.error = getEndSNResult.error;
+            return result;
+        }
+        endBlock = getEndSNResult.data![0].chains.find(chain => {return chain.chainName != token.chainName && chain.chainId != token.chainId})!.endBlockNum;
+
+        const swapChainInfo = getEndSNResult.data![0].chains.find(chain => {return chain.chainName != token.chainName && chain.chainId != token.chainId})!;
+        const originToken = (this.environment.tokenInfo as Array<TokenInfo>).find(t => {return t.targetTokenId == token.tokenid})!;
+
+        const getSwapTxsResult = await bridgeTxModel.getSwapTxs(swapChainInfo.chainName,swapChainInfo.chainId,account,originToken.address,beginBlock,endBlock,limit,offset);
+        if(getSwapTxsResult.error){
+            result.error = getSwapTxsResult.error;
+            return result;
+        }
+
+        if(getSwapTxsResult.data != undefined && getSwapTxsResult.data.length == 0){
+            return result;
+        }
+
+        const getSnapshootByParentrootResult = await snapshootModel.getSnapshootByParentRoot(getEndSNResult.data![0].merkleRoot);
+        if(getSnapshootByParentrootResult.error){
+            result.error = getSnapshootByParentrootResult.error;
+            return result;
+        }
+
+        result.data = {
+            merkleRoot:getSnapshootByParentrootResult.data!.merkleRoot,
+            from:originToken,
+            to:token,
+            sendingTxs:[],
+            receivingTx:endClaimTx,
+            totalAmount:BigInt(0),
+            status:2,
+            extension:{
+                latestTs:0
+            }
+        }
+
+        for(const swaptx of getSwapTxsResult.data!){
+            result.data.sendingTxs.push(swaptx);
+            result.data.totalAmount = result.data.totalAmount + swaptx.amount;
+            result.data.extension.latestTs = result.data.extension.latestTs <= swaptx.timestamp ? swaptx.timestamp : result.data.extension.latestTs;
+        }
+
+        return result;
     }
 }

@@ -9,7 +9,7 @@ import assert from 'assert';
 import { getReceipt } from "myvetools/dist/connexUtils";
 import { tokenid, TokenInfo } from "../../../src/common/utils/types/tokenInfo";
 import { BridgeSnapshoot, ZeroRoot } from "../../../src/common/utils/types/bridgeSnapshoot";
-import { SwapTx } from "../../../src/common/utils/types/swapTx";
+import { BridgeTx } from "../../../src/common/utils/types/bridgeTx";
 import { keccak256 } from "thor-devkit";
 import BridgeStorage from "../../../src/common/bridgeStorage";
 
@@ -439,7 +439,7 @@ export class V2EBridgeVerifierTestCase {
         this.tokenInfo[3].targetTokenId = this.tokenInfo[1].tokenid;
     }
 
-    private async mockSwapVVET():Promise<SwapTx>{
+    private async mockSwapVVET():Promise<BridgeTx>{
         const amount = 100000000;
         const clause1 = this.vVetContract.send("deposit",amount);
         const clause2 = this.vVetContract.send("approve",0,this.config.vechain.contracts.v2eBridge,amount);
@@ -453,7 +453,7 @@ export class V2EBridgeVerifierTestCase {
             assert.fail("swap faild");
         }
         
-        let result:SwapTx = {
+        let result:BridgeTx = {
             chainName:this.config.vechain.chainName,
             chainId:this.config.vechain.chainId,
             blockNumber:receipt1.meta.blockNumber,
@@ -471,9 +471,9 @@ export class V2EBridgeVerifierTestCase {
         return result;
     }
 
-    private async mockSwapVETH():Promise<SwapTx>{
+    private async mockSwapVETH():Promise<BridgeTx>{
         const amount = 200000000;
-        let result:SwapTx = {
+        let result:BridgeTx = {
             chainName:this.config.vechain.chainName,
             chainId:this.config.vechain.chainId,
             blockNumber:100000000,
@@ -491,7 +491,7 @@ export class V2EBridgeVerifierTestCase {
         return result;
     }
 
-    private initStorage(begin:number,end:number,swapTxs:SwapTx[]):string{
+    private initStorage(begin:number,end:number,swapTxs:BridgeTx[]):string{
         let result = "";
         const sn:BridgeSnapshoot = {
             parentMerkleRoot:"0x0000000000000000000000000000000000000000000000000000000000000000",

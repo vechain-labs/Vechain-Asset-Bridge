@@ -10,7 +10,7 @@ import { BridgeLedger, ledgerHash, ledgerID } from "../../../src/common/utils/ty
 import { BridgeSnapshoot, ZeroRoot } from "../../../src/common/utils/types/bridgeSnapshoot";
 import { tokenid, TokenInfo } from "../../../src/common/utils/types/tokenInfo";
 import { PromiseActionResult } from "../../../src/common/utils/components/actionResult";
-import { SwapTx } from "../../../src/common/utils/types/swapTx";
+import { BridgeTx } from "../../../src/common/utils/types/bridgeTx";
 import { keccak256 } from "thor-devkit";
 import BridgeStorage from "../../../src/common/bridgeStorage";
 
@@ -484,7 +484,7 @@ export class E2VBridgeVerifierTestCase{
         this.tokenInfo[3].targetTokenId = this.tokenInfo[1].tokenid;
     }
 
-    private async mockSwapWETH():Promise<SwapTx>{
+    private async mockSwapWETH():Promise<BridgeTx>{
         const amount = 100000000;
 
         const gas1 = await this.wEthContract.methods.deposit().estimateGas({
@@ -521,7 +521,7 @@ export class E2VBridgeVerifierTestCase{
             assert.fail("swap WETH faild");
         }
 
-        let result:SwapTx = {
+        let result:BridgeTx = {
             chainName:this.config.ethereum.chainName,
             chainId:this.config.ethereum.chainId,
             blockNumber:receipt.blockNumber,
@@ -540,9 +540,9 @@ export class E2VBridgeVerifierTestCase{
         return result;
     }
 
-    private async mockSwapWVET():Promise<SwapTx>{
+    private async mockSwapWVET():Promise<BridgeTx>{
         const amount = 200000000;
-        let result:SwapTx = {
+        let result:BridgeTx = {
             chainName:this.config.ethereum.chainName,
             chainId:this.config.ethereum.chainId,
             blockNumber:100000000,
@@ -560,7 +560,7 @@ export class E2VBridgeVerifierTestCase{
         return result;
     }
 
-    private initStorage(begin:number,end:number,swapTxs:SwapTx[]):string{
+    private initStorage(begin:number,end:number,swapTxs:BridgeTx[]):string{
         let result = "";
         const sn:BridgeSnapshoot = {
             parentMerkleRoot:"0x0000000000000000000000000000000000000000000000000000000000000000",

@@ -1,8 +1,8 @@
 import { keccak256 } from "thor-devkit";
 import { Entity, PrimaryColumn, Column, Index } from "typeorm";
 
-@Entity("swapTx")
-export class SwapTxEntity{
+@Entity("bridgeTx")
+export class BridgeTxEntity{
 
     @PrimaryColumn({name:"swapid"})
     public swapid!:string;

@@ -7,7 +7,7 @@ import { ActionData } from "./utils/components/actionResult";
 import { ThorDevKitEx } from "./utils/extensions/thorDevkitExten";
 import { IBridgeHead } from "./utils/iBridgeHead";
 import { BridgeSnapshoot, ZeroRoot } from "./utils/types/bridgeSnapshoot";
-import { SwapTx } from "./utils/types/swapTx";
+import { BridgeTx } from "./utils/types/bridgeTx";
 
 export class EthereumBridgeHead implements IBridgeHead{
 
@@ -179,10 +179,10 @@ export class EthereumBridgeHead implements IBridgeHead{
         return result;
     }
 
-    public async scanTxs(begin:number,end:number): Promise<ActionData<SwapTx[]>> {
+    public async scanTxs(begin:number,end:number): Promise<ActionData<BridgeTx[]>> {
 
-        let result = new ActionData<SwapTx[]>();
-        result.data = new Array<SwapTx>();
+        let result = new ActionData<BridgeTx[]>();
+        result.data = new Array<BridgeTx>();
         let blockCache:Map<number,Web3Eth.BlockTransactionString> = new Map();
 
         try {
@@ -200,7 +200,7 @@ export class EthereumBridgeHead implements IBridgeHead{
                         blockCache.set(block.number,block);
                     }
 
-                    let swapTx:SwapTx = {
+                    let swapTx:BridgeTx = {
                         chainName:this.config.ethereum.chainName,
                         chainId:this.config.ethereum.chainId,
                         blockNumber:swapEvent.blockNumber,
@@ -226,7 +226,7 @@ export class EthereumBridgeHead implements IBridgeHead{
                     }
 
 
-                    let swapTx:SwapTx = {
+                    let swapTx:BridgeTx = {
                         chainName:this.config.ethereum.chainName,
                         chainId:this.config.ethereum.chainId,
                         blockNumber:claimEvent.blockNumber,

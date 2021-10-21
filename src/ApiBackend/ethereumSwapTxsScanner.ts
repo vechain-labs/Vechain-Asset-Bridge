@@ -1,7 +1,7 @@
 import Web3 from "web3";
 import { EthereumBridgeHead } from "../common/ethereumBridgeHead";
 import { SnapshootModel } from "../common/model/snapshootModel";
-import SwapTxModel from "../common/model/swapTxModel";
+import BridgeTxModel from "../common/model/bridgeTxModel";
 import { ActionResult } from "../common/utils/components/actionResult";
 
 export class EthereumSwapTxsScanner{
@@ -12,7 +12,7 @@ export class EthereumSwapTxsScanner{
         this.web3 = this.env.web3;
         this.ethereumBridge = new EthereumBridgeHead(this.env);
         this.snapshootModel = new SnapshootModel(this.env);
-        this.swapTxModel = new SwapTxModel(this.env);
+        this.BridgeTxModel = new BridgeTxModel(this.env);
         this.env.ethereumscan = {endBlock:0};
     }
 
@@ -64,7 +64,7 @@ export class EthereumSwapTxsScanner{
         
         if(scanTxsResult.data && scanTxsResult.data!.length > 0){
             console.debug(`Get ${scanTxsResult.data!.length} swapTxs`);
-            const saveResult = await this.swapTxModel.saveSwapTx(scanTxsResult.data);
+            const saveResult = await this.BridgeTxModel.saveBridgeTxs(scanTxsResult.data);
             if(saveResult.error){
                 result.error = saveResult.error;
                 return result;
@@ -79,6 +79,6 @@ export class EthereumSwapTxsScanner{
     private config:any;
     private ethereumBridge:EthereumBridgeHead;
     private web3!:Web3;
-    private swapTxModel!:SwapTxModel;
+    private BridgeTxModel!:BridgeTxModel;
     private snapshootModel!:SnapshootModel;
 }

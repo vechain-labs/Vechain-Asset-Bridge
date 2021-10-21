@@ -1,6 +1,6 @@
 import { Framework } from "@vechain/connex-framework";
 import { SnapshootModel } from "../common/model/snapshootModel";
-import SwapTxModel from "../common/model/swapTxModel";
+import BridgeTxModel from "../common/model/bridgeTxModel";
 import { ActionResult } from "../common/utils/components/actionResult";
 import { VeChainBridgeHead } from "../common/vechainBridgeHead";
 
@@ -10,7 +10,7 @@ export class VeChainSwapTxsScanner{
         this.config = env.config;
         this.connex = this.env.connex;
         this.vechainBridge = new VeChainBridgeHead(this.env);
-        this.swapTxModel = new SwapTxModel(this.env);
+        this.BridgeTxModel = new BridgeTxModel(this.env);
         this.snapshootModel = new SnapshootModel(this.env);
         this.env.vechainscan = {endBlock:0};
     }
@@ -63,7 +63,7 @@ export class VeChainSwapTxsScanner{
         
         if(scanTxsResult.data && scanTxsResult.data!.length > 0){
             console.debug(`Get ${scanTxsResult.data!.length} swapTxs`);
-            const saveResult = await this.swapTxModel.saveSwapTx(scanTxsResult.data);
+            const saveResult = await this.BridgeTxModel.saveBridgeTxs(scanTxsResult.data);
             if(saveResult.error){
                 result.error = saveResult.error;
                 return result;
@@ -77,6 +77,6 @@ export class VeChainSwapTxsScanner{
     private config:any;
     private vechainBridge:VeChainBridgeHead;
     private connex!:Framework;
-    private swapTxModel!:SwapTxModel;
+    private BridgeTxModel!:BridgeTxModel;
     private snapshootModel!:SnapshootModel;
 }
