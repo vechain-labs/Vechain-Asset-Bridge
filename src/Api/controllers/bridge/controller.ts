@@ -458,9 +458,9 @@ export default class BridgeController extends BaseMiddleware{
         }
 
         if(getClaimTxsResult.data != undefined && getClaimTxsResult.data.length > 0){
-            for(let index = getClaimTxsResult.data.length - 1; index >= 0; index--){
+            for(let index = 0; index < getClaimTxsResult.data.length; index++){
                 let endClaimTx = getClaimTxsResult.data[index];
-                let beginClaimTx = index > 0 ? getClaimTxsResult.data[index] : undefined;
+                let beginClaimTx = index < getClaimTxsResult.data.length ? getClaimTxsResult.data[index + 1] : undefined;
                 const getClaimedListResult = await this.getClaimedListByTokenAndClaim(token,account,beginClaimTx,endClaimTx,10,0);
                 if(getClaimedListResult.error){
                     result.error = getClaimedListResult.error;
