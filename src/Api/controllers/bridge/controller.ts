@@ -527,14 +527,13 @@ export default class BridgeController extends BaseMiddleware{
             totalAmount:BigInt(0),
             status:2,
             extension:{
-                latestTs:0
+                latestTs:endClaimTx.timestamp
             }
         }
 
         for(const swaptx of getSwapTxsResult.data!){
             result.data.sendingTxs.push(swaptx);
             result.data.totalAmount = result.data.totalAmount + swaptx.amount;
-            result.data.extension.latestTs = result.data.extension.latestTs <= swaptx.timestamp ? swaptx.timestamp : result.data.extension.latestTs;
         }
 
         return result;
