@@ -1,6 +1,6 @@
 import { BaseMiddleware } from "../../utils/baseMiddleware";
 import Router from "koa-router";
-import { ClaimMeta } from "../../utils/types/claimMeta";
+import { claimID, ClaimMeta } from "../../utils/types/claimMeta";
 import { ActionData } from "../../../common/utils/components/actionResult";
 import ConvertJSONResponeMiddleware from "../../middleware/convertJSONResponeMiddleware";
 import { SnapshootModel } from "../../../common/model/snapshootModel";
@@ -85,6 +85,7 @@ export default class BridgeController extends BaseMiddleware{
 
         for(const meta of list){
             const data = {
+                claimId:meta.claimId,
                 merkleRoot:meta.merkleRoot,
                 from:{
                     chainName:meta.from.chainName,
@@ -319,7 +320,9 @@ export default class BridgeController extends BaseMiddleware{
                 let fromToken = (this.environment.tokenInfo as Array<TokenInfo>).find(token => {return token.chainName == swapChainInfo.chainName && token.chainId == swapChainInfo.chainId && token.address.toLowerCase() == swapTx.token.toLowerCase()})!;
                 let toToken = (this.environment.tokenInfo as Array<TokenInfo>).find(token => {return token.tokenid == fromToken.targetTokenId;})!;
                 let newMeta:ClaimMeta = {
+                    claimId:"",
                     merkleRoot:"",
+                    account:account,
                     from:fromToken,
                     to:toToken,
                     sendingTxs:[swapTx],
@@ -327,6 +330,7 @@ export default class BridgeController extends BaseMiddleware{
                     totalAmount:swapTx.amount,
                     status:0
                 }
+                newMeta.claimId = claimID(newMeta);
                 claimList.push(newMeta);
             } else {
                 targetMeta.sendingTxs.push(swapTx);
@@ -398,6 +402,8 @@ export default class BridgeController extends BaseMiddleware{
         }
 
         let newClaimMeta:ClaimMeta = {
+            claimId:"",
+            account:account,
             merkleRoot:sn.merkleRoot,
             from:originToken,
             to:token,
@@ -409,6 +415,7 @@ export default class BridgeController extends BaseMiddleware{
                 latestTs:0
             }
         }
+        newClaimMeta.claimId = claimID(newClaimMeta);
 
         for(const swaptx of getSwapTxsResult.data!){
             newClaimMeta.sendingTxs.push(swaptx);
@@ -519,7 +526,9 @@ export default class BridgeController extends BaseMiddleware{
         }
 
         result.data = {
+            claimId:"",
             merkleRoot:getSnapshootByParentrootResult.data!.merkleRoot,
+            account:account,
             from:originToken,
             to:token,
             sendingTxs:[],
@@ -530,7 +539,7 @@ export default class BridgeController extends BaseMiddleware{
                 latestTs:endClaimTx.timestamp
             }
         }
-
+        result.data.claimId = claimID(result.data);
         for(const swaptx of getSwapTxsResult.data!){
             result.data.sendingTxs.push(swaptx);
             result.data.totalAmount = result.data.totalAmount + swaptx.amount;
