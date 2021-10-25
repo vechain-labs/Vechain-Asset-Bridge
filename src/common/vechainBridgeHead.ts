@@ -69,7 +69,7 @@ export class VeChainBridgeHead implements IBridgeHead {
         let filter = this.connex.thor.filter("event",[{
             address:this.config.vechain.contracts.v2eBridge,
             topic0:this.UpdateMerkleRootEvent.signature
-        }]).order("desc"); 
+        }]).order("desc");
 
         let snapShoot:BridgeSnapshoot = {
             parentMerkleRoot:ZeroRoot(),
@@ -245,7 +245,8 @@ export class VeChainBridgeHead implements IBridgeHead {
                             swapTx = {
                                 chainName:this.config.vechain.chainName,
                                 chainId:this.config.vechain.chainId,
-                                blockNumber:blockNum,
+                                blockNumber:event.meta.blockNumber,
+                                blockId:event.meta.blockID,
                                 txid:event.meta.txID,
                                 clauseIndex:clauseIndex,
                                 index:eventIndex,
@@ -262,7 +263,8 @@ export class VeChainBridgeHead implements IBridgeHead {
                             swapTx = {
                                 chainName:this.config.vechain.chainName,
                                 chainId:this.config.vechain.chainId,
-                                blockNumber:blockNum,
+                                blockNumber:event.meta.blockNumber,
+                                blockId:event.meta.blockID,
                                 txid:event.meta.txID,
                                 clauseIndex:clauseIndex,
                                 index:eventIndex,

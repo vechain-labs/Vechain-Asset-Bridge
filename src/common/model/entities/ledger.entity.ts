@@ -28,4 +28,7 @@ export class LedgerEntity{
 
     @Column({name:"balance"})
     public balance!:string;
+
+    @Column({name:"invalid"})
+    public invalid!:boolean;
 }

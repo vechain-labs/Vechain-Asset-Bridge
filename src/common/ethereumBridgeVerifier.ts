@@ -144,7 +144,7 @@ export class EthereumBridgeVerifier {
                         result.data = "reverted";
                         break;
                     }
-                    if(bestBlock - receipt.blockNumber >= this.config.vechain.confirmHeight){
+                    if(bestBlock - receipt.blockNumber >= this.config.ethereum.confirmHeight){
                         result.data = "confirmed";
                         break;
                     } else {

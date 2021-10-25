@@ -19,6 +19,10 @@ export class BridgeTxEntity{
     @Column({name:"blocknumber"})
     public blockNumber!:number;
 
+    @Index()
+    @Column({name:"blockid"})
+    public blockId!:string;
+
     @Column({name:"txid"})
     public txid!:string;
 
@@ -46,7 +50,12 @@ export class BridgeTxEntity{
     public timestamp!:number;
 
     @Column({name:"type"})
+    @Index()
     public type!:number;
+
+    @Column({name:"invalid"})
+    @Index()
+    public invalid!:boolean;
 }
 
 export function swapID(chainName:string,chainId:string,blocknum:number,txid:string,clauseIndex:number,index:number,account:string,token:string):string {

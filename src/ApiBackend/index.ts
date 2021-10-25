@@ -15,17 +15,11 @@ class BridgeApiBackend{
         const scanEthereumScanner = new EthereumSwapTxsScanner(env);
 
         const rule = new schedule.RecurrenceRule();
-        rule.second = [0, 30];
+        rule.second = [0,10,20,30,40,50];
 
         const taskJob = schedule.scheduleJob(rule, async() =>{
             if(taskIsBusy == false){
                 taskIsBusy = true;
-                const snapshootResult = await snapshootScanner.run();
-                if(snapshootResult.error){
-                    console.error(`Snapshoot Error: ${snapshootResult.error}`);
-                    taskIsBusy = false;
-                    return;
-                }
 
                 const scanvechainResult = await scanVeChainScanner.run();
                 if(scanvechainResult.error){
@@ -40,6 +34,14 @@ class BridgeApiBackend{
                     taskIsBusy = false;
                     return;
                 }
+
+                const snapshootResult = await snapshootScanner.run();
+                if(snapshootResult.error){
+                    console.error(`Snapshoot Error: ${snapshootResult.error}`);
+                    taskIsBusy = false;
+                    return;
+                }
+                
                 taskIsBusy = false;
             }
         });

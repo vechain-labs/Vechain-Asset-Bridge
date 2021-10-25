@@ -68,7 +68,10 @@ export class SnapshootModel {
 
         try {
             let data = await getRepository(SnapshootEntity)
-                .findOne({where:{merkleRoot:root}});
+                .findOne({where:{
+                    merkleRoot:root,
+                    invalid:true
+                }});
                 if(data != undefined){
                     result.data = {
                         parentMerkleRoot:data.parentMerkleRoot,
@@ -109,7 +112,10 @@ export class SnapshootModel {
 
         try {
             let data = await getRepository(SnapshootEntity)
-                .findOne({where:{parentMerkleRoot:parentRoot}});
+                .findOne({where:{
+                    parentMerkleRoot:parentRoot,
+                    invalid:true
+                }});
                 if(data != undefined){
                     result.data = {
                         parentMerkleRoot:data.parentMerkleRoot,
@@ -186,7 +192,7 @@ export class SnapshootModel {
         }
 
         return result;
-    } 
+    }
 
     public async save(sns:BridgeSnapshoot[]):Promise<ActionResult>{
         let result = new ActionResult();
@@ -195,7 +201,6 @@ export class SnapshootModel {
             await getManager().transaction(async transactionalEntityManager => {
                 for(const sn of sns){
                     let entity = new SnapshootEntity();
-                    
                     entity.merkleRoot = sn.merkleRoot;
                     entity.parentMerkleRoot = sn.parentMerkleRoot;
                     const vechainInfo = sn.chains.find(chain => {return chain.chainName == this.config.vechain.chainName && chain.chainId == this.config.vechain.chainId;});

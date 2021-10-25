@@ -2,7 +2,7 @@ import Web3 from "web3";
 import { EthereumBridgeHead } from "../common/ethereumBridgeHead";
 import { SnapshootModel } from "../common/model/snapshootModel";
 import BridgeTxModel from "../common/model/bridgeTxModel";
-import { ActionResult } from "../common/utils/components/actionResult";
+import { ActionData, ActionResult } from "../common/utils/components/actionResult";
 
 export class EthereumSwapTxsScanner{
 
@@ -44,6 +44,12 @@ export class EthereumSwapTxsScanner{
                 result.error = scanResult.error;
                 return result;
             }
+
+            const handleForkResult = await this.handleFork();
+            if(handleForkResult.error){
+                result.error = handleForkResult.error;
+                return result;
+            }
             this.env.ethereumscan.endBlock = endBlock;
             console.info(`End Ethereum Swaptxs scanner`);
 
@@ -72,6 +78,80 @@ export class EthereumSwapTxsScanner{
         }
         console.info(`End Scan Ethereum SwapTxs OnChain`);
         return result;
+    }
+
+    private async handleFork():Promise<ActionResult>{
+        let result = new ActionResult();
+
+        try {
+            while(true){
+                console.info(`begin handle ethereum Fork`);
+                const latestBridgeTxResult = await this.BridgeTxModel.getLastBridgeTx(this.config.ethereum.chainName,this.config.ethereum.chainId);
+                if(latestBridgeTxResult.error){
+                    result.error = latestBridgeTxResult.error;
+                    return result;
+                }
+    
+                if(latestBridgeTxResult.data == undefined){
+                    return result;
+                }
+    
+                let blockHash = latestBridgeTxResult.data.blockId.toLowerCase();
+                const blockIsForkResult = await this.blockIsFork(blockHash);
+                if(blockIsForkResult.error){
+                    result.error = blockIsForkResult.error;
+                    return result;
+                }
+
+                if(blockIsForkResult.data == true){
+                    console.debug(`ethereum blockHash: ${blockHash} is fork`);
+                    await this.BridgeTxModel.removeByBlockIds(this.config.ethereum.chainName,this.config.ethereum.chainId,[blockHash]);
+                    continue;
+                }
+                console.info(`End handle ethereum Fork`);
+                break;
+            }
+        } catch (error) {
+            result.error = error;
+        }
+
+        return result;
+    }
+
+    private async blockIsFork(bhash:string):Promise<ActionData<boolean>>{
+        let result = new ActionData<boolean>();
+        result.data = false;
+        let blockHash = bhash; 
+        let comfirmedCount = 0;
+        try {
+            while(true){
+                const block = await this.web3.eth.getBlock(blockHash);
+                if(block == null){
+                    result.data = true;
+                    return result;
+                }
+    
+                const parentBlockHash = block.parentHash.toLowerCase();
+                const parentBlock = await this.web3.eth.getBlock(block.number - 1);
+                if(parentBlock == null){
+                    result.data = true;
+                    return result;
+                }
+
+                if(parentBlock.hash.toLowerCase() != parentBlockHash){
+                    result.data = true;
+                    return result;
+                }
+                blockHash = parentBlock.hash.toLowerCase();
+                comfirmedCount++;
+                if(comfirmedCount > this.config.ethereum.confirmHeight){
+                    return result;
+                }
+            }
+        } catch (error) {
+            result.error = error;
+            return result;
+        }
     }
 
 

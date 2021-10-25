@@ -1,7 +1,7 @@
 import { Framework } from "@vechain/connex-framework";
 import { SnapshootModel } from "../common/model/snapshootModel";
 import BridgeTxModel from "../common/model/bridgeTxModel";
-import { ActionResult } from "../common/utils/components/actionResult";
+import { ActionData, ActionResult } from "../common/utils/components/actionResult";
 import { VeChainBridgeHead } from "../common/vechainBridgeHead";
 
 export class VeChainSwapTxsScanner{
@@ -21,7 +21,7 @@ export class VeChainSwapTxsScanner{
         try {
             console.info(`Begin VeChain Swaptxs scanner`);
             let beginBlock = this.config.vechain.startBlockNum;
-            let endBlock = (await this.connex.thor.block().get())!.number - this.config.vechain.confirmHeight;
+            let endBlock = (await this.connex.thor.block().get())!.number;
             
             if(this.env.vechainscan.endBlock == 0){
                 const lastSnapshootResult = await this.snapshootModel.getLastSnapshoot();
@@ -43,6 +43,13 @@ export class VeChainSwapTxsScanner{
                 result.error = scanResult.error;
                 return result;
             }
+
+            const handleForkResult = await this.handleFork();
+            if(handleForkResult.error){
+                result.error = handleForkResult.error;
+                return result;
+            }
+
             this.env.vechainscan.endBlock = endBlock;
             console.info(`End VeChain Swaptxs scanner`);
         } catch (error) {
@@ -71,6 +78,81 @@ export class VeChainSwapTxsScanner{
         }
         console.info(`End Scan VeChain SwapTxs OnChain`);
         return result;
+    }
+
+    private async handleFork():Promise<ActionResult>{
+        let result = new ActionResult();
+
+        try {
+            while(true){
+                console.info(`begin handle VeChain Fork`);
+                const latestBridgeTxResult = await this.BridgeTxModel.getLastBridgeTx(this.config.vechain.chainName,this.config.vechain.chainId);
+                if(latestBridgeTxResult.error){
+                    result.error = latestBridgeTxResult.error;
+                    return result;
+                }
+
+                if(latestBridgeTxResult.data == undefined){
+                    return result;
+                }
+
+                let blockId = latestBridgeTxResult.data.blockId.toLowerCase();
+                const blockIsForkResult = await this.blockIsFork(blockId);
+                if(blockIsForkResult.error){
+                    result.error = blockIsForkResult.error;
+                    return result;
+                }
+
+                if(blockIsForkResult.data == true){
+                    console.debug(`VeChain blockId: ${blockId} is fork`);
+                    await this.BridgeTxModel.removeByBlockIds(this.config.vechain.chainName,this.config.vechain.chainId,[blockId]);
+                    continue;
+                }
+                console.info(`End handle VeChain Fork`);
+                break;
+            }
+        } catch (error) {
+            result.error = error;
+        }
+
+        return result;
+    }
+
+    private async blockIsFork(bid:string):Promise<ActionData<boolean>>{
+        let result = new ActionData<boolean>();
+        result.data = false;
+        let blockId = bid;
+        let comfirmedCount = 0;
+
+        try {
+            while(true){
+                const block = await this.connex.thor.block(blockId).get();
+                if(block == null){
+                    result.data = true;
+                    return result;
+                }
+                const parentBlockId = block.parentID.toLowerCase();
+                const parentBlock = await this.connex.thor.block(block.number - 1).get();
+                if(parentBlock == null){
+                    result.data = true;
+                    return result;
+                }
+
+                if(parentBlock.id.toLowerCase() != parentBlockId){
+                    result.data = true;
+                    return result;
+                }
+                blockId = parentBlock.id.toLowerCase();
+                comfirmedCount++;
+                if(comfirmedCount > this.config.vechain.confirmHeight){
+                    return result;
+                }
+                
+            }
+        } catch (error) {
+            result.error = error;
+            return result;
+        }
     }
 
     private env:any;

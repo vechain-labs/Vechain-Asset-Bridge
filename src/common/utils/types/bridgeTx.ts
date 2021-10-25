@@ -2,6 +2,7 @@ export type BridgeTx = {
     chainName:string;
     chainId:string;
     blockNumber:number;
+    blockId:string;
     txid:string;
     clauseIndex:number;
     index:number;

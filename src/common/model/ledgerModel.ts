@@ -16,7 +16,10 @@ export default class LedgerModel {
 
         try {
             let data = await getRepository(LedgerEntity)
-                .find({where:{merkleRoot:root.toLowerCase()}});
+                .find({where:{
+                    merkleRoot:root.toLowerCase(),
+                    invalid:true
+                }});
             for(const item of data){
                 let ledger:BridgeLedger = {
                     root:item.merkleRoot,
@@ -45,7 +48,8 @@ export default class LedgerModel {
                     merkleRoot:root.toLowerCase(),
                     chainName:chainName,
                     chainId:chainId,
-                    account:account.toLowerCase()
+                    account:account.toLowerCase(),
+                    invalid:true
                 }});
             for(const item of data){
                 let ledger:BridgeLedger = {
@@ -80,8 +84,25 @@ export default class LedgerModel {
                     entity.chainId = ledger.chainId.toLowerCase();
                     entity.account = ledger.account.toLowerCase();
                     entity.token = ledger.token.toLowerCase();
-                    entity.balance = '0x' + ledger.balance.toString(16)
+                    entity.balance = '0x' + ledger.balance.toString(16),
+                    entity.invalid = true;
                     await transactionalEntityManager.save(entity);
+                }
+            });
+        } catch (error) {
+            result.error = error;
+        }
+
+        return result;
+    }
+
+    public async removeBySnapshootIds(snIds:string[]):Promise<ActionResult>{
+        let result = new ActionResult();
+
+        try {
+            await getManager().transaction(async transactionalEntityManager =>{
+                for(const snId of snIds){
+                    transactionalEntityManager.update(LedgerEntity,{snapshootid:snId},{invalid:true});
                 }
             });
         } catch (error) {

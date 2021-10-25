@@ -38,20 +38,27 @@ export class SnapshootScanner{
             }
             console.info(`LastSyncedSnapshoot is ${lastSyncSnRsult.data!.merkleRoot}`);
 
-            // if(lastSyncSnRsult.data!.merkleRoot == ZeroRoot()){
-            //     console.info(`Complete synchronization`);
-            //     return result;
-            // }
+            const latestMerkleRootResult = await this.vechainBridge.getMerkleRoot();
+            if(latestMerkleRootResult.error){
+                result.error = latestMerkleRootResult.error;
+                return result;
+            }
+
+            if(latestMerkleRootResult.data != undefined && latestMerkleRootResult.data == lastSyncSnRsult.data!.merkleRoot){
+                console.info(`Complete synchronization`);
+                return result;
+            }           
+
+            const latestSnapshootResult = await this.vechainBridge.getLastSnapshoot();
+            if(latestSnapshootResult.error){
+                result.error = latestSnapshootResult.error;
+                return result;
+            }
 
             console.info(`Get NoSyncSnapshootList`);
             const getNoSyncListResult = await this.getNoSyncSnapshootList(lastSyncSnRsult.data!);
             if(getNoSyncListResult.error){
                 result.copyBase(getNoSyncListResult);
-                return result;
-            }
-            
-            if(getNoSyncListResult.data!.length == 0){
-                console.info(`Complete synchronization`);
                 return result;
             }
 
@@ -99,6 +106,17 @@ export class SnapshootScanner{
                 result.error = localResult.error;
                 return result;
             }
+
+            const latestMerkleRootResult = await this.vechainBridge.getMerkleRoot();
+            if(latestMerkleRootResult.error){
+                result.error = latestMerkleRootResult.error;
+                return result;
+            }
+
+            if(localResult.data!.merkleRoot == latestMerkleRootResult.data!){
+                result.data = localResult.data;
+                return result;
+            }
             
             const onchainResult = await this.vechainBridge.getLastSnapshoot();
             if(onchainResult.error != undefined){
@@ -108,11 +126,6 @@ export class SnapshootScanner{
 
             let localsnapshoot = localResult.data!;
             let onchainsnapshoot = onchainResult.data!.sn;
-
-            if(localsnapshoot.merkleRoot == onchainsnapshoot.merkleRoot){
-                result.data = localsnapshoot;
-                return result;
-            }
 
             while(true){
                 if(localsnapshoot.merkleRoot == onchainsnapshoot.merkleRoot){
