@@ -441,12 +441,7 @@ export default class BridgeController extends BaseMiddleware{
                 result.data = result.data.concat(getWattingClaimByTokenResult.data);
             }
         }
-
-        result.data = sortArray(result.data,{
-            by:["extension.latestTs"],
-            order:"desc"
-        });
-
+        result.data = result.data!.sort((a,b) => {return b.extension!.latestTs - a.extension!.latestTs});
         return result;
     }
 

@@ -303,7 +303,7 @@ export class BridgeLockProcess{
 
             let needSendLockTx:boolean = true;
             /** 
-             * DOTO: Check which verifier need to send ethereum bridge lock transaction.
+             * TODO: Check which verifier need to send ethereum bridge lock transaction.
              * needSendLockTx = {};
              */
             if(needSendLockTx){
