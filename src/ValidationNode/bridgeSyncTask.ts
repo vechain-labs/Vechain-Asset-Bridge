@@ -38,15 +38,21 @@ export class BridgeSyncTask{
             }
             console.info(`LastSyncedSnapshoot is ${lastSyncSnRsult.data!.merkleRoot}`);
 
+            const latestMerkleRootResult = await this.vechainBridge.getMerkleRoot();
+            if(latestMerkleRootResult.error){
+                result.error = latestMerkleRootResult.error;
+                return result;
+            }
+
+            if(latestMerkleRootResult.data != undefined && latestMerkleRootResult.data == lastSyncSnRsult.data!.merkleRoot){
+                console.info(`Complete synchronization`);
+                return result;
+            }
+
             console.info(`Get NoSyncSnapshootList`);
             const getNoSyncListResult = await this.getNoSyncSnapshootList(lastSyncSnRsult.data!);
             if(getNoSyncListResult.error){
                 result.copyBase(getNoSyncListResult);
-                return result;
-            }
-            
-            if(getNoSyncListResult.data!.length == 0){
-                console.info(`Complete synchronization`);
                 return result;
             }
 

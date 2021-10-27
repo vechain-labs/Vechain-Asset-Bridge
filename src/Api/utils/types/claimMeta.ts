@@ -15,13 +15,13 @@ export type ClaimMeta = {
     extension?:any
 }
 
-export function claimID(meta:ClaimMeta):string {
+export function claimID(merkleroot:string,meta:ClaimMeta):string {
     let encode = Buffer.concat([
         Buffer.from(meta.to.chainName),
         Buffer.from(meta.to.chainId),
         Buffer.from(meta.account.substring(2),'hex'),
         Buffer.from(meta.to.address.substring(2),'hex'),
-        Buffer.from(meta.merkleRoot.substring(2),'hex')
+        Buffer.from(merkleroot.substring(2),'hex')
     ]);
     return '0x' + keccak256(encode).toString('hex');
 }

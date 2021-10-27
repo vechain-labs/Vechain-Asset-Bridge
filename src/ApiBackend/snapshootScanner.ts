@@ -47,12 +47,6 @@ export class SnapshootScanner{
             if(latestMerkleRootResult.data != undefined && latestMerkleRootResult.data == lastSyncSnRsult.data!.merkleRoot){
                 console.info(`Complete synchronization`);
                 return result;
-            }           
-
-            const latestSnapshootResult = await this.vechainBridge.getLastSnapshoot();
-            if(latestSnapshootResult.error){
-                result.error = latestSnapshootResult.error;
-                return result;
             }
 
             console.info(`Get NoSyncSnapshootList`);

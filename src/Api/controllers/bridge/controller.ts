@@ -321,7 +321,7 @@ export default class BridgeController extends BaseMiddleware{
                 let toToken = (this.environment.tokenInfo as Array<TokenInfo>).find(token => {return token.tokenid == fromToken.targetTokenId;})!;
                 let newMeta:ClaimMeta = {
                     claimId:"",
-                    merkleRoot:"",
+                    merkleRoot:ZeroRoot(),
                     account:account,
                     from:fromToken,
                     to:toToken,
@@ -330,7 +330,7 @@ export default class BridgeController extends BaseMiddleware{
                     totalAmount:swapTx.amount,
                     status:0
                 }
-                newMeta.claimId = claimID(newMeta);
+                newMeta.claimId = claimID(sn.merkleRoot,newMeta);
                 claimList.push(newMeta);
             } else {
                 targetMeta.sendingTxs.push(swapTx);
@@ -404,7 +404,7 @@ export default class BridgeController extends BaseMiddleware{
         let newClaimMeta:ClaimMeta = {
             claimId:"",
             account:account,
-            merkleRoot:sn.merkleRoot,
+            merkleRoot:ZeroRoot(),
             from:originToken,
             to:token,
             sendingTxs:[],
@@ -415,7 +415,7 @@ export default class BridgeController extends BaseMiddleware{
                 latestTs:0
             }
         }
-        newClaimMeta.claimId = claimID(newClaimMeta);
+        newClaimMeta.claimId = claimID(sn.parentMerkleRoot,newClaimMeta);
 
         for(const swaptx of getSwapTxsResult.data!){
             newClaimMeta.sendingTxs.push(swaptx);
@@ -514,7 +514,7 @@ export default class BridgeController extends BaseMiddleware{
             return result;
         }
 
-        const getSnapshootByParentrootResult = await snapshootModel.getSnapshootByParentRoot(getEndSNResult.data![0].merkleRoot);
+        const getSnapshootByParentrootResult = await snapshootModel.getSnapshootByRoot(getEndSNResult.data![0].parentMerkleRoot);
         if(getSnapshootByParentrootResult.error){
             result.error = getSnapshootByParentrootResult.error;
             return result;
@@ -534,7 +534,7 @@ export default class BridgeController extends BaseMiddleware{
                 latestTs:endClaimTx.timestamp
             }
         }
-        result.data.claimId = claimID(result.data);
+        result.data.claimId = claimID(getSnapshootByParentrootResult.data!.merkleRoot,result.data);
         for(const swaptx of getSwapTxsResult.data!){
             result.data.sendingTxs.push(swaptx);
             result.data.totalAmount = result.data.totalAmount + swaptx.amount;
