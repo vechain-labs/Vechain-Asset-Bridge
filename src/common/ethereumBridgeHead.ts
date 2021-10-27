@@ -2,7 +2,7 @@ import { compileContract } from "myvetools/dist/utils";
 import path from "path";
 import Web3 from "web3";
 import Web3Eth from 'web3-eth';
-import {Contract as EthContract, EventData} from 'web3-eth-contract';
+import {Contract as EthContract} from 'web3-eth-contract';
 import { ActionData } from "./utils/components/actionResult";
 import { ThorDevKitEx } from "./utils/extensions/thorDevkitExten";
 import { IBridgeHead } from "./utils/iBridgeHead";
