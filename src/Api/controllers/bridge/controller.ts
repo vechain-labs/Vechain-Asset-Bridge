@@ -328,16 +328,21 @@ export default class BridgeController extends BaseMiddleware{
                     sendingTxs:[swapTx],
                     receivingTx:undefined,
                     totalAmount:swapTx.amount,
-                    status:0
+                    status:0,
+                    extension:{
+                        latestTs:swapTx.timestamp
+                    }
                 }
                 newMeta.claimId = claimID(sn.merkleRoot,newMeta);
                 claimList.push(newMeta);
             } else {
                 targetMeta.sendingTxs.push(swapTx);
                 targetMeta.totalAmount = targetMeta.totalAmount + swapTx.amount;
+                targetMeta.extension!.latestTs = swapTx.timestamp >= targetMeta.extension!.latestTs ? swapTx.timestamp : targetMeta.extension!.latestTs;
             }
         }
         result.data = claimList;
+        result.data = result.data!.sort((a,b) => {return b.extension!.latestTs - a.extension!.latestTs});
         return result;
     }
 
@@ -356,11 +361,7 @@ export default class BridgeController extends BaseMiddleware{
                 result.data.push(getWattingClaimByTokenResult.data);
             }
         }
-        result.data = sortArray(result.data,{
-            by:["extension.latestTs"],
-            order:"desc"
-        });
-
+        result.data = result.data!.sort((a,b) => {return b.extension!.latestTs - a.extension!.latestTs});
         return result;
     }
 
