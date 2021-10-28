@@ -4,7 +4,7 @@ import { ActionResult } from "../common/utils/components/actionResult";
 import { tokenid, TokenInfo } from "../common/utils/types/tokenInfo";
 import IActiveSupportServices from "../Api/utils/iActiveSupportService";
 import { environment } from ".";
-import { Driver, SimpleNet, SimpleWallet } from "@vechain/connex-driver";
+import { Driver, SimpleNet,SimpleWallet } from "@vechain/connex-driver";
 import { Framework } from "@vechain/connex-framework";
 import Web3 from "web3";
 import * as Devkit from 'thor-devkit';
@@ -102,8 +102,13 @@ export default class ActiveSupportServices implements IActiveSupportServices{
     }
 
     private async initConnex(){
-        const driver = await Driver.connect(new SimpleNet(environment.config.vechain.nodeHost as string));
+        const masterNode = Devkit.HDNode.fromMnemonic((environment.config.mnemonic as string).split(' '));
+        const account = masterNode.derive(5);
+        const wallet = new SimpleWallet();
+        wallet.import(account.privateKey!.toString('hex'));
+        const driver = await Driver.connect(new SimpleNet(environment.config.vechain.nodeHost as string),wallet);
         environment.connex = new Framework(driver);
+        environment.wallet = wallet;
     }
 
     private async initWeb3js(){

@@ -31,6 +31,18 @@
         {
             "type": "node",
             "request": "launch",
+            "name": "Launch Bridge Node",
+            "skipFiles": [
+                "<node_internals>/**"
+            ],
+            "program": "${workspaceFolder}/src/ValidationNode/index.ts",
+            "outFiles": [
+                "${workspaceFolder}/**/*.js"
+            ]
+        },
+        {
+            "type": "node",
+            "request": "launch",
             "name": "Mocha Smart Contract",
             "program": "${workspaceFolder}/node_modules/mocha/bin/mocha",
             "args": [

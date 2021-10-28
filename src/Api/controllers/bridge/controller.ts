@@ -16,7 +16,6 @@ import { BridgeTx } from "../../../common/utils/types/bridgeTx";
 import BridgeTxModel from "../../../common/model/bridgeTxModel";
 import { EthereumBridgeHead } from "../../../common/ethereumBridgeHead";
 import { VeChainBridgeHead } from "../../../common/vechainBridgeHead";
-const sortArray = require('sort-array');
 
 export default class BridgeController extends BaseMiddleware{
     public claimList:Router.IMiddleware;
@@ -58,6 +57,22 @@ export default class BridgeController extends BaseMiddleware{
             if(this.environment.bridgePack == false){
                 const syncTask = new BridgeSyncTask(this.environment);
                 const packTask = new BridgePackTask(this.environment);
+
+                const ethereumBridgeStatusResult = await (new EthereumBridgeHead(this.environment)).getLockedStatus();
+                const vechainBridgeStatusResult = await (new VeChainBridgeHead(this.environment)).getLockedStatus();
+                let status = this.environment.bridgePack;
+                if(ethereumBridgeStatusResult.error == undefined && ethereumBridgeStatusResult.data == true){
+                    status = true;
+                }
+                if(vechainBridgeStatusResult.error == undefined && vechainBridgeStatusResult.data == true){
+                    status = true;
+                }
+
+                if(status == true){
+                    this.environment.bridgePack = true;
+                    return;
+                }
+
                 this.environment.bridgePack = true;
                 syncTask.taskJob().then( action => {
                     console.info(`Sync Bridge Data Finish`);
@@ -76,6 +91,16 @@ export default class BridgeController extends BaseMiddleware{
         }
 
         this.packStatus = async (ctx:Router.IRouterContext,next: () => Promise<any>) => {
+            const ethereumBridgeStatusResult = await (new EthereumBridgeHead(this.environment)).getLockedStatus();
+            const vechainBridgeStatusResult = await (new VeChainBridgeHead(this.environment)).getLockedStatus();
+            let status = this.environment.bridgePack;
+            if(ethereumBridgeStatusResult.error == undefined && ethereumBridgeStatusResult.data == true){
+                status = true;
+            }
+            if(vechainBridgeStatusResult.error == undefined && vechainBridgeStatusResult.data == true){
+                status = true;
+            }
+            this.environment.bridgePack = status;
             ConvertJSONResponeMiddleware.bodyToJSONResponce(ctx,{packing:this.environment.bridgePack});
         }
     }
