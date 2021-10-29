@@ -40,7 +40,7 @@ class BridgeValidationNode{
 
     private async packRule():Promise<boolean>{
         const bestBlock = await (this.environment.connex as Framework).thor.block().get();
-        return bestBlock && bestBlock.number % 100 == 0 ? true : false;
+        return bestBlock && bestBlock.number % 200 == 0 ? true : false;
     }
 
     private environment:any;
