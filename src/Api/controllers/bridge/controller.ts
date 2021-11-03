@@ -93,14 +93,13 @@ export default class BridgeController extends BaseMiddleware{
         this.packStatus = async (ctx:Router.IRouterContext,next: () => Promise<any>) => {
             const ethereumBridgeStatusResult = await (new EthereumBridgeHead(this.environment)).getLockedStatus();
             const vechainBridgeStatusResult = await (new VeChainBridgeHead(this.environment)).getLockedStatus();
-            let status = this.environment.bridgePack;
+            let status = false;
             if(ethereumBridgeStatusResult.error == undefined && ethereumBridgeStatusResult.data == true){
                 status = true;
             }
             if(vechainBridgeStatusResult.error == undefined && vechainBridgeStatusResult.data == true){
                 status = true;
             }
-            this.environment.bridgePack = status;
             ConvertJSONResponeMiddleware.bodyToJSONResponce(ctx,{packing:this.environment.bridgePack});
         }
     }
