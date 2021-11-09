@@ -54,25 +54,22 @@ export default class BridgeController extends BaseMiddleware{
         }
 
         this.pack = async (ctx:Router.IRouterContext,next: () => Promise<any>) => {
+            const syncTask = new BridgeSyncTask(this.environment);
+            const packTask = new BridgePackTask(this.environment);
+
+            const ethereumBridgeStatusResult = await (new EthereumBridgeHead(this.environment)).getLockedStatus();
+            const vechainBridgeStatusResult = await (new VeChainBridgeHead(this.environment)).getLockedStatus();
+
+            if(ethereumBridgeStatusResult.error == undefined && ethereumBridgeStatusResult.data == true){
+                this.environment.bridgePack = true;
+                return;
+            }
+            if(vechainBridgeStatusResult.error == undefined && vechainBridgeStatusResult.data == true){
+                this.environment.bridgePack = true;
+                return;
+            }
+
             if(this.environment.bridgePack == false){
-                const syncTask = new BridgeSyncTask(this.environment);
-                const packTask = new BridgePackTask(this.environment);
-
-                const ethereumBridgeStatusResult = await (new EthereumBridgeHead(this.environment)).getLockedStatus();
-                const vechainBridgeStatusResult = await (new VeChainBridgeHead(this.environment)).getLockedStatus();
-                let status = this.environment.bridgePack;
-                if(ethereumBridgeStatusResult.error == undefined && ethereumBridgeStatusResult.data == true){
-                    status = true;
-                }
-                if(vechainBridgeStatusResult.error == undefined && vechainBridgeStatusResult.data == true){
-                    status = true;
-                }
-
-                if(status == true){
-                    this.environment.bridgePack = true;
-                    return;
-                }
-
                 this.environment.bridgePack = true;
                 syncTask.taskJob().then( action => {
                     console.info(`Sync Bridge Data Finish`);
@@ -81,10 +78,12 @@ export default class BridgeController extends BaseMiddleware{
                         this.environment.bridgePack = false;
                     }).catch(error => {
                         console.error(`Pack Bridge Data Faild, ${error}`);
+                        this.environment.bridgePack = false;
                     });
                 }
                 ).catch(error => {
                     console.error(`Sync Bridge Data Faild, ${error}`);
+                    this.environment.bridgePack = false;
                 });
             }
             ConvertJSONResponeMiddleware.bodyToJSONResponce(ctx,{});
