@@ -391,23 +391,23 @@ export default class BridgeController extends BaseMiddleware{
         }
         result.data = result.data!.sort((a,b) => {return b.extension!.latestTs - a.extension!.latestTs});
 
-        const ethereumStatusResult = await (new EthereumBridgeHead(this.environment)).getLockedStatus();
-        if(ethereumStatusResult.error){
-            result.error = ethereumStatusResult.error;
-            return result;
-        }
+        // const ethereumStatusResult = await (new EthereumBridgeHead(this.environment)).getLockedStatus();
+        // if(ethereumStatusResult.error){
+        //     result.error = ethereumStatusResult.error;
+        //     return result;
+        // }
 
-        const vechainStatusResult = await (new VeChainBridgeHead(this.environment)).getLockedStatus();
-        if(vechainStatusResult.error){
-            result.error = vechainStatusResult.error;
-            return result;
-        }
+        // const vechainStatusResult = await (new VeChainBridgeHead(this.environment)).getLockedStatus();
+        // if(vechainStatusResult.error){
+        //     result.error = vechainStatusResult.error;
+        //     return result;
+        // }
 
-        if(ethereumStatusResult.data == true || vechainStatusResult.data === true){
-            for(let claimMeta of result.data){
-                claimMeta.status = 0;
-            }
-        }
+        // if(ethereumStatusResult.data == true || vechainStatusResult.data === true){
+        //     for(let claimMeta of result.data){
+        //         claimMeta.status = 0;
+        //     }
+        // }
 
         return result;
     }
