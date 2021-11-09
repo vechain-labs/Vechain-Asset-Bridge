@@ -1,1 +1,388 @@
-[{"inputs":[],"stateMutability":"nonpayable","type":"constructor"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"_addr","type":"address"}],"name":"BridgeUpdate","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"bytes32","name":"_hash","type":"bytes32"},{"indexed":false,"internalType":"bytes[]","name":"_sig","type":"bytes[]"}],"name":"ExecOpertion","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"_addr","type":"address"}],"name":"GovernanceUpdate","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"bytes32","name":"_value","type":"bytes32"},{"indexed":true,"internalType":"address","name":"_verifier","type":"address"},{"indexed":false,"internalType":"bytes","name":"_sig","type":"bytes"}],"name":"SubmitLockBridge","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"bytes32","name":"_value","type":"bytes32"},{"indexed":true,"internalType":"address","name":"_verifier","type":"address"},{"indexed":false,"internalType":"bytes","name":"_sig","type":"bytes"}],"name":"SubmitUnLockBridge","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"bytes32","name":"_value","type":"bytes32"},{"indexed":true,"internalType":"address","name":"_verifier","type":"address"},{"indexed":false,"internalType":"bytes","name":"_sig","type":"bytes"}],"name":"SubmitUpdateRoot","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"_verifier","type":"address"},{"indexed":true,"internalType":"bool","name":"_status","type":"bool"}],"name":"VerifierChanged","type":"event"},{"inputs":[{"internalType":"address","name":"_verifier","type":"address"}],"name":"addVerifier","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[],"name":"bridge","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"bytes32","name":"_hash","type":"bytes32"}],"name":"getLockBridgeProposals","outputs":[{"components":[{"internalType":"uint8","name":"quorum","type":"uint8"},{"internalType":"bool","name":"executed","type":"bool"},{"internalType":"bytes32","name":"value","type":"bytes32"},{"internalType":"bytes[]","name":"signatures","type":"bytes[]"}],"internalType":"struct V2EBridgeVerifier.Proposal","name":"","type":"tuple"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"bytes32","name":"_hash","type":"bytes32"}],"name":"getMerkleRootProposal","outputs":[{"components":[{"internalType":"uint8","name":"quorum","type":"uint8"},{"internalType":"bool","name":"executed","type":"bool"},{"internalType":"bytes32","name":"value","type":"bytes32"},{"internalType":"bytes[]","name":"signatures","type":"bytes[]"}],"internalType":"struct V2EBridgeVerifier.Proposal","name":"","type":"tuple"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"bytes32","name":"_hash","type":"bytes32"}],"name":"getUnLockBridgeProposals","outputs":[{"components":[{"internalType":"uint8","name":"quorum","type":"uint8"},{"internalType":"bool","name":"executed","type":"bool"},{"internalType":"bytes32","name":"value","type":"bytes32"},{"internalType":"bytes[]","name":"signatures","type":"bytes[]"}],"internalType":"struct V2EBridgeVerifier.Proposal","name":"","type":"tuple"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"governance","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"bytes32","name":"_lastRoot","type":"bytes32"},{"internalType":"bytes","name":"_sig","type":"bytes"}],"name":"lockBridge","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"bytes32","name":"","type":"bytes32"}],"name":"lockBridgeProposals","outputs":[{"internalType":"uint8","name":"quorum","type":"uint8"},{"internalType":"bool","name":"executed","type":"bool"},{"internalType":"bytes32","name":"value","type":"bytes32"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"bytes32","name":"","type":"bytes32"}],"name":"merkleRootProposals","outputs":[{"internalType":"uint8","name":"quorum","type":"uint8"},{"internalType":"bool","name":"executed","type":"bool"},{"internalType":"bytes32","name":"value","type":"bytes32"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"_verifier","type":"address"}],"name":"removeVerifier","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"_addr","type":"address"}],"name":"setBridge","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"_addr","type":"address"}],"name":"setGovernance","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"bytes32","name":"_lastRoot","type":"bytes32"},{"internalType":"bytes","name":"_sig","type":"bytes"}],"name":"unlockBridge","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"bytes32","name":"","type":"bytes32"}],"name":"unlockBridgeProposals","outputs":[{"internalType":"uint8","name":"quorum","type":"uint8"},{"internalType":"bool","name":"executed","type":"bool"},{"internalType":"bytes32","name":"value","type":"bytes32"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"bytes32","name":"_lastRoot","type":"bytes32"},{"internalType":"bytes32","name":"_root","type":"bytes32"},{"internalType":"bytes","name":"_sig","type":"bytes"}],"name":"updateBridgeMerkleRoot","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"nonpayable","type":"function"},{"inputs":[],"name":"verifierCount","outputs":[{"internalType":"uint8","name":"","type":"uint8"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"","type":"address"}],"name":"verifiers","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"view","type":"function"}]
+[
+    {
+        "inputs": [],
+        "stateMutability": "nonpayable",
+        "type": "constructor"
+    },
+    {
+        "anonymous": false,
+        "inputs": [
+            {
+                "indexed": true,
+                "internalType": "address",
+                "name": "_addr",
+                "type": "address"
+            }
+        ],
+        "name": "BridgeUpdate",
+        "type": "event",
+        "signature": "0xbae6bfb41d5dd3ccf562bd03be1acbd3cb8453b581874f716d1b4042d7a72283"
+    },
+    {
+        "anonymous": false,
+        "inputs": [
+            {
+                "indexed": true,
+                "internalType": "bytes32",
+                "name": "_hash",
+                "type": "bytes32"
+            }
+        ],
+        "name": "ExecOperation",
+        "type": "event",
+        "signature": "0x5b5cee1cec477c3a698a4859c968c48e0dd8e7b7494d7142b2a46b5ab73f372b"
+    },
+    {
+        "anonymous": false,
+        "inputs": [
+            {
+                "indexed": true,
+                "internalType": "address",
+                "name": "_addr",
+                "type": "address"
+            }
+        ],
+        "name": "GovernanceUpdate",
+        "type": "event",
+        "signature": "0x1cd048b45ea5203385ebe96168ec6a921aa265172a5571433980be648e6943c9"
+    },
+    {
+        "anonymous": false,
+        "inputs": [
+            {
+                "indexed": true,
+                "internalType": "bytes32",
+                "name": "_value",
+                "type": "bytes32"
+            }
+        ],
+        "name": "LockBridge",
+        "type": "event",
+        "signature": "0x1325bca99982677a0330bda188c87b49684276196fa8353c2629e721838314c8"
+    },
+    {
+        "anonymous": false,
+        "inputs": [
+            {
+                "indexed": true,
+                "internalType": "bytes32",
+                "name": "_value",
+                "type": "bytes32"
+            }
+        ],
+        "name": "UnlockBridge",
+        "type": "event",
+        "signature": "0x93168db65eaff47ce7fcacb6782bfb5693f1de953a0dac237a28732d64430fbf"
+    },
+    {
+        "anonymous": false,
+        "inputs": [
+            {
+                "indexed": true,
+                "internalType": "bytes32",
+                "name": "_value",
+                "type": "bytes32"
+            }
+        ],
+        "name": "UpdateBridgeMerkleRoot",
+        "type": "event",
+        "signature": "0xf11b2d65e025ac2e4f31fd8e1bcfdff0c34541d2abe948fb0d1ec1ee23f4c6ba"
+    },
+    {
+        "anonymous": false,
+        "inputs": [
+            {
+                "indexed": true,
+                "internalType": "address",
+                "name": "_verifier",
+                "type": "address"
+            },
+            {
+                "indexed": true,
+                "internalType": "bool",
+                "name": "_status",
+                "type": "bool"
+            }
+        ],
+        "name": "VerifierChanged",
+        "type": "event",
+        "signature": "0x236add70c20c2f60e43dcc488294664ab5296e7026500747f9ef20fc2ad600c8"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "address",
+                "name": "_verifier",
+                "type": "address"
+            }
+        ],
+        "name": "addVerifier",
+        "outputs": [],
+        "stateMutability": "nonpayable",
+        "type": "function",
+        "signature": "0x9000b3d6"
+    },
+    {
+        "inputs": [],
+        "name": "bridge",
+        "outputs": [
+            {
+                "internalType": "address",
+                "name": "",
+                "type": "address"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function",
+        "constant": true,
+        "signature": "0xe78cea92"
+    },
+    {
+        "inputs": [],
+        "name": "governance",
+        "outputs": [
+            {
+                "internalType": "address",
+                "name": "",
+                "type": "address"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function",
+        "constant": true,
+        "signature": "0x5aa6e675"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "bytes32",
+                "name": "_lastRoot",
+                "type": "bytes32"
+            },
+            {
+                "internalType": "bytes[]",
+                "name": "_sigs",
+                "type": "bytes[]"
+            },
+            {
+                "internalType": "uint256",
+                "name": "_blockRef",
+                "type": "uint256"
+            },
+            {
+                "internalType": "uint256",
+                "name": "_expirnum",
+                "type": "uint256"
+            }
+        ],
+        "name": "lockBridge",
+        "outputs": [],
+        "stateMutability": "nonpayable",
+        "type": "function",
+        "signature": "0xb1d673d3"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "bytes32",
+                "name": "",
+                "type": "bytes32"
+            }
+        ],
+        "name": "lockBridgeProposals",
+        "outputs": [
+            {
+                "internalType": "bool",
+                "name": "",
+                "type": "bool"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function",
+        "constant": true,
+        "signature": "0xc3464c2c"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "bytes32",
+                "name": "",
+                "type": "bytes32"
+            }
+        ],
+        "name": "merkleRootProposals",
+        "outputs": [
+            {
+                "internalType": "bool",
+                "name": "",
+                "type": "bool"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function",
+        "constant": true,
+        "signature": "0xa2baf172"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "address",
+                "name": "_verifier",
+                "type": "address"
+            }
+        ],
+        "name": "removeVerifier",
+        "outputs": [],
+        "stateMutability": "nonpayable",
+        "type": "function",
+        "signature": "0xca2dfd0a"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "address",
+                "name": "_addr",
+                "type": "address"
+            }
+        ],
+        "name": "setBridge",
+        "outputs": [],
+        "stateMutability": "nonpayable",
+        "type": "function",
+        "signature": "0x8dd14802"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "address",
+                "name": "_addr",
+                "type": "address"
+            }
+        ],
+        "name": "setGovernance",
+        "outputs": [],
+        "stateMutability": "nonpayable",
+        "type": "function",
+        "signature": "0xab033ea9"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "bytes32",
+                "name": "_lastRoot",
+                "type": "bytes32"
+            },
+            {
+                "internalType": "bytes[]",
+                "name": "_sigs",
+                "type": "bytes[]"
+            },
+            {
+                "internalType": "uint256",
+                "name": "_blockRef",
+                "type": "uint256"
+            },
+            {
+                "internalType": "uint256",
+                "name": "_expirnum",
+                "type": "uint256"
+            }
+        ],
+        "name": "unlockBridge",
+        "outputs": [],
+        "stateMutability": "nonpayable",
+        "type": "function",
+        "signature": "0xa69d1f36"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "bytes32",
+                "name": "",
+                "type": "bytes32"
+            }
+        ],
+        "name": "unlockBridgeProposals",
+        "outputs": [
+            {
+                "internalType": "bool",
+                "name": "",
+                "type": "bool"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function",
+        "constant": true,
+        "signature": "0x1e61c73d"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "bytes32",
+                "name": "_lastRoot",
+                "type": "bytes32"
+            },
+            {
+                "internalType": "bytes32",
+                "name": "_root",
+                "type": "bytes32"
+            },
+            {
+                "internalType": "bytes[]",
+                "name": "_sigs",
+                "type": "bytes[]"
+            },
+            {
+                "internalType": "uint256",
+                "name": "_blockRef",
+                "type": "uint256"
+            },
+            {
+                "internalType": "uint256",
+                "name": "_expirnum",
+                "type": "uint256"
+            }
+        ],
+        "name": "updateBridgeMerkleRoot",
+        "outputs": [],
+        "stateMutability": "nonpayable",
+        "type": "function",
+        "signature": "0xbbf30750"
+    },
+    {
+        "inputs": [],
+        "name": "verifierCount",
+        "outputs": [
+            {
+                "internalType": "uint8",
+                "name": "",
+                "type": "uint8"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function",
+        "constant": true,
+        "signature": "0xfb4adf52"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "address",
+                "name": "",
+                "type": "address"
+            }
+        ],
+        "name": "verifiers",
+        "outputs": [
+            {
+                "internalType": "bool",
+                "name": "",
+                "type": "bool"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function",
+        "constant": true,
+        "signature": "0x6c824487"
+    }
+]

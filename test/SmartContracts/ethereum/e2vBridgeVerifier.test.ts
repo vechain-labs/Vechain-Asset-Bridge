@@ -360,10 +360,10 @@ export class E2VBridgeVerifierTestCase{
 
             this.config.ethereum.contracts.wEth = this.wEthContract.options.address;
     
-            const gas2 = await this.bridgeContract.methods.setWrappedNativeCoin(this.config.ethereum.contracts.wEth).estimateGas({
+            const gas2 = await this.bridgeContract.methods.setWrappedNativeCoin(this.config.ethereum.contracts.wEth,"0x0000000000000000000000000000000000000000",this.config.ethereum.startBlockNum,0).estimateGas({
                 from:this.wallet.list[1].address
             });
-            const s1 = await this.bridgeContract.methods.setWrappedNativeCoin(this.config.ethereum.contracts.wEth).send({
+            const s1 = await this.bridgeContract.methods.setWrappedNativeCoin(this.config.ethereum.contracts.wEth,"0x0000000000000000000000000000000000000000",this.config.ethereum.startBlockNum,0).send({
                 from:this.wallet.list[1].address,
                 gas:gas2,
                 gasPrice:this.gasPrice
@@ -401,10 +401,10 @@ export class E2VBridgeVerifierTestCase{
             });
             this.config.ethereum.contracts.wVet = this.wVetContract.options.address;
     
-            const gas2 = await this.bridgeContract.methods.setToken(this.config.ethereum.contracts.wVet,2).estimateGas({
+            const gas2 = await this.bridgeContract.methods.setToken(this.config.ethereum.contracts.wVet,2,"0x0000000000000000000000000000000000000000",this.config.ethereum.startBlockNum,0).estimateGas({
                 from:this.wallet.list[1].address
             });
-            const s1 = await this.bridgeContract.methods.setToken(this.config.ethereum.contracts.wVet,2).send({
+            const s1 = await this.bridgeContract.methods.setToken(this.config.ethereum.contracts.wVet,2,"0x0000000000000000000000000000000000000000",this.config.ethereum.startBlockNum,0).send({
                 from:this.wallet.list[1].address,
                 gas:gas2,
                 gasPrice:this.gasPrice

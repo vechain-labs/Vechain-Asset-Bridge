@@ -10,7 +10,6 @@ interface IV2EBridgeHead {
     function lock(bytes32 _lastRoot) external;
     function unlock(bytes32 _lastRoot) external;
     function locked() external returns (bool);
-    
 }
 
 contract BridgeVerifierControl {

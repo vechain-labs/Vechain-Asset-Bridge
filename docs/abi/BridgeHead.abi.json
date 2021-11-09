@@ -32,7 +32,8 @@
             }
         ],
         "name": "BridgeLockChange",
-        "type": "event"
+        "type": "event",
+        "signature": "0x1ca233e8649eb688a940d1c2dfae3c5d89e9d7ed1c35a5d39f9232332189d45c"
     },
     {
         "anonymous": false,
@@ -57,7 +58,8 @@
             }
         ],
         "name": "Claim",
-        "type": "event"
+        "type": "event",
+        "signature": "0x70eb43c4a8ae8c40502dcf22436c509c28d6ff421cf07c491be56984bd987068"
     },
     {
         "anonymous": false,
@@ -70,7 +72,8 @@
             }
         ],
         "name": "GovLockChanged",
-        "type": "event"
+        "type": "event",
+        "signature": "0x6836e6fd64d3048fe1043c9131f1fb8d09420363b7846124b88074c0087cfbd7"
     },
     {
         "anonymous": false,
@@ -83,20 +86,22 @@
             }
         ],
         "name": "GovernanceUpdated",
-        "type": "event"
+        "type": "event",
+        "signature": "0x9d3e522e1e47a2f6009739342b9cc7b252a1888154e843ab55ee1c81745795ab"
     },
     {
         "anonymous": false,
         "inputs": [
             {
                 "indexed": true,
-                "internalType": "uint256",
+                "internalType": "uint16",
                 "name": "_reward",
-                "type": "uint256"
+                "type": "uint16"
             }
         ],
         "name": "RewardChanged",
-        "type": "event"
+        "type": "event",
+        "signature": "0x11f4e5e05c3866632a18174ff8807eb7a09f0cf860f678e329a1e971cd1f10a3"
     },
     {
         "anonymous": false,
@@ -133,7 +138,8 @@
             }
         ],
         "name": "Swap",
-        "type": "event"
+        "type": "event",
+        "signature": "0xcd3829a3813dc3cdd188fd3d01dcf3268c16be2fdd2dd21d0665418816e46062"
     },
     {
         "anonymous": false,
@@ -143,16 +149,11 @@
                 "internalType": "address",
                 "name": "_token",
                 "type": "address"
-            },
-            {
-                "indexed": true,
-                "internalType": "uint8",
-                "name": "_type",
-                "type": "uint8"
             }
         ],
         "name": "TokenUpdated",
-        "type": "event"
+        "type": "event",
+        "signature": "0x5ba6b30cd4b2f9e9e67f4feb9b9df10d5da3b057598e6901b217b7d590345e30"
     },
     {
         "anonymous": false,
@@ -177,7 +178,8 @@
             }
         ],
         "name": "UpdateMerkleRoot",
-        "type": "event"
+        "type": "event",
+        "signature": "0xd2a4a986f2f28739ae766dfae611eed5644dfed24f88aecb7598ee21e9d8c9d5"
     },
     {
         "anonymous": false,
@@ -190,11 +192,13 @@
             }
         ],
         "name": "VerifierUpdated",
-        "type": "event"
+        "type": "event",
+        "signature": "0xd24015cc99cc1700cafca3042840a1d8ac1e3964fd2e0e37ea29c654056ee327"
     },
     {
         "stateMutability": "payable",
-        "type": "fallback"
+        "type": "fallback",
+        "payable": true
     },
     {
         "inputs": [],
@@ -207,7 +211,9 @@
             }
         ],
         "stateMutability": "view",
-        "type": "function"
+        "type": "function",
+        "constant": true,
+        "signature": "0xd83af147"
     },
     {
         "inputs": [],
@@ -220,7 +226,9 @@
             }
         ],
         "stateMutability": "view",
-        "type": "function"
+        "type": "function",
+        "constant": true,
+        "signature": "0xd122819d"
     },
     {
         "inputs": [],
@@ -233,7 +241,9 @@
             }
         ],
         "stateMutability": "view",
-        "type": "function"
+        "type": "function",
+        "constant": true,
+        "signature": "0xc63fb02e"
     },
     {
         "inputs": [
@@ -257,7 +267,9 @@
             }
         ],
         "stateMutability": "view",
-        "type": "function"
+        "type": "function",
+        "constant": true,
+        "signature": "0x5734fafb"
     },
     {
         "inputs": [],
@@ -270,7 +282,9 @@
             }
         ],
         "stateMutability": "view",
-        "type": "function"
+        "type": "function",
+        "constant": true,
+        "signature": "0xcd84980e"
     },
     {
         "inputs": [],
@@ -283,7 +297,9 @@
             }
         ],
         "stateMutability": "view",
-        "type": "function"
+        "type": "function",
+        "constant": true,
+        "signature": "0xb7dfef19"
     },
     {
         "inputs": [
@@ -317,7 +333,8 @@
             }
         ],
         "stateMutability": "nonpayable",
-        "type": "function"
+        "type": "function",
+        "signature": "0xfabed412"
     },
     {
         "inputs": [
@@ -346,7 +363,8 @@
             }
         ],
         "stateMutability": "nonpayable",
-        "type": "function"
+        "type": "function",
+        "signature": "0x2a64175a"
     },
     {
         "inputs": [
@@ -370,7 +388,9 @@
             }
         ],
         "stateMutability": "view",
-        "type": "function"
+        "type": "function",
+        "constant": true,
+        "signature": "0x8b45d08f"
     },
     {
         "inputs": [],
@@ -383,7 +403,9 @@
             }
         ],
         "stateMutability": "view",
-        "type": "function"
+        "type": "function",
+        "constant": true,
+        "signature": "0x87c53dde"
     },
     {
         "inputs": [],
@@ -396,7 +418,9 @@
             }
         ],
         "stateMutability": "view",
-        "type": "function"
+        "type": "function",
+        "constant": true,
+        "signature": "0x5aa6e675"
     },
     {
         "inputs": [
@@ -420,7 +444,9 @@
             }
         ],
         "stateMutability": "view",
-        "type": "function"
+        "type": "function",
+        "constant": true,
+        "signature": "0x8a946788"
     },
     {
         "inputs": [
@@ -433,14 +459,16 @@
         "name": "lock",
         "outputs": [],
         "stateMutability": "nonpayable",
-        "type": "function"
+        "type": "function",
+        "signature": "0x01670ba9"
     },
     {
         "inputs": [],
         "name": "lockByGov",
         "outputs": [],
         "stateMutability": "nonpayable",
-        "type": "function"
+        "type": "function",
+        "signature": "0x02630e06"
     },
     {
         "inputs": [],
@@ -453,7 +481,9 @@
             }
         ],
         "stateMutability": "view",
-        "type": "function"
+        "type": "function",
+        "constant": true,
+        "signature": "0xcf309012"
     },
     {
         "inputs": [],
@@ -466,20 +496,24 @@
             }
         ],
         "stateMutability": "view",
-        "type": "function"
+        "type": "function",
+        "constant": true,
+        "signature": "0x2eb4a7ab"
     },
     {
         "inputs": [],
         "name": "reward",
         "outputs": [
             {
-                "internalType": "uint8",
+                "internalType": "uint16",
                 "name": "",
-                "type": "uint8"
+                "type": "uint16"
             }
         ],
         "stateMutability": "view",
-        "type": "function"
+        "type": "function",
+        "constant": true,
+        "signature": "0x228cb733"
     },
     {
         "inputs": [
@@ -492,38 +526,56 @@
         "name": "setGovernance",
         "outputs": [],
         "stateMutability": "nonpayable",
-        "type": "function"
+        "type": "function",
+        "signature": "0xab033ea9"
     },
     {
         "inputs": [
             {
-                "internalType": "uint8",
+                "internalType": "uint16",
                 "name": "_reward",
-                "type": "uint8"
+                "type": "uint16"
             }
         ],
         "name": "setReward",
         "outputs": [],
         "stateMutability": "nonpayable",
-        "type": "function"
+        "type": "function",
+        "signature": "0xc244bbaf"
     },
     {
         "inputs": [
             {
                 "internalType": "address",
-                "name": "_token",
+                "name": "_addr",
                 "type": "address"
             },
             {
                 "internalType": "uint8",
                 "name": "_type",
                 "type": "uint8"
+            },
+            {
+                "internalType": "address",
+                "name": "_target",
+                "type": "address"
+            },
+            {
+                "internalType": "uint256",
+                "name": "_begin",
+                "type": "uint256"
+            },
+            {
+                "internalType": "uint256",
+                "name": "_end",
+                "type": "uint256"
             }
         ],
         "name": "setToken",
         "outputs": [],
         "stateMutability": "nonpayable",
-        "type": "function"
+        "type": "function",
+        "signature": "0xefe7e8d4"
     },
     {
         "inputs": [
@@ -536,7 +588,8 @@
         "name": "setVerifier",
         "outputs": [],
         "stateMutability": "nonpayable",
-        "type": "function"
+        "type": "function",
+        "signature": "0x5437988d"
     },
     {
         "inputs": [
@@ -544,12 +597,28 @@
                 "internalType": "address",
                 "name": "_native",
                 "type": "address"
+            },
+            {
+                "internalType": "address",
+                "name": "_target",
+                "type": "address"
+            },
+            {
+                "internalType": "uint256",
+                "name": "_begin",
+                "type": "uint256"
+            },
+            {
+                "internalType": "uint256",
+                "name": "_end",
+                "type": "uint256"
             }
         ],
         "name": "setWrappedNativeCoin",
         "outputs": [],
         "stateMutability": "nonpayable",
-        "type": "function"
+        "type": "function",
+        "signature": "0x816ab820"
     },
     {
         "inputs": [
@@ -578,7 +647,8 @@
             }
         ],
         "stateMutability": "nonpayable",
-        "type": "function"
+        "type": "function",
+        "signature": "0x6d069a67"
     },
     {
         "inputs": [
@@ -597,7 +667,30 @@
             }
         ],
         "stateMutability": "payable",
-        "type": "function"
+        "type": "function",
+        "payable": true,
+        "signature": "0xb7a77d70"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "address",
+                "name": "_token",
+                "type": "address"
+            }
+        ],
+        "name": "tokenActivate",
+        "outputs": [
+            {
+                "internalType": "bool",
+                "name": "",
+                "type": "bool"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function",
+        "constant": true,
+        "signature": "0x1bcd373c"
     },
     {
         "inputs": [
@@ -611,12 +704,29 @@
         "outputs": [
             {
                 "internalType": "uint8",
-                "name": "",
+                "name": "tokentype",
                 "type": "uint8"
+            },
+            {
+                "internalType": "address",
+                "name": "target",
+                "type": "address"
+            },
+            {
+                "internalType": "uint256",
+                "name": "begin",
+                "type": "uint256"
+            },
+            {
+                "internalType": "uint256",
+                "name": "end",
+                "type": "uint256"
             }
         ],
         "stateMutability": "view",
-        "type": "function"
+        "type": "function",
+        "constant": true,
+        "signature": "0xe4860339"
     },
     {
         "inputs": [
@@ -629,14 +739,16 @@
         "name": "unlock",
         "outputs": [],
         "stateMutability": "nonpayable",
-        "type": "function"
+        "type": "function",
+        "signature": "0xec9b5b3a"
     },
     {
         "inputs": [],
         "name": "unlockByGov",
         "outputs": [],
         "stateMutability": "nonpayable",
-        "type": "function"
+        "type": "function",
+        "signature": "0x13b3d331"
     },
     {
         "inputs": [
@@ -654,7 +766,8 @@
         "name": "updateMerkleRoot",
         "outputs": [],
         "stateMutability": "nonpayable",
-        "type": "function"
+        "type": "function",
+        "signature": "0xaf887905"
     },
     {
         "inputs": [],
@@ -667,7 +780,9 @@
             }
         ],
         "stateMutability": "view",
-        "type": "function"
+        "type": "function",
+        "constant": true,
+        "signature": "0x2b7ac3f3"
     },
     {
         "inputs": [],
@@ -680,10 +795,13 @@
             }
         ],
         "stateMutability": "view",
-        "type": "function"
+        "type": "function",
+        "constant": true,
+        "signature": "0x11cc1ad6"
     },
     {
         "stateMutability": "payable",
-        "type": "receive"
+        "type": "receive",
+        "payable": true
     }
 ]

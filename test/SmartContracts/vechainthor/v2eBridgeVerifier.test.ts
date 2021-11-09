@@ -304,7 +304,7 @@ export class V2EBridgeVerifierTestCase {
             assert.fail("save config faild");
         }
 
-        const clause2 = this.bridgeContract.send("setWrappedNativeCoin",0,this.config.vechain.contracts.vVet);
+        const clause2 = this.bridgeContract.send("setWrappedNativeCoin",0,this.config.vechain.contracts.vVet,this.config.ethereum.contracts.wVet,this.config.vechain.startBlockNum,0);
         const txRep2 = await this.connex.vendor.sign('tx', [clause2])
             .signer(this.wallet.list[1].address)
             .request();
@@ -331,7 +331,7 @@ export class V2EBridgeVerifierTestCase {
 
         try {
             fs.writeFileSync(this.configPath, JSON.stringify(this.config));
-            const clause2 = this.bridgeContract.send('setToken',0,this.config.vechain.contracts.vEth,2);
+            const clause2 = this.bridgeContract.send('setToken',0,this.config.vechain.contracts.vEth,2,this.config.ethereum.contracts.wEth,this.config.vechain.startBlockNum,0);
             const txRep2 = await this.connex.vendor.sign('tx',[clause2])
                 .signer(this.wallet.list[1].address)
                 .request();

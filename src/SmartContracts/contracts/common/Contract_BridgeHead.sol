@@ -16,7 +16,7 @@ contract BridgeHeadControl {
     address public governance;
     uint16 public reward = 0; //Range 0-1000 (0‰ - 100‰)
 
-    mapping(address => uint8) public tokens;
+
     address public wrappedNativeCoin;
     bool public govLocked = false;
 
@@ -26,9 +26,17 @@ contract BridgeHeadControl {
 
     event VerifierUpdated(address indexed _addr);
     event GovernanceUpdated(address indexed _addr);
-    event TokenUpdated(address indexed _token, uint8 indexed _type);
     event GovLockChanged(bool indexed _status);
     event RewardChanged(uint16 indexed _reward);
+    event TokenUpdated(address indexed _token);
+
+    struct TokenInfo {
+        uint8 tokentype;
+        address target;
+        uint256 begin;
+        uint256 end;
+    }
+    mapping(address => TokenInfo) public tokens;
 
     receive() external payable {}
 
@@ -44,9 +52,28 @@ contract BridgeHeadControl {
         emit GovernanceUpdated(_addr);
     }
 
-    function setToken(address _token, uint8 _type) external onlyGovernance {
-        tokens[_token] = _type;
-        emit TokenUpdated(_token, _type);
+    function setToken(address _addr, uint8 _type, address _target, uint256 _begin, uint256 _end) external onlyGovernance {
+        if(tokens[_addr].tokentype == 0){
+            TokenInfo memory _new = TokenInfo({
+                tokentype:_type,
+                target:_target,
+                begin:_begin,
+                end:_end
+            });
+            tokens[_addr] = _new;
+        } else {
+            TokenInfo storage info = tokens[_addr];
+            info.tokentype = _type;
+            info.target = _target;
+            info.begin = _begin;
+            info.end = _end;
+        }
+        emit TokenUpdated(_addr);
+    }
+
+    function tokenActivate(address _token) external view returns (bool) {
+        return (tokens[_token].tokentype == ORIGINTOKEN || tokens[_token].tokentype == WRAPPEDTOKEN) 
+            && (tokens[_token].begin >= block.number && (tokens[_token].end <= block.number || tokens[_token].end == 0));
     }
 
     function setReward(uint16 _reward) external onlyGovernance {
@@ -55,11 +82,16 @@ contract BridgeHeadControl {
         emit RewardChanged(reward);
     }
 
-    function setWrappedNativeCoin(address _native) external onlyGovernance {
-        tokens[wrappedNativeCoin] = FREEZE;
+    function setWrappedNativeCoin(address _native,address _target, uint256 _begin, uint256 _end) external onlyGovernance {
         wrappedNativeCoin = _native;
-        tokens[_native] = ORIGINTOKEN;
-        emit TokenUpdated(_native, ORIGINTOKEN);
+        TokenInfo memory _new = TokenInfo({
+             tokentype:ORIGINTOKEN,
+             target:_target,
+             begin:_begin,
+             end:_end
+        });
+        tokens[_native] = _new;
+        emit TokenUpdated(_native);
     }
 
     function lockByGov() external onlyGovernance {
@@ -151,15 +183,15 @@ contract BridgeHead is BridgeHeadControl {
         address _recipient
     ) public unLock govUnlock returns (bool) {
         require(
-            tokens[_token] == ORIGINTOKEN || tokens[_token] == WRAPPEDTOKEN,
-            "token not register or freeze"
+            this.tokenActivate(_token),
+            "token unactivate"
         );
 
-        if (tokens[_token] == ORIGINTOKEN) {
+        if (tokens[_token].tokentype == ORIGINTOKEN) {
             swapOriginToken(_token, _amount);
         }
 
-        if (tokens[_token] == WRAPPEDTOKEN) {
+        if (tokens[_token].tokentype == WRAPPEDTOKEN) {
             swapWrappedToken(_token, _amount);
         }
 
@@ -176,8 +208,8 @@ contract BridgeHead is BridgeHeadControl {
         returns (bool)
     {
         require(
-            tokens[wrappedNativeCoin] == ORIGINTOKEN,
-            "token not register or freeze"
+            tokens[wrappedNativeCoin].tokentype == ORIGINTOKEN,
+            "token unactivate"
         );
         IToken token = IToken(wrappedNativeCoin);
 
@@ -202,8 +234,8 @@ contract BridgeHead is BridgeHeadControl {
         bytes32[] calldata _merkleProof
     ) public unLock govUnlock returns (bool) {
         require(
-            tokens[_token] == ORIGINTOKEN || tokens[_token] == WRAPPEDTOKEN,
-            "token not register or freeze"
+            this.tokenActivate(_token),
+            "token unactivate"
         );
 
         bytes32 nodehash = keccak256(
@@ -216,11 +248,11 @@ contract BridgeHead is BridgeHeadControl {
 
         require(!isClaim(merkleRoot, nodehash), "the swap has been claimed");
 
-        if (tokens[_token] == ORIGINTOKEN) {
+        if (tokens[_token].tokentype == ORIGINTOKEN) {
             claimOrginToken(_token, _recipient, _balance);
         }
 
-        if (tokens[_token] == WRAPPEDTOKEN) {
+        if (tokens[_token].tokentype == WRAPPEDTOKEN) {
             claimWrappedToken(_token, _recipient, _balance);
         }
 
@@ -236,9 +268,9 @@ contract BridgeHead is BridgeHeadControl {
         bytes32[] calldata _merkleProof
     ) external unLock govUnlock returns (bool) {
         require(
-            tokens[wrappedNativeCoin] == ORIGINTOKEN ||
-                tokens[wrappedNativeCoin] == WRAPPEDTOKEN,
-            "native coin not register or freeze"
+            tokens[wrappedNativeCoin].tokentype == ORIGINTOKEN ||
+                tokens[wrappedNativeCoin].tokentype == WRAPPEDTOKEN,
+            "native token unactivate"
         );
 
         bytes32 nodehash = keccak256(
