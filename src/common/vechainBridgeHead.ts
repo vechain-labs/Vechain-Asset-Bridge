@@ -1,4 +1,5 @@
 import { Framework } from "@vechain/connex-framework";
+import Axios from "axios";
 import { Contract } from "myvetools";
 import { compileContract } from "myvetools/dist/utils";
 import path from "path";
@@ -8,6 +9,7 @@ import { ThorDevKitEx } from "./utils/extensions/thorDevkitExten";
 import { IBridgeHead } from "./utils/iBridgeHead";
 import { BridgeSnapshoot, ZeroRoot } from "./utils/types/bridgeSnapshoot";
 import { BridgeTx } from "./utils/types/bridgeTx";
+import { TokenInfo } from "./utils/types/tokenInfo";
 
 export class VeChainBridgeHead implements IBridgeHead {
 
@@ -293,6 +295,38 @@ export class VeChainBridgeHead implements IBridgeHead {
         return result;
     }
 
+    public async getTokenInfos(begin:number,end:number):Promise<ActionData<TokenInfo[]>> {
+        let result = new ActionData<TokenInfo[]>();
+        result.data = new Array<TokenInfo>();
+
+        try {
+            for(let block = begin; block <= end;){
+                let from = block;
+                let to = block + this.scanBlockStep > end ? end:block + this.scanBlockStep;
+    
+                console.debug(`scan vechain bridge token update: ${from} - ${to}`);
+    
+                let events = await this.connex.thor.filter("event",[
+                    {address:this.config.vechain.contracts.v2eBridge,topic0:this.TokenUpdatedEvent.signature}
+                ]).order("asc").range({unit:"block",from:from,to:to}).apply(0,200);
+
+                for(const event of events){
+                    // let info:TokenInfo = {
+                    //     tokenid:"",
+                    //     chainName:this.config.vechain.chainName,
+                    //     chainId:this.config.vechain.chainId,
+                    //     name:
+                    // }
+                }
+
+
+            }
+        } catch (error) {
+            result.error = error;
+        }
+        return result;
+    }
+
     private async updateMerkleRootEvents(begin:number,end:number):Promise<ActionData<{blockNum:number,from:number,root:string,parentRoot:string}[]>>{
         let result = new ActionData<any>();
         result.data = Array();
@@ -386,6 +420,30 @@ export class VeChainBridgeHead implements IBridgeHead {
         return result;
     }
 
+    private async getTokenInfo(addr:string,blockNum:number):Promise<ActionData<TokenInfo>> {
+        let result = new ActionData<TokenInfo>();
+
+        try {
+            let clause = {
+                to:this.config.vechain.contracts.v2eBridge,
+                value:0,
+                data:this.tokensFunc.encode(addr)
+            }
+            let response = await Axios({
+                url:this.config.vechain.nodeHost,
+                method:"GET",
+                responseType:"json",
+                params:{revision:blockNum},
+                data:{
+                    clause:clause
+                }});
+            let data =this.tokensFunc.decode(response.data[0].data);
+        } catch (error) {
+            result.error = error;
+        }
+        return result;
+    }
+
     private initV2EBridge(){
         const filePath = path.join(this.env.contractdir,"/common/Contract_BridgeHead.sol");
         const bridgeAbi = JSON.parse(compileContract(filePath,"BridgeHead","abi"));
@@ -394,6 +452,8 @@ export class VeChainBridgeHead implements IBridgeHead {
         this.SwapEvent = new abi.Event(this.v2eBridge.ABI("Swap","event") as any);
         this.ClaimEvent = new abi.Event(this.v2eBridge.ABI("Claim","event") as any);
         this.BridgeLockChangeEvent = new abi.Event(this.v2eBridge.ABI("BridgeLockChange","event") as any);
+        this.TokenUpdatedEvent = new abi.Event(this.v2eBridge.ABI("TokenUpdated","event") as any);
+        this.tokensFunc = new abi.Function(this.v2eBridge.ABI("tokens","function") as any);
     }
 
     private env:any;
@@ -404,5 +464,7 @@ export class VeChainBridgeHead implements IBridgeHead {
     private UpdateMerkleRootEvent!:abi.Event;
     private SwapEvent!:abi.Event;
     private ClaimEvent!:abi.Event;
+    private TokenUpdatedEvent!:abi.Event;
     private BridgeLockChangeEvent!:abi.Event;
+    private tokensFunc!:abi.Function;
 }
