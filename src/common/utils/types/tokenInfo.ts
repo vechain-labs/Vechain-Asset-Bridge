@@ -11,6 +11,9 @@ export type TokenInfo = {
     nativeCoin:boolean,
     tokenType:string;
     targetTokenId:string;
+    begin:number;
+    end:number;
+    update:number;
 }
 
 export function tokenid(chainName:string,chainId:string,token:string):string{

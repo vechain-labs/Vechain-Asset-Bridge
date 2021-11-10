@@ -9,7 +9,6 @@ import assert from 'assert';
 import { getReceipt } from "myvetools/dist/connexUtils";
 import { BridgeLedger, ledgerHash, ledgerID } from "../../../src/common/utils/types/bridgeLedger";
 import { BridgeSnapshoot, ZeroRoot } from "../../../src/common/utils/types/bridgeSnapshoot";
-import { keccak256 } from "thor-devkit";
 import BridgeStorage from "../../../src/common/bridgeStorage";
 
 export class V2EBridgeHeadTestCase {
@@ -508,7 +507,7 @@ export class V2EBridgeHeadTestCase {
         let vVETAddr = "";
         if (this.config.vechain.contracts.vVet.length == 42) {
             const call1 = await this.bridgeContract.call('tokens', this.config.vechain.contracts.v2eBridge);
-            const type = Number(call1.decoded[0]);
+            const type = Number(call1.decoded[0][0]);
             if (type == 1) {
                 vVETAddr = this.config.vechain.contracts.vVet;
             } else {
@@ -524,7 +523,7 @@ export class V2EBridgeHeadTestCase {
         let vETHAddr = "";
         if (this.config.vechain.contracts.vEth.length == 42) {
             const call1 = await this.bridgeContract.call('tokens', this.config.vechain.contracts.v2eBridge);
-            const type = Number(call1.decoded[0]);
+            const type = Number(call1.decoded[0][0]);
             if (type == 2) {
                 vETHAddr = this.config.vechain.contracts.vVet;
             } else {

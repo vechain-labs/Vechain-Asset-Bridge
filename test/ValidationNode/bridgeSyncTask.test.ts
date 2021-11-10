@@ -55,7 +55,10 @@ export class BridgeSyncTaskTestCase{
                         address:this.config.vechain.contracts.vVet,
                         nativeCoin:false,
                         tokenType:"1",
-                        targetTokenId:""
+                        targetTokenId:"",
+                        begin:0,
+                        end:0,
+                        update:0
                     },
                     {
                         tokenid:"",
@@ -67,7 +70,10 @@ export class BridgeSyncTaskTestCase{
                         address:this.config.vechain.contracts.vEth,
                         nativeCoin:false,
                         tokenType:"2",
-                        targetTokenId:""
+                        targetTokenId:"",
+                        begin:0,
+                        end:0,
+                        update:0
                     },
                     {
                         tokenid:"",
@@ -79,7 +85,10 @@ export class BridgeSyncTaskTestCase{
                         address:this.config.ethereum.contracts.wVet,
                         nativeCoin:false,
                         tokenType:"2",
-                        targetTokenId:""
+                        targetTokenId:"",
+                        begin:0,
+                        end:0,
+                        update:0
                     },
                     {
                         tokenid:"",
@@ -91,7 +100,10 @@ export class BridgeSyncTaskTestCase{
                         address:this.config.ethereum.contracts.wEth,
                         nativeCoin:false,
                         tokenType:"1",
-                        targetTokenId:""
+                        targetTokenId:"",
+                        begin:0,
+                        end:0,
+                        update:0
                     }
                 ]
 

@@ -485,7 +485,8 @@ export class E2VBridgeHeadTestCase{
     public async initWETHToken(){
         let wEthAddr = "";
         if(this.config.ethereum.contracts.wEth.length == 42){
-            const type = await this.bridgeContract.methods.tokens(this.config.ethereum.contracts.wEth).call();
+            const call = await this.bridgeContract.methods.tokens(this.config.ethereum.contracts.wEth).call();
+            const type = Number(call[0]);
             if(type == 1){
                 wEthAddr = this.config.ethereum.contracts.wEth;
             } else {
@@ -500,7 +501,8 @@ export class E2VBridgeHeadTestCase{
     public async initWVETToken(){
         let wVetAddr = "";
         if(this.config.ethereum.contracts.wVet.length == 42){
-            const type = await this.bridgeContract.methods.tokens(this.config.ethereum.contracts.wVet).call();
+            const call = await this.bridgeContract.methods.tokens(this.config.ethereum.contracts.wVet).call();
+            const type = Number(call[0]);
             if(type == 2){
                 wVetAddr = this.config.ethereum.contracts.wVet;
             } else {

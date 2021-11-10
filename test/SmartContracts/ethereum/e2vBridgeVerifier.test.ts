@@ -143,7 +143,8 @@ export class E2VBridgeVerifierTestCase{
     public async initWETHToken() {
         let wEthAddr = "";
         if(this.config.ethereum.contracts.wEth.length == 42){
-            const type = await this.bridgeContract.methods.tokens(this.config.ethereum.contracts.wEth).call();
+            const call = await this.bridgeContract.methods.tokens(this.config.ethereum.contracts.wEth).call();
+            const type = Number(call[0]);
             if(type == 1){
                 wEthAddr = this.config.ethereum.contracts.wEth;
             } else {
@@ -158,7 +159,8 @@ export class E2VBridgeVerifierTestCase{
     public async initWVETToken(){
         let wVetAddr = "";
         if(this.config.ethereum.contracts.wVet.length == 42){
-            const type = await this.bridgeContract.methods.tokens(this.config.ethereum.contracts.wVet).call();
+            const call = await this.bridgeContract.methods.tokens(this.config.ethereum.contracts.wVet).call();
+            const type = Number(call[0]);
             if(type == 2){
                 wVetAddr = this.config.ethereum.contracts.wVet;
             } else {
@@ -435,7 +437,10 @@ export class E2VBridgeVerifierTestCase{
                 address:this.config.vechain.contracts.vVet,
                 nativeCoin:false,
                 tokenType:"1",
-                targetTokenId:""
+                targetTokenId:"",
+                begin:0,
+                end:0,
+                update:0
             },
             {
                 tokenid:"",
@@ -447,7 +452,10 @@ export class E2VBridgeVerifierTestCase{
                 address:this.config.vechain.contracts.vEth,
                 nativeCoin:false,
                 tokenType:"2",
-                targetTokenId:""
+                targetTokenId:"",
+                begin:0,
+                end:0,
+                update:0
             },
             {
                 tokenid:"",
@@ -459,7 +467,10 @@ export class E2VBridgeVerifierTestCase{
                 address:this.config.ethereum.contracts.wVet,
                 nativeCoin:false,
                 tokenType:"2",
-                targetTokenId:""
+                targetTokenId:"",
+                begin:0,
+                end:0,
+                update:0
             },
             {
                 tokenid:"",
@@ -471,7 +482,10 @@ export class E2VBridgeVerifierTestCase{
                 address:this.config.ethereum.contracts.wEth,
                 nativeCoin:false,
                 tokenType:"1",
-                targetTokenId:""
+                targetTokenId:"",
+                begin:0,
+                end:0,
+                update:0
             }
         ]
 

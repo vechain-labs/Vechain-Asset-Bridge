@@ -44,7 +44,10 @@ const initTokens = function() {
             address:config.vechain.contracts.vVet,
             nativeCoin:false,
             tokenType:"1",
-            targetTokenId:""
+            targetTokenId:"",
+            begin:0,
+            end:0,
+            update:0
         },
         {
             tokenid:"",
@@ -56,7 +59,10 @@ const initTokens = function() {
             address:config.vechain.contracts.vEth,
             nativeCoin:false,
             tokenType:"2",
-            targetTokenId:""
+            targetTokenId:"",
+            begin:0,
+            end:0,
+            update:0
         },
         {
             tokenid:"",
@@ -68,7 +74,10 @@ const initTokens = function() {
             address:config.ethereum.contracts.wVet,
             nativeCoin:false,
             tokenType:"2",
-            targetTokenId:""
+            targetTokenId:"",
+            begin:0,
+            end:0,
+            update:0
         },
         {
             tokenid:"",
@@ -80,7 +89,10 @@ const initTokens = function() {
             address:config.ethereum.contracts.wEth,
             nativeCoin:false,
             tokenType:"1",
-            targetTokenId:""
+            targetTokenId:"",
+            begin:0,
+            end:0,
+            update:0
         }
     ]
 

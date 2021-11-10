@@ -12,8 +12,14 @@ export class TokenEntity{
     @Column({name:"chainid"})
     public chainId!:string;
 
-    @Column({name:"tokensymbol"})
-    public tokenSymbol!:string;
+    @Column({name:"name"})
+    public name!:string;
+
+    @Column({name:"symbol"})
+    public symbol!:string;
+
+    @Column({name:"decimals"})
+    public decimals!:number;
 
     @Column({name:"tokenaddr"})
     public tokenAddr!:string;
@@ -23,4 +29,13 @@ export class TokenEntity{
 
     @Column({name:"targettoken"})
     public targetToken!:string;
+
+    @Column({name:"begin"})
+    public begin!:number;
+
+    @Column({name:"end"})
+    public end!:number;
+
+    @Column({name:"update"})
+    public update!:number;
 }
