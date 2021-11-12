@@ -3,11 +3,13 @@ import path from "path";
 import Web3 from "web3";
 import Web3Eth from 'web3-eth';
 import {Contract as EthContract} from 'web3-eth-contract';
+import { ERC20Token } from "./erc20Token";
 import { ActionData } from "./utils/components/actionResult";
 import { ThorDevKitEx } from "./utils/extensions/thorDevkitExten";
 import { IBridgeHead } from "./utils/iBridgeHead";
 import { BridgeSnapshoot, ZeroRoot } from "./utils/types/bridgeSnapshoot";
 import { BridgeTx } from "./utils/types/bridgeTx";
+import { tokenid, TokenInfo } from "./utils/types/tokenInfo";
 
 export class EthereumBridgeHead implements IBridgeHead{
 
@@ -254,6 +256,41 @@ export class EthereumBridgeHead implements IBridgeHead{
         return result;
     }
 
+    public async getTokenInfos(begin:number,end:number):Promise<ActionData<TokenInfo[]>> {
+        let result = new ActionData<TokenInfo[]>();
+        result.data = new Array<TokenInfo>();
+        let tokensMap = new Map<String,TokenInfo>();
+
+        try {
+            for(let block = begin; block <= end;){
+                let from = block;
+                let to = block + this.scanBlockStep > end ? end:block + this.scanBlockStep;
+    
+                console.debug(`scan ethereum bridge tokens update: ${from} - ${to}`);
+
+                const events = await this.e2vBridge.getPastEvents("TokenUpdated",{fromBlock:from,toBlock:to});
+                for(const event of events){
+                    const addr = ThorDevKitEx.Bytes32ToAddress(event.raw.topics[1]);
+                    const updated = event.blockNumber;
+                    const tokenInfoResult = await this.getTokenInfo(addr,updated);
+                    if(tokenInfoResult.error){
+                        result.error = tokenInfoResult.error;
+                        return result;
+                    }
+                    tokensMap.set(tokenInfoResult.data!.tokenid,tokenInfoResult.data!);
+                }
+                block = to + 1;
+            }
+            for(const item of tokensMap){
+                result.data.push(item[1]);
+            }
+        } catch (error) {
+            result.error = error;
+        }
+
+        return result;
+    }
+
     private async updateMerkleRootEvents(begin:number,end:number):Promise<ActionData<{blockNum:number,from:number,root:string,parentRoot:string}[]>>{
         let result = new ActionData<any>();
         result.data = Array();
@@ -335,6 +372,38 @@ export class EthereumBridgeHead implements IBridgeHead{
         result.data = result.data.reverse();
         return result;
     }
+
+    private async getTokenInfo(addr:string,blockNum:number):Promise<ActionData<TokenInfo>> {
+        let result = new ActionData<TokenInfo>();
+
+        try {
+            const data = await this.e2vBridge.methods.tokens(addr).call(undefined,blockNum);
+            const token = new ERC20Token(addr,this.web3);
+            const baseInfo = await token.baseInfo();
+
+            let tokenInfo:TokenInfo = {
+                tokenid:"",
+                chainName:this.config.ethereum.chainName,
+                chainId:this.config.ethereum.chainId,
+                name:baseInfo.name,
+                symbol:baseInfo.symbol,
+                decimals:baseInfo.decimals,
+                address:addr,
+                nativeCoin:false,
+                tokenType:String(data[0]),
+                targetTokenId:"",
+                begin:Number(data[2]),
+                end:Number(data[3]),
+                update:blockNum
+            }
+            tokenInfo.tokenid = tokenid(tokenInfo.chainName,tokenInfo.chainId,tokenInfo.address);
+            tokenInfo.targetTokenId = tokenid(this.config.vechain.chainName,this.config.vechain.chainId,String(data[1]))
+            result.data = tokenInfo;
+        } catch (error) {
+            result.error = error;
+        }
+        return result;
+    } 
 
     private initE2VBridge(){
         const filePath = path.join(this.env.contractdir,"/common/Contract_BridgeHead.sol");

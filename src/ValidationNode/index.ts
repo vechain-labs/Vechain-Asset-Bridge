@@ -25,13 +25,13 @@ class BridgeValidationNode{
                 if(syncResult.error){
                     console.error(`Sync bridge data error: ${syncResult.error}`);
                 }
-                const needToPacking = await this.packRule();
-                if(needToPacking){
-                    const packResult = await packTask.taskJob();
-                    if(packResult.error){
-                        console.error(`Pack bridge data error: ${packResult.error}`);
-                    }
-                }
+                // const needToPacking = await this.packRule();
+                // if(needToPacking){
+                //     const packResult = await packTask.taskJob();
+                //     if(packResult.error){
+                //         console.error(`Pack bridge data error: ${packResult.error}`);
+                //     }
+                // }
                 taskIsBusy = false;
             }
         });

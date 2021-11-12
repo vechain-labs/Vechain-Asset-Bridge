@@ -2,7 +2,7 @@ import { Framework } from "@vechain/connex-framework";
 import { Contract } from "myvetools";
 import path from "path";
 import { compileContract } from "myvetools/dist/utils";
-import { keccak256, Transaction } from "thor-devkit";
+import { abi, keccak256, Transaction } from "thor-devkit";
 import { SimpleWallet } from "@vechain/connex-driver";
 import { ActionData } from "./utils/components/actionResult";
 import { Proposal } from "./utils/types/proposal";
@@ -164,6 +164,36 @@ export class VeChainBridgeVerifiter {
             await sleep(10 * 1000);
         }
         
+        return result;
+    }
+
+    public async getVerifiers(begin:number,end:number):Promise<ActionData<string[]>> {
+        let result = new ActionData<string[]>();
+        result.data = new Array<string>();
+
+
+
+        try {
+            for(let block = begin; block <= end;){
+                let from = block;
+                let to = block + this.scanBlockStep > end ? end:block + this.scanBlockStep;
+    
+                console.debug(`scan verifiers update: ${from} - ${to}`);
+
+                // let events = await this.connex.thor.filter("event",[
+                //     {address:this.config.vechain.contracts.v2eBridge,topic0:this.VerifierChangedEvent.signature}
+                // ]).order("asc").range({unit:"block",from:from,to:to}).apply(0,200);
+
+                // for(const event of events){
+                    
+                // }
+
+
+                block = to + 1;
+            }
+        } catch (error) {
+            result.error = error;
+        }
         return result;
     }
 

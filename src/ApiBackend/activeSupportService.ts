@@ -14,7 +14,8 @@ export default class ActiveSupportServices implements IActiveSupportServices{
         let result = new ActionResult();
 
         try {
-            this.initTokenList();
+            //this.initTokenList();
+            environment.tokenInfo = new Array<TokenInfo>();
             await this.initDB();
             await this.initConnex();
             await this.initWeb3js();

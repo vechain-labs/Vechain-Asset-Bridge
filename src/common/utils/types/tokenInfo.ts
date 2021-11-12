@@ -16,11 +16,11 @@ export type TokenInfo = {
     update:number;
 }
 
-export function tokenid(chainName:string,chainId:string,token:string):string{
+export function tokenid(chainName:string,chainId:string,address:string):string{
     let encode = Buffer.concat([
-        Buffer.from(chainName),
-        Buffer.from(chainId),
-        Buffer.from(token)
+        Buffer.from(chainName.toLowerCase()),
+        Buffer.from(chainId.toLowerCase()),
+        Buffer.from(address.toLowerCase())
     ]); 
     return '0x' + keccak256(encode).toString('hex');
 }

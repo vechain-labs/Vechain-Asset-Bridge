@@ -1,3 +1,4 @@
+import { string } from "@oclif/parser/lib/flags";
 import { Framework } from "@vechain/connex-framework";
 import Axios from "axios";
 import { Contract } from "myvetools";
@@ -9,7 +10,8 @@ import { ThorDevKitEx } from "./utils/extensions/thorDevkitExten";
 import { IBridgeHead } from "./utils/iBridgeHead";
 import { BridgeSnapshoot, ZeroRoot } from "./utils/types/bridgeSnapshoot";
 import { BridgeTx } from "./utils/types/bridgeTx";
-import { TokenInfo } from "./utils/types/tokenInfo";
+import { tokenid, TokenInfo } from "./utils/types/tokenInfo";
+import { VIP180Token } from "./vip180Token";
 
 export class VeChainBridgeHead implements IBridgeHead {
 
@@ -298,28 +300,33 @@ export class VeChainBridgeHead implements IBridgeHead {
     public async getTokenInfos(begin:number,end:number):Promise<ActionData<TokenInfo[]>> {
         let result = new ActionData<TokenInfo[]>();
         result.data = new Array<TokenInfo>();
+        let tokensMap = new Map<String,TokenInfo>();
 
         try {
             for(let block = begin; block <= end;){
                 let from = block;
                 let to = block + this.scanBlockStep > end ? end:block + this.scanBlockStep;
     
-                console.debug(`scan vechain bridge token update: ${from} - ${to}`);
+                console.debug(`scan vechain bridge tokens update: ${from} - ${to}`);
     
                 let events = await this.connex.thor.filter("event",[
                     {address:this.config.vechain.contracts.v2eBridge,topic0:this.TokenUpdatedEvent.signature}
                 ]).order("asc").range({unit:"block",from:from,to:to}).apply(0,200);
 
                 for(const event of events){
-                    // let info:TokenInfo = {
-                    //     tokenid:"",
-                    //     chainName:this.config.vechain.chainName,
-                    //     chainId:this.config.vechain.chainId,
-                    //     name:
-                    // }
+                    const addr = ThorDevKitEx.Bytes32ToAddress(event.topics[1]);
+                    const updated = event.meta.blockNumber;
+                    const tokenInfoResult = await this.getTokenInfo(addr,updated);
+                    if(tokenInfoResult.error){
+                        result.error = tokenInfoResult.error;
+                        return result;
+                    }
+                    tokensMap.set(tokenInfoResult.data!.tokenid,tokenInfoResult.data!);
                 }
-
-
+                block = to + 1;
+            }
+            for(const item of tokensMap){
+                result.data.push(item[1]);
             }
         } catch (error) {
             result.error = error;
@@ -424,20 +431,40 @@ export class VeChainBridgeHead implements IBridgeHead {
         let result = new ActionData<TokenInfo>();
 
         try {
-            let clause = {
+            const clause = {
                 to:this.config.vechain.contracts.v2eBridge,
-                value:0,
+                value:"0",
                 data:this.tokensFunc.encode(addr)
             }
-            let response = await Axios({
-                url:this.config.vechain.nodeHost,
-                method:"GET",
+            const response = await Axios({
+                url:this.config.vechain.nodeHost + `/accounts/*?revision=${blockNum}`,
+                method:"POST",
                 responseType:"json",
-                params:{revision:blockNum},
                 data:{
-                    clause:clause
+                    clauses:[clause]
                 }});
-            let data =this.tokensFunc.decode(response.data[0].data);
+            const data =this.tokensFunc.decode(response.data[0].data);
+            const token = new VIP180Token(addr,this.connex);
+            const baseInfo = await token.baseInfo();
+            
+            let tokenInfo:TokenInfo = {
+                tokenid:"",
+                chainName:this.config.vechain.chainName,
+                chainId:this.config.vechain.chainId,
+                name:baseInfo.name,
+                symbol:baseInfo.symbol,
+                decimals:baseInfo.decimals,
+                address:addr,
+                nativeCoin:false,
+                tokenType:String(data[0]),
+                targetTokenId:"",
+                begin:Number(data[2]),
+                end:Number(data[3]),
+                update:blockNum
+            }
+            tokenInfo.tokenid = tokenid(tokenInfo.chainName,tokenInfo.chainId,tokenInfo.address);
+            tokenInfo.targetTokenId = tokenid(this.config.ethereum.chainName,this.config.ethereum.chainId,String(data[1]))
+            result.data = tokenInfo;
         } catch (error) {
             result.error = error;
         }

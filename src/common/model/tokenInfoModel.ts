@@ -29,6 +29,7 @@ export default class TokenInfoModel {
                     end:entity.end,
                     update:entity.update
                 }
+                result.data.push(_new);
             }
 
         } catch (error) {

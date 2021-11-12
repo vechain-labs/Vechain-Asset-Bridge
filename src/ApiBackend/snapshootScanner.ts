@@ -11,6 +11,7 @@ import BridgeTxModel from "../common/model/bridgeTxModel";
 import { VeChainBridgeHead } from "../common/vechainBridgeHead";
 import { EthereumBridgeHead } from "../common/ethereumBridgeHead";
 import BridgeStorage from "../common/bridgeStorage";
+import TokenInfoModel from "../common/model/tokenInfoModel";
 
 export class SnapshootScanner{
     constructor(env:any){
@@ -24,12 +25,21 @@ export class SnapshootScanner{
         this.snapshootModel = new SnapshootModel(this.env);
         this.ledgerModel = new LedgerModel(this.env);
         this.BridgeTxModel = new BridgeTxModel(this.env);
+        this.tokenInfoModel = new TokenInfoModel();
     }
 
     public async run():Promise<ActionResult>{
         let result = new ActionResult();
 
         try {
+
+            console.info(`Sync TokenInfo`);
+            const syncTokenInfo = await this.snycTokensInfo();
+            if(syncTokenInfo.error){
+                result.copyBase(syncTokenInfo);
+                return result;
+            }
+
             console.info(`Get LastSyncedSnapshoot`);
             const lastSyncSnRsult = await this.getLastSyncedSnapshoot();
             if(lastSyncSnRsult.error){
@@ -289,6 +299,80 @@ export class SnapshootScanner{
         return result;
     }
 
+    private async snycTokensInfo():Promise<ActionResult>{
+        let result = new ActionResult();
+        let needUpdate = false;
+        if(this.env.tokenInfoScan == undefined){
+            this.env.tokenInfoScan = {
+                vechainEndBlock:this.config.vechain.startBlockNum,
+                ethereumEndBlock:this.config.ethereum.startBlockNum
+            };
+        }
+
+        if(this.tokenInfo.length == 0){
+            const localTokenInfosResult = await this.tokenInfoModel.getTokenInfos();
+            if(localTokenInfosResult.error){
+                result.error = localTokenInfosResult.error;
+                return result;
+            }
+            this.tokenInfo = localTokenInfosResult.data!;
+        }
+
+        const vechainTokens = (this.env.tokenInfo as Array<TokenInfo>).filter(token => {return token.chainName == this.config.vechain.chainName && token.chainId == this.config.vechain.chainId;})
+                                .sort((l,r) => {return r.update - l.update;});
+        const ethereumTokens = (this.env.tokenInfo as Array<TokenInfo>).filter(token => {return token.chainName == this.config.ethereum.chainName && token.chainId == this.config.ethereum.chainId;})
+                                .sort((l,r) => {return r.update - l.update;});
+
+        this.env.tokenInfoScan.vechainEndBlock = (vechainTokens.length > 0 && this.env.tokenInfoScan.vechainEndBlock < vechainTokens[0].update) ? vechainTokens[0].update : this.env.tokenInfoScan.vechainEndBlock;
+        this.env.tokenInfoScan.ethereumEndBlock = (vechainTokens.length > 0 && this.env.tokenInfoScan.ethereumEndBlock < ethereumTokens[0].update) ? ethereumTokens[0].update : this.env.tokenInfoScan.ethereumEndBlock;
+
+        const getVeChainTokensInfoResult = await this.vechainBridge.getTokenInfos(this.env.tokenInfoScan.vechainEndBlock + 1,this.connex.thor.status.head.number);
+        if(getVeChainTokensInfoResult.error){
+            result.error = getVeChainTokensInfoResult.error;
+            return result;
+        }
+
+        if(getVeChainTokensInfoResult.data!.length > 0){
+            needUpdate = true;
+            for(const tokenInfo of getVeChainTokensInfoResult.data!){
+                let index = this.tokenInfo.findIndex( item => {return item.tokenid == tokenInfo.tokenid});
+                if(index != -1){
+                    this.tokenInfo[index] = tokenInfo;
+                } else {
+                    this.tokenInfo.push(tokenInfo);
+                }
+            }
+        }
+        this.env.tokenInfoScan.vechainEndBlock = this.connex.thor.status.head.number;
+
+        const ethereumLatestBlock = await this.web3.eth.getBlockNumber();
+        const getEthereumTokenInfoResult = await this.ethereumBridge.getTokenInfos(this.env.tokenInfoScan.ethereumEndBlock + 1,ethereumLatestBlock);
+        if(getEthereumTokenInfoResult.error){
+            result.error = getEthereumTokenInfoResult.error;
+        }
+
+        if(getEthereumTokenInfoResult.data!.length > 0){
+            needUpdate = true;
+            for(const tokenInfo of getEthereumTokenInfoResult.data!){
+                let index = this.tokenInfo.findIndex( item => {return item.tokenid == tokenInfo.tokenid});
+                if(index != -1){
+                    this.tokenInfo[index] = tokenInfo;
+                } else {
+                    this.tokenInfo.push(tokenInfo);
+                }
+            }
+        }
+
+        this.env.tokenInfoScan.ethereumEndBlock = ethereumLatestBlock;
+
+        if(needUpdate){
+            await this.tokenInfoModel.save(this.tokenInfo);
+            this.env.tokenInfo = this.tokenInfo;
+        }
+        
+        return result;
+    }
+
     private env:any;
     private config:any;
     private vechainBridge:VeChainBridgeHead;
@@ -299,4 +383,5 @@ export class SnapshootScanner{
     private snapshootModel!:SnapshootModel;
     private ledgerModel!:LedgerModel;
     private BridgeTxModel!:BridgeTxModel;
+    private tokenInfoModel!:TokenInfoModel;
 }

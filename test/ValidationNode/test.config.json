@@ -8,10 +8,10 @@
         "confirmHeight": 3,
         "expiration": 180,
         "contracts": {
-            "vVet": "0x3890c1169d9f1f277803843221746d730c12bcb2",
-            "vEth": "0xce8155fe82e4bc0978fd2e671b09d5e828260169",
-            "v2eBridge": "0x9acdae3dc19cff52d77068ba7d24bed20f574fd4",
-            "v2eBridgeVerifier": "0xfbb1230533b6b45523097767028ad2e63d73d6b5"
+            "vVet": "",
+            "vEth": "",
+            "v2eBridge": "",
+            "v2eBridgeVerifier": ""
         }
     },
     "ethereum": {
@@ -22,10 +22,10 @@
         "confirmHeight": 3,
         "expiration": 24,
         "contracts": {
-            "wEth": "0x82389E1D1bE9e1e1D2827E80C08114750b14532a",
-            "wVet": "0x80B7745f69111f0116Cd5C2E3E606Ec71a633f05",
-            "e2vBridge": "0xdF6003770CCC782D25c337aC8E6BCE3C90C1eb5D",
-            "e2vBridgeVerifier": "0x0e19AB9198b632A613c3c095Ddd36e0c95649f0C"
+            "wEth": "",
+            "wVet": "",
+            "e2vBridge": "",
+            "e2vBridgeVerifier": ""
         }
     }
 }

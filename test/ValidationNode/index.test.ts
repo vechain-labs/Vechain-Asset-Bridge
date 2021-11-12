@@ -1,2 +1,2 @@
-//require("./bridgeSyncTask.test");
-require('./bridgePackTask.test');
+require("./bridgeSyncTask.test");
+//require('./bridgePackTask.test');

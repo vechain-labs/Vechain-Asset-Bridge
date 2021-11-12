@@ -73,7 +73,7 @@ contract BridgeHeadControl {
 
     function tokenActivate(address _token) external view returns (bool) {
         return (tokens[_token].tokentype == ORIGINTOKEN || tokens[_token].tokentype == WRAPPEDTOKEN) 
-            && (tokens[_token].begin >= block.number && (tokens[_token].end <= block.number || tokens[_token].end == 0));
+            && (tokens[_token].begin <= block.number && (tokens[_token].end >= block.number || tokens[_token].end == 0));
     }
 
     function setReward(uint16 _reward) external onlyGovernance {
