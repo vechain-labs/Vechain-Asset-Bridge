@@ -8,17 +8,16 @@ import { ActionData } from "./utils/components/actionResult";
 import { Proposal } from "./utils/types/proposal";
 import { ZeroRoot } from "./utils/types/bridgeSnapshoot";
 import { sleep } from "./utils/sleep";
+import { Verifier } from "./utils/types/verifier";
+import { ThorDevKitEx } from "./utils/extensions/thorDevkitExten";
 
-export class VeChainBridgeVerifiter {
+export class VeChainBridgeVerifiterReader {
     constructor(env:any){
         this.env = env;
         this.connex = this.env.connex;
         this.config = this.env.config;
-        this.wallet = this.env.wallet;
         this.initV2eVerifiter();
     }
-
-    private readonly scanBlockStep = 100;
 
     public async isVerifier(address:string):Promise<ActionData<boolean>>{
         let result = new ActionData<boolean>();
@@ -69,6 +68,62 @@ export class VeChainBridgeVerifiter {
         }
 
         return result;
+    }
+
+    public async getVerifiers(begin:number,end:number):Promise<ActionData<Verifier[]>> {
+        let result = new ActionData<Verifier[]>();
+        result.data = new Array<Verifier>();
+
+        try {
+            for(let block = begin; block <= end;){
+                let from = block;
+                let to = block + this.scanBlockStep > end ? end:block + this.scanBlockStep;
+    
+                console.debug(`scan verifiers update: ${from} - ${to}`);
+
+                let events = await this.connex.thor.filter("event",[
+                    {address:this.config.vechain.contracts.v2eBridgeVerifier,topic0:this.VerifierChangedEvent.signature}
+                ]).order("asc").range({unit:"block",from:from,to:to}).apply(0,200);
+
+                for(const event of events){
+                    let verifier = {
+                        verifier:ThorDevKitEx.Bytes32ToAddress(event.topics[1]),
+                        status:event.topics[2] == "0x0000000000000000000000000000000000000000000000000000000000000001" ? true : false,
+                        update:event.meta.blockNumber};
+                    const index = result.data.findIndex(item =>{return item.verifier.toLowerCase() == verifier.verifier.toLowerCase()});
+                    if(index == -1){
+                        result.data.push(verifier);
+                    } else {
+                        result.data[index] = verifier;
+                    }
+                }
+                block = to + 1;
+            }
+        } catch (error) {
+            result.error = error;
+        }
+        return result;
+    }
+
+    private initV2eVerifiter(){
+        const filePath = path.join(this.env.contractdir,"/vechainthor/Contract_V2EBridgeVerifier.sol");
+        const verifierAbi = JSON.parse(compileContract(filePath, 'V2EBridgeVerifier', 'abi',[this.env.contractdir]));
+        this.v2eVerifiter = new Contract({abi:verifierAbi,connex:this.connex,address:this.config.vechain.contracts.v2eBridgeVerifier});
+        this.VerifierChangedEvent = new abi.Event(this.v2eVerifiter.ABI("VerifierChanged","event") as any);
+    }
+
+    protected env:any;
+    protected config:any;
+    protected v2eVerifiter!:Contract;
+    protected connex!:Framework;
+    protected VerifierChangedEvent!:abi.Event;
+    protected readonly scanBlockStep = 100;
+}
+export class VeChainBridgeVerifiter extends VeChainBridgeVerifiterReader{
+
+    constructor(env:any){
+        super(env);
+        this.wallet = this.env.wallet;
     }
 
     public async lockBridge(lastRoot:string):Promise<ActionData<string>>{
@@ -167,42 +222,6 @@ export class VeChainBridgeVerifiter {
         return result;
     }
 
-    public async getVerifiers(begin:number,end:number):Promise<ActionData<string[]>> {
-        let result = new ActionData<string[]>();
-        result.data = new Array<string>();
-
-
-
-        try {
-            for(let block = begin; block <= end;){
-                let from = block;
-                let to = block + this.scanBlockStep > end ? end:block + this.scanBlockStep;
-    
-                console.debug(`scan verifiers update: ${from} - ${to}`);
-
-                // let events = await this.connex.thor.filter("event",[
-                //     {address:this.config.vechain.contracts.v2eBridge,topic0:this.VerifierChangedEvent.signature}
-                // ]).order("asc").range({unit:"block",from:from,to:to}).apply(0,200);
-
-                // for(const event of events){
-                    
-                // }
-
-
-                block = to + 1;
-            }
-        } catch (error) {
-            result.error = error;
-        }
-        return result;
-    }
-
-    private initV2eVerifiter(){
-        const filePath = path.join(this.env.contractdir,"/vechainthor/Contract_V2EBridgeVerifier.sol");
-        const abi = JSON.parse(compileContract(filePath, 'V2EBridgeVerifier', 'abi',[this.env.contractdir]));
-        this.v2eVerifiter = new Contract({abi:abi,connex:this.connex,address:this.config.vechain.contracts.v2eBridgeVerifier});
-    }
-
     private signEncodePacked(opertion:string,hash:string):Buffer{
         let hashBuffer = hash != ZeroRoot() ? Buffer.from(hash.substring(2),'hex') : Buffer.alloc(32);
         let encode = Buffer.concat([
@@ -212,9 +231,5 @@ export class VeChainBridgeVerifiter {
         return keccak256(encode);
     }
 
-    private env:any;
-    private config:any;
-    private v2eVerifiter!:Contract;
-    private connex!:Framework;
     private wallet!:SimpleWallet;
 }

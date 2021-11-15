@@ -6,12 +6,14 @@ import { SimpleWallet } from "@vechain/connex-driver";
 import { ActionData } from "./utils/components/actionResult";
 import { sleep } from "./utils/sleep";
 
-export class EthereumBridgeVerifier {
+
+export class EthereumBridgeVerifierReader {
+
     constructor(env:any){
         this.env = env;
         this.config = this.env.config;
         this.web3 = this.env.web3;
-        this.wallet = this.env.wallet;
+        
         this.initE2VBridgeVerifier();
     }
 
@@ -60,6 +62,24 @@ export class EthereumBridgeVerifier {
         }
 
         return result;
+    }
+
+    private initE2VBridgeVerifier(){
+        const filePath = path.join(this.env.contractdir,"/ethereum/Contract_E2VBridgeVerifier.sol");
+        const abi = JSON.parse(compileContract(filePath,"E2VBridgeVerifier","abi",[this.env.contractdir]));
+        this.e2vBridgeVerifier = new this.web3.eth.Contract(abi,this.config.ethereum.contracts.e2vBridgeVerifier);
+    }
+
+    protected env:any;
+    protected config:any;
+    protected web3!:Web3;
+    protected e2vBridgeVerifier!:EthContract;
+}
+export class EthereumBridgeVerifier extends EthereumBridgeVerifierReader{
+    
+    constructor(env:any){
+        super(env);
+        this.wallet = this.env.wallet;
     }
 
     public async lockBridge(lastRoot:string,sigs:string[]):Promise<ActionData<string>>{
@@ -165,16 +185,6 @@ export class EthereumBridgeVerifier {
         return result;
     }
 
-    private initE2VBridgeVerifier(){
-        const filePath = path.join(this.env.contractdir,"/ethereum/Contract_E2VBridgeVerifier.sol");
-        const abi = JSON.parse(compileContract(filePath,"E2VBridgeVerifier","abi",[this.env.contractdir]));
-        this.e2vBridgeVerifier = new this.web3.eth.Contract(abi,this.config.ethereum.contracts.e2vBridgeVerifier);
-    }
-
-    private env:any;
-    private config:any;
-    private web3!:Web3;
-    private e2vBridgeVerifier!:EthContract;
     private wallet!:SimpleWallet;
 }
 

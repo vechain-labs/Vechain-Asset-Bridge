@@ -22,11 +22,16 @@ export default class BridgeRouter extends BaseRouter{
             (ctx,next) => controller.merkleproof(ctx,next)
         );
 
-        this.get("/pack",
-            (ctx,next) => controller.pack(ctx,next)
+        this.get("/pack/step",
+            (ctx,next) => controller.packstep(ctx,next)
         );
 
-        this.get("/pack/status",
-            (ctx,next) => controller.packStatus(ctx,next));
+        // this.get("/pack",
+        //     (ctx,next) => controller.pack(ctx,next)
+        // );
+
+        // this.get("/pack/status",
+        //     (ctx,next) => controller.packStatus(ctx,next)
+        // );
     }
 }

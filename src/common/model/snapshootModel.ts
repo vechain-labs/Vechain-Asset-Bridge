@@ -25,7 +25,7 @@ export class SnapshootModel {
         try {
             let data = await getRepository(SnapshootEntity)
                 .createQueryBuilder()
-                .where("invalid = :invalid",{invalid:true})
+                .where("valid = true")
                 .orderBy("end_blocknum_0","DESC")
                 .getOne();
             if(data != undefined){
@@ -70,7 +70,7 @@ export class SnapshootModel {
             let data = await getRepository(SnapshootEntity)
                 .findOne({where:{
                     merkleRoot:root,
-                    invalid:true
+                    valid:true
                 }});
                 if(data != undefined){
                     result.data = {
@@ -114,7 +114,7 @@ export class SnapshootModel {
             let data = await getRepository(SnapshootEntity)
                 .findOne({where:{
                     parentMerkleRoot:parentRoot,
-                    invalid:true
+                    valid:true
                 }});
                 if(data != undefined){
                     result.data = {
@@ -145,7 +145,7 @@ export class SnapshootModel {
                     .where("chainname_0 = :chainname",{chainname:claimtx.chainName})
                     .andWhere("chainid_0 = :chainid", {chainid:claimtx.chainId})
                     .andWhere("end_blocknum_0 <= :blocknum", {blocknum:claimtx.blockNumber})
-                    .andWhere("invalid = :invalid",{invalid:true})
+                    .andWhere("valid = :invalid",{invalid:true})
                     .orderBy("end_blocknum_0","DESC")
                     .limit(limit)
                     .offset(offset)
@@ -155,7 +155,7 @@ export class SnapshootModel {
                     .where("chainname_1 = :chainname",{chainname:claimtx.chainName})
                     .andWhere("chainid_1 = :chainid", {chainid:claimtx.chainId})
                     .andWhere("end_blocknum_1 <= :blocknum", {blocknum:claimtx.blockNumber})
-                    .andWhere("invalid = :invalid",{invalid:true})
+                    .andWhere("valid = :invalid",{invalid:true})
                     .orderBy("end_blocknum_1","DESC")
                     .limit(limit)
                     .offset(offset)
@@ -220,7 +220,7 @@ export class SnapshootModel {
                         entity.lockedBlockNum_1 = ethereumInfo.lockedBlockNum;
                         entity.endBlockNum_1 = ethereumInfo.endBlockNum;
                     }
-                    entity.invalid = true;
+                    entity.valid = true;
                     await transactionalEntityManager.save(entity);
                 }
             });

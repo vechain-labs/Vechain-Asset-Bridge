@@ -58,7 +58,8 @@ export class BridgeSyncTaskTestCase{
                         targetTokenId:"",
                         begin:0,
                         end:0,
-                        update:0
+                        update:0,
+                        updateBlock:""
                     },
                     {
                         tokenid:"",
@@ -73,7 +74,8 @@ export class BridgeSyncTaskTestCase{
                         targetTokenId:"",
                         begin:0,
                         end:0,
-                        update:0
+                        update:0,
+                        updateBlock:""
                     },
                     {
                         tokenid:"",
@@ -88,7 +90,8 @@ export class BridgeSyncTaskTestCase{
                         targetTokenId:"",
                         begin:0,
                         end:0,
-                        update:0
+                        update:0,
+                        updateBlock:""
                     },
                     {
                         tokenid:"",
@@ -103,7 +106,8 @@ export class BridgeSyncTaskTestCase{
                         targetTokenId:"",
                         begin:0,
                         end:0,
-                        update:0
+                        update:0,
+                        updateBlock:""
                     }
                 ]
 

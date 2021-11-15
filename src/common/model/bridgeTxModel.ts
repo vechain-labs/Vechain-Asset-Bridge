@@ -31,7 +31,7 @@ export default class BridgeTxModel{
                     entity.reward = '0x' + swapTx.amount.toString(16),
                     entity.timestamp = swapTx.timestamp,
                     entity.type = swapTx.type == "swap" ? 1 : 2;
-                    entity.invalid = true;
+                    entity.valid = true;
                     await transactionalEntityManager.save(entity);
                 }
             })
@@ -49,7 +49,7 @@ export default class BridgeTxModel{
             .findOne({
                 chainName:Equal(chainName),
                 chainId:Equal(chainId),
-                invalid:Equal(true)
+                valid:Equal(true)
             },{
                 order:{
                     timestamp:"DESC"
@@ -91,7 +91,7 @@ export default class BridgeTxModel{
             .andWhere("chainid = :id",{id:chainId})
             .andWhere("account = :account",{account:account.toLowerCase()})
             .andWhere("type = 2")
-            .andWhere("invalid = true")
+            .andWhere("valid = true")
             .orderBy("timestamp","DESC")
             .offset(offset)
             .limit(limit);
@@ -146,7 +146,7 @@ export default class BridgeTxModel{
             .andWhere("chainid = :id",{id:chainId})
             .andWhere("account = :account",{account:account.toLowerCase()})
             .andWhere("type = 1")
-            .andWhere("invalid = true")
+            .andWhere("valid = true")
             .orderBy("timestamp","DESC")
             .offset(offset)
             .limit(limit);
@@ -202,7 +202,7 @@ export default class BridgeTxModel{
                 .andWhere("chainid = :id",{id:chain.chainId})
                 .andWhere("blocknumber >= :begin",{begin:chain.beginBlockNum})
                 .andWhere("blocknumber <= :end",{end:chain.endBlockNum - 1})
-                .andWhere("invalid = true")
+                .andWhere("valid = true")
                 .limit(limit)
                 .offset(offset)
                 const data = await query.getMany();
@@ -240,7 +240,7 @@ export default class BridgeTxModel{
                     await transactionalEntityManager.update(
                         BridgeTxEntity,
                         {blockId:blockId,chainName:chainName,chainId:chainId},
-                        {invalid:false})
+                        {valid:false})
                 }
             });
         } catch (error) {

@@ -15,6 +15,8 @@ import { BridgeSnapshoot, ChainInfo, ZeroRoot } from "../common/utils/types/brid
 import { BridgeTx } from "../common/utils/types/bridgeTx";
 import { VeChainBridgeHead } from "../common/vechainBridgeHead";
 import { VeChainBridgeVerifiter } from "../common/vechainBridgeVerifier";
+import { Verifier } from "../common/utils/types/verifier";
+import Web3 from "web3";
 
 export class BridgeSnapshootProcess{
     constructor(env:any){
@@ -22,6 +24,7 @@ export class BridgeSnapshootProcess{
         this.config = env.config;
         this.wallet = env.wallet;
         this.connex = env.connex;
+        this.web3 = this.env.web3;
         this.snapshootModel = new SnapshootModel(this.env);
         this.vechainBridge = new VeChainBridgeHead(this.env);
         this.vechainVerifier = new VeChainBridgeVerifiter(this.env);
@@ -297,6 +300,7 @@ export class BridgeSnapshootProcess{
         let result = new ActionResult();
         const retryLimit = 5;
         let retryCount = 0;
+        let beginBlock = await this.web3.eth.getBlockNumber();
 
         while(retryCount <= retryLimit){
             await sleep(5 * 1000);
@@ -324,12 +328,7 @@ export class BridgeSnapshootProcess{
                 return result;
             }
 
-            let needSendLockTx:boolean = true;
-            /** 
-             * DOTO: Check which verifier need to send ethereum bridge lock transaction.
-             * needSendLockTx = {};
-             */
-
+            let needSendLockTx = await this.needSendEthereumTx(root,beginBlock);
              if(needSendLockTx){
                  try {
                      const updateResult = await this.ethereumVerifier.updateBridgeMerkleRoot(parent,proposal.hash,proposal.signatures);
@@ -556,10 +555,35 @@ export class BridgeSnapshootProcess{
         return keccak256(encode);
     }
 
+    private async needSendEthereumTx(root:string,beginBlock:number):Promise<boolean>{
+        let arr = new Array<{addr:string,hash:string}>();
+        for(const verifier of (this.env.verifiers as Array<Verifier>)){
+            let data = Buffer.concat([
+                Buffer.from(root),
+                Buffer.from(verifier.verifier)
+            ]);
+            let hash = "0x" + keccak256(data).toString('hex');
+            arr.push({addr:verifier.verifier,hash:hash});
+        }
+        let sortArr = arr.sort((l,r) => {return (BigInt(l.hash) >= BigInt(r.hash)) ? 1 : -1;});
+
+        const index = sortArr.findIndex( item => {return item.addr.toLowerCase() == this.wallet.list[0].address.toLocaleLowerCase();});
+        if(index == -1){
+            return false;
+        } else {
+            const latestBlock = await this.web3.eth.getBlockNumber();
+            if((beginBlock + this.wattingBlock * index) <= latestBlock && (beginBlock + this.wattingBlock * (index + 1)) > latestBlock){
+                return true;
+            }
+        }
+        return false;
+    }
+
     private env:any;
     private config:any;
     private readonly processTimeout = 60 * 30 * 1000;
     private wallet:SimpleWallet;
+    private web3!:Web3;
     private vechainBridge:VeChainBridgeHead;
     private ethereumBridge:EthereumBridgeHead;
     private snapshootModel:SnapshootModel;
@@ -569,6 +593,7 @@ export class BridgeSnapshootProcess{
     private BridgeTxModel:BridgeTxModel;
     private connex:Framework;
     private status:STATUS;
+    private readonly wattingBlock = 6;
 }
 
 enum STATUS {

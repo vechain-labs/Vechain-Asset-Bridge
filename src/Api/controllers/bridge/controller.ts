@@ -16,12 +16,15 @@ import { BridgeTx } from "../../../common/utils/types/bridgeTx";
 import BridgeTxModel from "../../../common/model/bridgeTxModel";
 import { EthereumBridgeHead } from "../../../common/ethereumBridgeHead";
 import { VeChainBridgeHead } from "../../../common/vechainBridgeHead";
+import TokenInfoModel from "../../../common/model/tokenInfoModel";
 
 export default class BridgeController extends BaseMiddleware{
     public claimList:Router.IMiddleware;
     public merkleproof:Router.IMiddleware;
     public pack:Router.IMiddleware;
     public packStatus:Router.IMiddleware;
+    public packstep:Router.IMiddleware;
+    public tokens:Router.IMiddleware;
 
     constructor(env:any){
         super(env);
@@ -103,6 +106,14 @@ export default class BridgeController extends BaseMiddleware{
                 status = false;
             }
             ConvertJSONResponeMiddleware.bodyToJSONResponce(ctx,{packing:this.environment.bridgePack});
+        }
+
+        this.packstep = async (ctx:Router.IRouterContext,next:() => Promise<any>) => {
+            ConvertJSONResponeMiddleware.bodyToJSONResponce(ctx,{step:150});
+        }
+
+        this.tokens = async (ctx:Router.IRouterContext,next:() => Promise<any>) => {
+            
         }
     }
 
@@ -196,21 +207,28 @@ export default class BridgeController extends BaseMiddleware{
             return result;
         }
         const sn = baseInfoResult.data!.sn;
-        const ledgers = baseInfoResult.data!.ledgers;
 
-        const getInProcessListResult = await this.getInProcessClaimList(chainName,chainId,account,sn);
+        const tokenInfosResult = await (new TokenInfoModel()).getTokenInfos();
+        if(tokenInfosResult.error){
+            result.error = tokenInfosResult.error;
+            return result;
+        }
+
+        const tokenInfos = tokenInfosResult.data!;
+
+        const getInProcessListResult = await this.getInProcessClaimList(chainName,chainId,account,sn,tokenInfos);
         if(getInProcessListResult.error){
             result.error = getInProcessListResult.error;
             return result;
         }
 
-        const getWattingClaimListResult = await this.getWattingClaimList(chainName,chainId,account,sn,10,0);
+        const getWattingClaimListResult = await this.getWattingClaimList(chainName,chainId,account,sn,tokenInfos,10,0);
         if(getWattingClaimListResult.error){
             result.error = getWattingClaimListResult.error;
             return result;
         }
 
-        const getClaimedListResult = await this.getClaimedList(chainName,chainId,account,sn,5,0);
+        const getClaimedListResult = await this.getClaimedList(chainName,chainId,account,sn,tokenInfos,5,0);
         if(getClaimedListResult.error){
             result.error = getClaimedListResult.error;
             return result;
@@ -243,6 +261,14 @@ export default class BridgeController extends BaseMiddleware{
     private async getMerkleProof(chainName:string,chainId:string,account:string,token:string):Promise<ActionData<{ledger?:BridgeLedger,proof?:string[]}>>{
         let result = new ActionData<{ledger?:BridgeLedger,proof?:string[]}>();
 
+        const tokenInfosResult = await (new TokenInfoModel()).getTokenInfos();
+        if(tokenInfosResult.error){
+            result.error = tokenInfosResult.error;
+            return result;
+        }
+
+        const tokenInfos = tokenInfosResult.data!;
+
         const getLastSnapshootResult = await (new SnapshootModel(this.environment)).getLastSnapshoot();
         if(getLastSnapshootResult.error){
             result.error = getLastSnapshootResult.error;
@@ -271,7 +297,7 @@ export default class BridgeController extends BaseMiddleware{
         }
         const swaptxs = getSwapTxsResult.data!;
 
-        let storage = new BridgeStorage(parentSn,this.environment.tokenInfo,ledgers);
+        let storage = new BridgeStorage(parentSn,tokenInfos,ledgers);
         let updateResult = await storage.updateLedgers(swaptxs);
         if(updateResult.error){
             result.error = updateResult.error;
@@ -286,7 +312,7 @@ export default class BridgeController extends BaseMiddleware{
 
         let tokenAdd = token;
         if(tokenAdd == ""){
-            let nativeCoinToken = (this.environment.tokenInfo as Array<TokenInfo>).find(token => {return token.chainId == chainId && token.chainName == chainName && token.nativeCoin == true;});
+            let nativeCoinToken = tokenInfos.find(token => {return token.chainId == chainId && token.chainName == chainName && token.nativeCoin == true;});
             if(nativeCoinToken == undefined){
                 result.error = `Can't found nativecoin on ChainName:${chainName} ChainId:${chainId}`;
                 return result;
@@ -330,7 +356,7 @@ export default class BridgeController extends BaseMiddleware{
         ConvertJSONResponeMiddleware.bodyToJSONResponce(ctx,body);
     }
 
-    private async getInProcessClaimList(chainName:string,chainId:string,account:string,sn:BridgeSnapshoot,limit?:number,offset:number = 0):Promise<ActionData<ClaimMeta[]>>{
+    private async getInProcessClaimList(chainName:string,chainId:string,account:string,sn:BridgeSnapshoot,tokenInfos:Array<TokenInfo>,limit?:number,offset:number = 0):Promise<ActionData<ClaimMeta[]>>{
         let result = new ActionData<ClaimMeta[]>();
         result.data = new Array<ClaimMeta>();
 
@@ -345,8 +371,8 @@ export default class BridgeController extends BaseMiddleware{
         for(const swapTx of getSwapTxsResult.data!){
             let targetMeta = claimList.find(target =>{ return target.to.chainName == chainName && target.to.chainId == chainId && target.from.address.toLowerCase() == swapTx.token.toLowerCase();});
             if(targetMeta == undefined){
-                let fromToken = (this.environment.tokenInfo as Array<TokenInfo>).find(token => {return token.chainName == swapChainInfo.chainName && token.chainId == swapChainInfo.chainId && token.address.toLowerCase() == swapTx.token.toLowerCase()})!;
-                let toToken = (this.environment.tokenInfo as Array<TokenInfo>).find(token => {return token.tokenid == fromToken.targetTokenId;})!;
+                let fromToken = tokenInfos.find(token => {return token.chainName == swapChainInfo.chainName && token.chainId == swapChainInfo.chainId && token.address.toLowerCase() == swapTx.token.toLowerCase()})!;
+                let toToken = tokenInfos.find(token => {return token.tokenid == fromToken.targetTokenId;})!;
                 let newMeta:ClaimMeta = {
                     claimId:"",
                     merkleRoot:ZeroRoot(),
@@ -374,13 +400,13 @@ export default class BridgeController extends BaseMiddleware{
         return result;
     }
 
-    private async getWattingClaimList(chainName:string,chainId:string,account:string,sn:BridgeSnapshoot,limit?:number,offset:number = 0):Promise<ActionData<ClaimMeta[]>>{
+    private async getWattingClaimList(chainName:string,chainId:string,account:string,sn:BridgeSnapshoot,tokenInfos:Array<TokenInfo>,limit?:number,offset:number = 0):Promise<ActionData<ClaimMeta[]>>{
         let result = new ActionData<ClaimMeta[]>();
         result.data = new Array<ClaimMeta>();
 
-        const targetTokenList = (this.environment.tokenInfo as Array<TokenInfo>).filter(token => {return token.chainName == chainName && token.chainId == chainId});
+        const targetTokenList = tokenInfos.filter(token => {return token.chainName == chainName && token.chainId == chainId});
         for(const token of targetTokenList){
-            const getWattingClaimByTokenResult = await this.getWattingClaimByToken(token,account,sn,limit,offset);
+            const getWattingClaimByTokenResult = await this.getWattingClaimByToken(token,account,sn,tokenInfos,limit,offset);
             if(getWattingClaimByTokenResult.error){
                 result.error = getWattingClaimByTokenResult.error;
                 return result;
@@ -391,28 +417,10 @@ export default class BridgeController extends BaseMiddleware{
         }
         result.data = result.data!.sort((a,b) => {return b.extension!.latestTs - a.extension!.latestTs});
 
-        // const ethereumStatusResult = await (new EthereumBridgeHead(this.environment)).getLockedStatus();
-        // if(ethereumStatusResult.error){
-        //     result.error = ethereumStatusResult.error;
-        //     return result;
-        // }
-
-        // const vechainStatusResult = await (new VeChainBridgeHead(this.environment)).getLockedStatus();
-        // if(vechainStatusResult.error){
-        //     result.error = vechainStatusResult.error;
-        //     return result;
-        // }
-
-        // if(ethereumStatusResult.data == true || vechainStatusResult.data === true){
-        //     for(let claimMeta of result.data){
-        //         claimMeta.status = 0;
-        //     }
-        // }
-
         return result;
     }
 
-    private async getWattingClaimByToken(token:TokenInfo,account:string,sn:BridgeSnapshoot,limit?:number,offset:number = 0):Promise<ActionData<ClaimMeta>>{
+    private async getWattingClaimByToken(token:TokenInfo,account:string,sn:BridgeSnapshoot,tokenInfos:Array<TokenInfo>,limit?:number,offset:number = 0):Promise<ActionData<ClaimMeta>>{
         let result = new ActionData<ClaimMeta>();
         const bridgeTxModel = new BridgeTxModel(this.environment);
         const snapshootModel = new SnapshootModel(this.environment);
@@ -443,7 +451,7 @@ export default class BridgeController extends BaseMiddleware{
 
             beginBlock = (lastClaimedSN.chains.find(chain => {return chain.chainName == swapChainInfo.chainName && chain.chainId == swapChainInfo.chainId})!.endBlockNum) - 1;
         }
-        const originToken = (this.environment.tokenInfo as Array<TokenInfo>).find(t => {return t.targetTokenId == token.tokenid})!;
+        const originToken = tokenInfos.find(t => {return t.targetTokenId == token.tokenid})!;
         const getSwapTxsResult = await bridgeTxModel.getSwapTxs(swapChainInfo.chainName,swapChainInfo.chainId,account,originToken.address,beginBlock,swapChainInfo.endBlockNum -1,limit,offset);
         if(getSwapTxsResult.data!.length == 0){
             return result;
@@ -474,13 +482,13 @@ export default class BridgeController extends BaseMiddleware{
         return result;
     }
 
-    private async getClaimedList(chainName:string,chainId:string,account:string,sn:BridgeSnapshoot,limit?:number,offset:number = 0):Promise<ActionData<ClaimMeta[]>>{
+    private async getClaimedList(chainName:string,chainId:string,account:string,sn:BridgeSnapshoot,tokenInfos:Array<TokenInfo>,limit?:number,offset:number = 0):Promise<ActionData<ClaimMeta[]>>{
         let result = new ActionData<ClaimMeta[]>();
         result.data = new Array<ClaimMeta>();
 
-        const targetTokenList = (this.environment.tokenInfo as Array<TokenInfo>).filter(token => {return token.chainName == chainName && token.chainId == chainId});
+        const targetTokenList = tokenInfos.filter(token => {return token.chainName == chainName && token.chainId == chainId});
         for(const token of targetTokenList){
-            const getWattingClaimByTokenResult = await this.getClaimedListByToken(token,account,sn,limit,offset);
+            const getWattingClaimByTokenResult = await this.getClaimedListByToken(token,account,sn,tokenInfos,limit,offset);
             if(getWattingClaimByTokenResult.error){
                 result.error = getWattingClaimByTokenResult.error;
                 return result;
@@ -493,7 +501,7 @@ export default class BridgeController extends BaseMiddleware{
         return result;
     }
 
-    private async getClaimedListByToken(token:TokenInfo,account:string,sn:BridgeSnapshoot,limit?:number,offset:number = 0):Promise<ActionData<ClaimMeta[]>>{
+    private async getClaimedListByToken(token:TokenInfo,account:string,sn:BridgeSnapshoot,tokenInfos:Array<TokenInfo>,limit?:number,offset:number = 0):Promise<ActionData<ClaimMeta[]>>{
         let result = new ActionData<ClaimMeta[]>();
         result.data = new Array<ClaimMeta>();
 
@@ -511,7 +519,7 @@ export default class BridgeController extends BaseMiddleware{
             for(let index = 0; index < getClaimTxsResult.data.length; index++){
                 let endClaimTx = getClaimTxsResult.data[index];
                 let beginClaimTx = index < getClaimTxsResult.data.length ? getClaimTxsResult.data[index + 1] : undefined;
-                const getClaimedListResult = await this.getClaimedListByTokenAndClaim(token,account,beginClaimTx,endClaimTx,10,0);
+                const getClaimedListResult = await this.getClaimedListByTokenAndClaim(token,account,tokenInfos,beginClaimTx,endClaimTx,10,0);
                 if(getClaimedListResult.error){
                     result.error = getClaimedListResult.error;
                     return result;
@@ -526,7 +534,7 @@ export default class BridgeController extends BaseMiddleware{
         return result;
     }
 
-    private async getClaimedListByTokenAndClaim(token:TokenInfo,account:string,beginClaimTx:BridgeTx|undefined,endClaimTx:BridgeTx,limit?:number,offset:number = 0):Promise<ActionData<ClaimMeta>>{
+    private async getClaimedListByTokenAndClaim(token:TokenInfo,account:string,tokenInfos:Array<TokenInfo>,beginClaimTx:BridgeTx|undefined,endClaimTx:BridgeTx,limit?:number,offset:number = 0):Promise<ActionData<ClaimMeta>>{
         let result = new ActionData<ClaimMeta>();
         const bridgeTxModel = new BridgeTxModel(this.environment);
         const snapshootModel = new SnapshootModel(this.environment);
@@ -550,7 +558,7 @@ export default class BridgeController extends BaseMiddleware{
         endBlock = getEndSNResult.data![0].chains.find(chain => {return chain.chainName != token.chainName && chain.chainId != token.chainId})!.endBlockNum;
 
         const swapChainInfo = getEndSNResult.data![0].chains.find(chain => {return chain.chainName != token.chainName && chain.chainId != token.chainId})!;
-        const originToken = (this.environment.tokenInfo as Array<TokenInfo>).find(t => {return t.targetTokenId == token.tokenid})!;
+        const originToken = tokenInfos.find(t => {return t.targetTokenId == token.tokenid})!;
 
         const getSwapTxsResult = await bridgeTxModel.getSwapTxs(swapChainInfo.chainName,swapChainInfo.chainId,account,originToken.address,beginBlock,endBlock,limit,offset);
         if(getSwapTxsResult.error){

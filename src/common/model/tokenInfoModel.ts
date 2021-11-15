@@ -12,7 +12,9 @@ export default class TokenInfoModel {
 
         try {
             let data = await getRepository(TokenEntity)
-                .find();
+                .createQueryBuilder()
+                .where("valid = true")
+                .getMany();
             for(const entity of data){
                 let _new:TokenInfo = {
                     tokenid:entity.tokenid,
@@ -27,13 +29,14 @@ export default class TokenInfoModel {
                     targetTokenId:entity.targetToken,
                     begin:entity.begin,
                     end:entity.end,
-                    update:entity.update
+                    update:entity.update,
+                    updateBlock:entity.updateBlock
                 }
                 result.data.push(_new);
             }
 
         } catch (error) {
-            result.error = new Error(`getCalculateTreeConfig faild: ${JSON.stringify(error)}`);
+            result.error = new Error(`getTokenInfos faild: ${JSON.stringify(error)}`);
         }
         
         return result;
@@ -57,12 +60,32 @@ export default class TokenInfoModel {
                     entity.begin = token.begin;
                     entity.end = token.end;
                     entity.update = token.update;
+                    entity.updateBlock = token.updateBlock;
+                    entity.valid = true;
                     await transactionalEntityManager.save(entity);
                 }
             });
         } catch (error) {
             result.error = error;
         }
+        return result;
+    }
+
+    public async removeByBlockIds(chainName:string,chainId:string,blockIds:string[]):Promise<ActionResult>{
+        let result = new ActionResult();
+        try {
+            await getManager().transaction(async transactionalEntityManager => {
+                for(const blockId of blockIds){
+                    await transactionalEntityManager.update(
+                        TokenEntity,
+                        {updateBlock:blockId},
+                        {valid:false})
+                }
+            });
+        } catch (error) {
+            result.error = error;
+        }
+
         return result;
     }
 }

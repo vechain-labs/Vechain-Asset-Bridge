@@ -272,7 +272,8 @@ export class EthereumBridgeHead implements IBridgeHead{
                 for(const event of events){
                     const addr = ThorDevKitEx.Bytes32ToAddress(event.raw.topics[1]);
                     const updated = event.blockNumber;
-                    const tokenInfoResult = await this.getTokenInfo(addr,updated);
+                    const updatedBlock = event.blockHash;
+                    const tokenInfoResult = await this.getTokenInfo(addr,updated,updatedBlock);
                     if(tokenInfoResult.error){
                         result.error = tokenInfoResult.error;
                         return result;
@@ -373,7 +374,7 @@ export class EthereumBridgeHead implements IBridgeHead{
         return result;
     }
 
-    private async getTokenInfo(addr:string,blockNum:number):Promise<ActionData<TokenInfo>> {
+    private async getTokenInfo(addr:string,blockNum:number,blockId:string):Promise<ActionData<TokenInfo>> {
         let result = new ActionData<TokenInfo>();
 
         try {
@@ -394,7 +395,8 @@ export class EthereumBridgeHead implements IBridgeHead{
                 targetTokenId:"",
                 begin:Number(data[2]),
                 end:Number(data[3]),
-                update:blockNum
+                update:blockNum,
+                updateBlock:blockId
             }
             tokenInfo.tokenid = tokenid(tokenInfo.chainName,tokenInfo.chainId,tokenInfo.address);
             tokenInfo.targetTokenId = tokenid(this.config.vechain.chainName,this.config.vechain.chainId,String(data[1]))

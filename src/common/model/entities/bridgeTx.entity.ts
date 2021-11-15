@@ -53,9 +53,9 @@ export class BridgeTxEntity{
     @Index()
     public type!:number;
 
-    @Column({name:"invalid"})
+    @Column({name:"valid"})
     @Index()
-    public invalid!:boolean;
+    public valid!:boolean;
 }
 
 export function swapID(chainName:string,chainId:string,blocknum:number,txid:string,clauseIndex:number,index:number,account:string,token:string):string {

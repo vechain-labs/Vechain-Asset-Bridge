@@ -18,7 +18,7 @@ export default class LedgerModel {
             let data = await getRepository(LedgerEntity)
                 .find({where:{
                     merkleRoot:root.toLowerCase(),
-                    invalid:true
+                    valid:true
                 }});
             for(const item of data){
                 let ledger:BridgeLedger = {
@@ -49,7 +49,7 @@ export default class LedgerModel {
                     chainName:chainName,
                     chainId:chainId,
                     account:account.toLowerCase(),
-                    invalid:true
+                    valid:true
                 }});
             for(const item of data){
                 let ledger:BridgeLedger = {
@@ -85,7 +85,7 @@ export default class LedgerModel {
                     entity.account = ledger.account.toLowerCase();
                     entity.token = ledger.token.toLowerCase();
                     entity.balance = '0x' + ledger.balance.toString(16),
-                    entity.invalid = true;
+                    entity.valid = true;
                     await transactionalEntityManager.save(entity);
                 }
             });
@@ -102,7 +102,7 @@ export default class LedgerModel {
         try {
             await getManager().transaction(async transactionalEntityManager =>{
                 for(const snId of snIds){
-                    transactionalEntityManager.update(LedgerEntity,{snapshootid:snId},{invalid:true});
+                    transactionalEntityManager.update(LedgerEntity,{snapshootid:snId},{valid:true});
                 }
             });
         } catch (error) {

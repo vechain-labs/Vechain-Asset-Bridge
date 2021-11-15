@@ -42,6 +42,6 @@ export class SnapshootEntity{
     @Column({name:"end_blocknum_1"})
     public endBlockNum_1!:number;
 
-    @Column({name:"invalid"})
-    public invalid!:boolean;
+    @Column({name:"valid"})
+    public valid!:boolean;
 }

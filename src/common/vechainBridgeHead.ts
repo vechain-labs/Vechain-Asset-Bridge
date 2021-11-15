@@ -12,7 +12,6 @@ import { BridgeSnapshoot, ZeroRoot } from "./utils/types/bridgeSnapshoot";
 import { BridgeTx } from "./utils/types/bridgeTx";
 import { tokenid, TokenInfo } from "./utils/types/tokenInfo";
 import { VIP180Token } from "./vip180Token";
-
 export class VeChainBridgeHead implements IBridgeHead {
 
     constructor(env:any){
@@ -316,7 +315,8 @@ export class VeChainBridgeHead implements IBridgeHead {
                 for(const event of events){
                     const addr = ThorDevKitEx.Bytes32ToAddress(event.topics[1]);
                     const updated = event.meta.blockNumber;
-                    const tokenInfoResult = await this.getTokenInfo(addr,updated);
+                    const updatedBlock = event.meta.blockID;
+                    const tokenInfoResult = await this.getTokenInfo(addr,updated,updatedBlock);
                     if(tokenInfoResult.error){
                         result.error = tokenInfoResult.error;
                         return result;
@@ -427,7 +427,7 @@ export class VeChainBridgeHead implements IBridgeHead {
         return result;
     }
 
-    private async getTokenInfo(addr:string,blockNum:number):Promise<ActionData<TokenInfo>> {
+    private async getTokenInfo(addr:string,blockNum:number,blockId:string):Promise<ActionData<TokenInfo>> {
         let result = new ActionData<TokenInfo>();
 
         try {
@@ -460,7 +460,8 @@ export class VeChainBridgeHead implements IBridgeHead {
                 targetTokenId:"",
                 begin:Number(data[2]),
                 end:Number(data[3]),
-                update:blockNum
+                update:blockNum,
+                updateBlock:blockId
             }
             tokenInfo.tokenid = tokenid(tokenInfo.chainName,tokenInfo.chainId,tokenInfo.address);
             tokenInfo.targetTokenId = tokenid(this.config.ethereum.chainName,this.config.ethereum.chainId,String(data[1]))

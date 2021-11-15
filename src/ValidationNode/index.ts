@@ -25,13 +25,13 @@ class BridgeValidationNode{
                 if(syncResult.error){
                     console.error(`Sync bridge data error: ${syncResult.error}`);
                 }
-                // const needToPacking = await this.packRule();
-                // if(needToPacking){
-                //     const packResult = await packTask.taskJob();
-                //     if(packResult.error){
-                //         console.error(`Pack bridge data error: ${packResult.error}`);
-                //     }
-                // }
+                const needToPacking = await this.packRule();
+                if(needToPacking){
+                    const packResult = await packTask.taskJob();
+                    if(packResult.error){
+                        console.error(`Pack bridge data error: ${packResult.error}`);
+                    }
+                }
                 taskIsBusy = false;
             }
         });
@@ -40,7 +40,7 @@ class BridgeValidationNode{
 
     private async packRule():Promise<boolean>{
         const bestBlock = await (this.environment.connex as Framework).thor.block().get();
-        return bestBlock && bestBlock.number % 200 <= 3 ? true : false;
+        return bestBlock && bestBlock.number % 150 <= 3 ? true : false;
     }
 
     private environment:any;

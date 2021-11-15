@@ -14,6 +14,7 @@ export type TokenInfo = {
     begin:number;
     end:number;
     update:number;
+    updateBlock:string;
 }
 
 export function tokenid(chainName:string,chainId:string,address:string):string{

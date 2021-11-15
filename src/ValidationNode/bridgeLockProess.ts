@@ -10,12 +10,16 @@ import { keccak256 } from "thor-devkit";
 import { SimpleWallet } from "@vechain/connex-driver";
 import { getReceipt } from "myvetools/dist/connexUtils";
 import { sleep } from "../common/utils/sleep";
+import { string } from "@oclif/command/lib/flags";
+import { Verifier } from "../common/utils/types/verifier";
+import Web3 from "web3";
 
 export class BridgeLockProcess{
     constructor(env:any){
         this.env = env;
         this.config = env.config;
         this.connex = this.env.connex;
+        this.web3 = this.env.web3;
         this.vechainBridge = new VeChainBridgeHead(this.env);
         this.ethereumBridge = new EthereumBridgeHead(this.env);
         this.snapshootModel = new SnapshootModel(this.env);
@@ -274,6 +278,7 @@ export class BridgeLockProcess{
         let result = new ActionResult();
         const retryLimit = 5;
         let retryCount = 0;
+        let beginBlock = await this.web3.eth.getBlockNumber();
 
         while(retryCount <= retryLimit){
             await sleep(10 * 1000);
@@ -301,11 +306,7 @@ export class BridgeLockProcess{
                 return result;
             }
 
-            let needSendLockTx:boolean = true;
-            /** 
-             * TODO: Check which verifier need to send ethereum bridge lock transaction.
-             * needSendLockTx = {};
-             */
+            let needSendLockTx = await this.needSendEthereumTx(root,beginBlock);
             if(needSendLockTx){
                 try {
                     const lockBridgeResult = await this.ethereumVerifier.lockBridge(root,proposal.signatures);
@@ -381,6 +382,30 @@ export class BridgeLockProcess{
         return keccak256(encode);
     }
 
+    private async needSendEthereumTx(root:string,beginBlock:number):Promise<boolean>{
+        let arr = new Array<{addr:string,hash:string}>();
+        for(const verifier of (this.env.verifiers as Array<Verifier>)){
+            let data = Buffer.concat([
+                Buffer.from(root),
+                Buffer.from(verifier.verifier)
+            ]);
+            let hash = "0x" + keccak256(data).toString('hex');
+            arr.push({addr:verifier.verifier,hash:hash});
+        }
+        let sortArr = arr.sort((l,r) => {return (BigInt(l.hash) >= BigInt(r.hash)) ? 1 : -1;});
+
+        const index = sortArr.findIndex( item => {return item.addr.toLowerCase() == this.wallet.list[0].address.toLocaleLowerCase();});
+        if(index == -1){
+            return false;
+        } else {
+            const latestBlock = await this.web3.eth.getBlockNumber();
+            if((beginBlock + this.wattingBlock * index) <= latestBlock && (beginBlock + this.wattingBlock * (index + 1)) > latestBlock){
+                return true;
+            }
+        }
+        return false;
+    }
+
     private env:any;
     private config:any;
     private vechainBridge:VeChainBridgeHead;
@@ -390,8 +415,10 @@ export class BridgeLockProcess{
     private connex!:Framework;
     private snapshootModel!:SnapshootModel;
     private readonly processTimeout = 60 * 30 * 1000;
+    private readonly wattingBlock = 6;
     private wallet!:SimpleWallet;
     private status:STATUS;
+    private web3!:Web3;
 }
 
 enum STATUS {

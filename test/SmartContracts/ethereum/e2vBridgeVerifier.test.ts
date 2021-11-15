@@ -440,7 +440,8 @@ export class E2VBridgeVerifierTestCase{
                 targetTokenId:"",
                 begin:0,
                 end:0,
-                update:0
+                update:0,
+                updateBlock:""
             },
             {
                 tokenid:"",
@@ -455,7 +456,8 @@ export class E2VBridgeVerifierTestCase{
                 targetTokenId:"",
                 begin:0,
                 end:0,
-                update:0
+                update:0,
+                updateBlock:""
             },
             {
                 tokenid:"",
@@ -470,7 +472,8 @@ export class E2VBridgeVerifierTestCase{
                 targetTokenId:"",
                 begin:0,
                 end:0,
-                update:0
+                update:0,
+                updateBlock:""
             },
             {
                 tokenid:"",
@@ -485,7 +488,8 @@ export class E2VBridgeVerifierTestCase{
                 targetTokenId:"",
                 begin:0,
                 end:0,
-                update:0
+                update:0,
+                updateBlock:""
             }
         ]
 

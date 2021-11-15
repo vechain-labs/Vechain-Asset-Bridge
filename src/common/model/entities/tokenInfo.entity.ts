@@ -38,4 +38,10 @@ export class TokenEntity{
 
     @Column({name:"update"})
     public update!:number;
+
+    @Column({name:"updateBlock"})
+    public updateBlock!:string;
+
+    @Column({name:"valid"})
+    public valid!:boolean;
 }
