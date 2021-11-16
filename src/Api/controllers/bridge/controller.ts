@@ -167,28 +167,24 @@ export default class BridgeController extends BaseMiddleware{
                 }
             }
 
-            if(data.from.nativeCoin == true){
-                if(data.from.symbol == "VVET"){
-                    data.from.symbol = "VET";
-                    data.from.name = "VET";
-                    data.from.address = "";
-                } else if(data.from.symbol == "WETH"){
-                    data.from.symbol = "ETH";
-                    data.from.name = "ETH";
-                    data.from.address = "";
-                }
+            if(data.from.symbol == "VVET"){
+                data.from.symbol = "VET";
+                data.from.name = "VET";
+                data.from.address = "";
+            } else if(data.from.symbol == "WETH"){
+                data.from.symbol = "ETH";
+                data.from.name = "ETH";
+                data.from.address = "";
             }
 
-            if(data.to.nativeCoin == true){
-                if(data.to.symbol == "VVET"){
-                    data.to.symbol = "VET";
-                    data.to.name = "VET";
-                    data.to.address = "";
-                } else if(data.to.symbol == "WETH"){
-                    data.to.symbol = "ETH";
-                    data.to.name = "ETH";
-                    data.to.address = "";
-                }
+            if(data.to.symbol == "VVET"){
+                data.to.symbol = "VET";
+                data.to.name = "VET";
+                data.to.address = "";
+            } else if(data.to.symbol == "WETH"){
+                data.to.symbol = "ETH";
+                data.to.name = "ETH";
+                data.to.address = "";
             }
 
             body.claimList.push(data);
