@@ -1,0 +1,9 @@
+[submodule "apiserve/src/common"]
+	path = apiserve/src/common
+	url = git@github.com:mongelly/Vechain-Asset-Bridge-Common.git
+[submodule "apibackend/src/common"]
+	path = apibackend/src/common
+	url = git@github.com:mongelly/Vechain-Asset-Bridge-Common.git
+[submodule "validationnode/src/common"]
+	path = validationnode/src/common
+	url = git@github.com:mongelly/Vechain-Asset-Bridge-Common.git

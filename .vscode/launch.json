@@ -11,9 +11,9 @@
             "skipFiles": [
                 "<node_internals>/**"
             ],
-            "program": "${workspaceFolder}/src/Api/index.ts",
+            "program": "${workspaceFolder}/apiserve/src/index.ts",
             "outFiles": [
-                "${workspaceFolder}/**/*.js"
+                "${workspaceFolder}/**/**/*.js"
             ]
         },
         {
@@ -23,9 +23,9 @@
             "skipFiles": [
                 "<node_internals>/**"
             ],
-            "program": "${workspaceFolder}/src/ApiBackend/index.ts",
+            "program": "${workspaceFolder}/apibackend/src/index.ts",
             "outFiles": [
-                "${workspaceFolder}/**/*.js"
+                "${workspaceFolder}/**/**/*.js"
             ]
         },
         {

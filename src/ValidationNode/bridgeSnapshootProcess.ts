@@ -332,7 +332,7 @@ export class BridgeSnapshootProcess{
              if(needSendLockTx){
                  try {
                      const updateResult = await this.ethereumVerifier.updateBridgeMerkleRoot(parent,proposal.hash,proposal.signatures);
-                     console.info(`send vechain update merkleroot, txid:${updateResult.data!}`);
+                     console.info(`send ethereum update merkleroot, txid:${updateResult.data!}`);
                      if(updateResult.error){
                          continue;
                      } else {
