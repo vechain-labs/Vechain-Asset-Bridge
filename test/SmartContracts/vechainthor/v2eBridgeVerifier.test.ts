@@ -114,7 +114,8 @@ export class V2EBridgeVerifierTestCase {
                 vVETAddr = await this.deployVVet();
             }
         } else {
-            vVETAddr = await this.deployVVet();
+            vVETAddr = this.config.vechain.contracts.vVet;
+            await this.setUpdateVVet(vVETAddr);
         }
         this.vVetContract.at(vVETAddr);
     }
@@ -130,7 +131,8 @@ export class V2EBridgeVerifierTestCase {
                 vETHAddr = await this.deployVETH(this.config.vechain.contracts.v2eBridge);
             }
         } else {
-            vETHAddr = await this.deployVETH(this.config.vechain.contracts.v2eBridge);
+            vETHAddr = this.config.vechain.contracts.vEth;
+            await this.setUpdateVETH(vETHAddr);
         }
         this.vEthContract.at(vETHAddr);
     }
@@ -316,6 +318,17 @@ export class V2EBridgeVerifierTestCase {
         return this.config.vechain.contracts.vVet;
     }
 
+    private async setUpdateVVet(addr:string): Promise<any> {
+        const clause = this.bridgeContract.send("setWrappedNativeCoin",0,addr,this.config.ethereum.contracts.wVet,this.config.vechain.startBlockNum,0);
+        const txRep2 = await this.connex.vendor.sign('tx', [clause])
+            .signer(this.wallet.list[1].address)
+            .request();
+        const receipt2 = await getReceipt(this.connex, 5, txRep2.txid);
+        if (receipt2 == null || receipt2.reverted) {
+            assert.fail('setToken faild');
+        }
+    }
+
     private async deployVETH(addr: string): Promise<string> {
         const clause1 = this.vEthContract.deploy(0, "VeChain Wrapped ETH","VETH",18,addr);
         const txRep1 = await this.connex.vendor.sign('tx', [clause1])
@@ -344,6 +357,21 @@ export class V2EBridgeVerifierTestCase {
         }
 
         return this.config.vechain.contracts.vEth;
+    }
+
+    private async setUpdateVETH(addr:string): Promise<any> {
+        try {
+            const clause = this.bridgeContract.send('setToken',0,addr,2,this.config.ethereum.contracts.wEth,this.config.vechain.startBlockNum,0);
+            const txRep2 = await this.connex.vendor.sign('tx',[clause])
+                .signer(this.wallet.list[1].address)
+                .request();
+            const receipt2 = await getReceipt(this.connex,5,txRep2.txid);
+            if(receipt2 == null || receipt2.reverted){
+                assert.fail('register token faild');
+            }
+        } catch (error) {
+            assert.fail('register token faild');
+        }
     }
 
     private async deployBridge():Promise<string> {

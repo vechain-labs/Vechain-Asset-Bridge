@@ -43,7 +43,6 @@ export default class Node extends Command {
     `);
 
     const node = new BridgeValidationNode(environment);
-    
   }
 
   private async intiEnv(flags:any):Promise<any> {

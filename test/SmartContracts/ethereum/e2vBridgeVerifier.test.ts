@@ -150,7 +150,8 @@ export class E2VBridgeVerifierTestCase{
                 wEthAddr = await this.deployWETH();
             }
         } else {
-            wEthAddr = await this.deployWETH();
+            wEthAddr = this.config.ethereum.contracts.wEth;
+            await this.setUpdateWETH(wEthAddr);
         }
         this.wEthContract.options.address = wEthAddr;
     }
@@ -166,7 +167,8 @@ export class E2VBridgeVerifierTestCase{
                 wVetAddr = await this.deployWVET(this.config.ethereum.contracts.e2vBridge);
             }
         } else {
-            wVetAddr = await this.deployWVET(this.config.ethereum.contracts.e2vBridge);
+            wVetAddr = this.config.ethereum.contracts.wVet;
+            await this.setUpdateWVET(wVetAddr);
         }
         this.wVetContract.options.address = wVetAddr;
     }
@@ -384,6 +386,29 @@ export class E2VBridgeVerifierTestCase{
         return this.config.ethereum.contracts.wEth;
     }
 
+    private async setUpdateWETH(addr:string):Promise<any> {
+        let txhash = "";
+        try {
+            const gas2 = await this.bridgeContract.methods.setWrappedNativeCoin(addr,"0x0000000000000000000000000000000000000000",this.config.ethereum.startBlockNum,0).estimateGas({
+                from:this.wallet.list[1].address
+            });
+            const s1 = await this.bridgeContract.methods.setWrappedNativeCoin(addr,"0x0000000000000000000000000000000000000000",this.config.ethereum.startBlockNum,0).send({
+                from:this.wallet.list[1].address,
+                gas:gas2,
+                gasPrice:this.gasPrice
+            }).on("receipt",function(receipt:any){
+                txhash = receipt.transactionHash
+            });
+
+            const receipt1 = await this.web3.eth.getTransactionReceipt(s1.transactionHash);
+            if(receipt1 == null || receipt1.status == false){
+                assert.fail("setWrappedNativeCoin faild");
+            }
+        } catch (error) {
+            assert.fail(`set update WETH faild: ${error}, txhash:${txhash}`);
+        }
+    }
+
     private async deployWVET(addr:string):Promise<string>{
         const bridgeFilePath = path.join(this.contractdir, "/common/Contract_BridgeWrappedToken.sol");
         const bytecode = compileContract(bridgeFilePath,"BridgeWrappedToken","bytecode",[this.contractdir]);
@@ -422,6 +447,28 @@ export class E2VBridgeVerifierTestCase{
         }
 
         return this.config.ethereum.contracts.wVet;
+    }
+
+    private async setUpdateWVET(addr:string):Promise<any>{
+        let txhash = "";
+        try {
+            const gas2 = await this.bridgeContract.methods.setToken(addr,2,"0x0000000000000000000000000000000000000000",this.config.ethereum.startBlockNum,0).estimateGas({
+                from:this.wallet.list[1].address
+            });
+            const s1 = await this.bridgeContract.methods.setToken(addr,2,"0x0000000000000000000000000000000000000000",this.config.ethereum.startBlockNum,0).send({
+                from:this.wallet.list[1].address,
+                gas:gas2,
+                gasPrice:this.gasPrice
+            }).on("receipt",function(receipt:any){
+                txhash = receipt.transactionHash
+            });
+            const receipt1 = await this.web3.eth.getTransactionReceipt(s1.transactionHash);
+            if(receipt1 == null || receipt1.status == false){
+                assert.fail("setToken faild");
+            }
+        } catch (error) {
+            assert.fail(`set update WVET faild: ${error}`);
+        }
     }
 
     private initTokens() {
