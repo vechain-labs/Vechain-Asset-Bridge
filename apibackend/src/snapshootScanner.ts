@@ -59,6 +59,16 @@ export class SnapshootScanner{
                 return result;
             }
 
+            const bridgeStatusResult = await this.checkBridgeStatus();
+            if(bridgeStatusResult.error){
+                result.copyBase(bridgeStatusResult);
+                return result;
+            }
+            if(bridgeStatusResult.data == true){
+                console.info(`Watting for bridge unlock.`);
+                return result;
+            }
+
             console.info(`Get NoSyncSnapshootList`);
             const getNoSyncListResult = await this.getNoSyncSnapshootList(lastSyncSnRsult.data!);
             if(getNoSyncListResult.error){
@@ -371,6 +381,26 @@ export class SnapshootScanner{
         }
         
         return result;
+    }
+
+    private async checkBridgeStatus():Promise<ActionData<boolean>>{
+        let result = new ActionData<boolean>();
+
+        const vechainResult = await this.vechainBridge.getLockedStatus();
+        if(vechainResult.error){
+            result.copyBase(vechainResult);
+            return result;
+        }
+        if(vechainResult.data == true){
+            return vechainResult;
+        }
+
+        const ethereumResult = await this.ethereumBridge.getLockedStatus();
+        if(ethereumResult.error){
+            result.copyBase(ethereumResult);
+            return result;
+        }
+        return ethereumResult;
     }
 
     private env:any;

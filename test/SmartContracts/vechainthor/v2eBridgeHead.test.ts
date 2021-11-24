@@ -7,9 +7,9 @@ import * as Devkit from 'thor-devkit';
 import { compileContract } from "myvetools/dist/utils";
 import assert from 'assert';
 import { getReceipt } from "myvetools/dist/connexUtils";
-import { BridgeLedger, ledgerHash, ledgerID } from "../../../src/common/utils/types/bridgeLedger";
-import { BridgeSnapshoot, ZeroRoot } from "../../../src/common/utils/types/bridgeSnapshoot";
-import BridgeStorage from "../../../src/common/bridgeStorage";
+import { BridgeLedger, ledgerHash, ledgerID } from "../../common/utils/types/bridgeLedger";
+import { BridgeSnapshoot, ZeroRoot } from "../../common/utils/types/bridgeSnapshoot";
+import BridgeStorage from "../../common/bridgeStorage";
 
 export class V2EBridgeHeadTestCase {
 
@@ -18,7 +18,7 @@ export class V2EBridgeHeadTestCase {
     public wallet = new SimpleWallet();
 
     public configPath = path.join(__dirname, '../test.config.json');
-    
+    public contractdir = path.join(__dirname,"../../common/contracts/");
     public config: any = {};
 
     public bridgeContract!: Contract;
@@ -38,17 +38,17 @@ export class V2EBridgeHeadTestCase {
                 this.driver = await Driver.connect(new SimpleNet(this.config.vechain.nodeHost as string), this.wallet);
                 this.connex = new Framework(this.driver);
 
-                const bridgeFilePath = path.join(__dirname, "../../../src/SmartContracts/contracts/common/Contract_BridgeHead.sol");
+                const bridgeFilePath = path.join(this.contractdir, "/common/Contract_BridgeHead.sol");
                 const bridgeAbi = JSON.parse(compileContract(bridgeFilePath, 'BridgeHead', 'abi'));
                 const bridgeBin = compileContract(bridgeFilePath, 'BridgeHead', 'bytecode');
                 this.bridgeContract = new Contract({ abi: bridgeAbi, connex: this.connex, bytecode: bridgeBin, address: this.config.vechain.contracts.v2eBridge != "" ? this.config.vechain.contracts.v2eBridge : undefined });
 
-                const vVetFilePath = path.join(__dirname, "../../../src/SmartContracts/contracts/vechainthor/Contract_vVet.sol");
+                const vVetFilePath = path.join(this.contractdir, "/vechainthor/Contract_vVet.sol");
                 const vVetAbi = JSON.parse(compileContract(vVetFilePath, 'VVET', 'abi'));
                 const vVetBin = compileContract(vVetFilePath, 'VVET', 'bytecode');
                 this.vVetContract = new Contract({ abi: vVetAbi, connex: this.connex, bytecode: vVetBin, address: this.config.vechain.contracts.vVet != "" ? this.config.vechain.contracts.vVet : undefined });
 
-                const vEthFilePath = path.join(__dirname, "../../../src/SmartContracts/contracts/common/Contract_BridgeWrappedToken.sol");
+                const vEthFilePath = path.join(this.contractdir, "/common/Contract_BridgeWrappedToken.sol");
                 const vEthAbi = JSON.parse(compileContract(vEthFilePath, 'BridgeWrappedToken', 'abi'));
                 const vEthBin = compileContract(vEthFilePath, 'BridgeWrappedToken', 'bytecode');
                 this.vEthContract = new Contract({ abi: vEthAbi, connex: this.connex, bytecode: vEthBin, address: this.config.vechain.contracts.vEth != "" ? this.config.vechain.contracts.vEth : undefined });

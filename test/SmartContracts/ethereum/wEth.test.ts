@@ -12,9 +12,10 @@ export class WETHTestCase{
     public wallet = new SimpleWallet();
 
     public configPath = path.join(__dirname,'../test.config.json');
+    public contractdir = path.join(__dirname,"../../common/contracts/");
     public config:any = {};
 
-    private contractPath = path.join(__dirname,"../../../src/SmartContracts/contracts/ethereum/Contract_wEth.sol");
+    private contractPath = path.join(this.contractdir,"/ethereum/Contract_wEth.sol");
     private contract!:EthContract
 
     public async init(){

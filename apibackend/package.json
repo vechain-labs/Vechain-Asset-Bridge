@@ -13,7 +13,11 @@
     "@vechain/connex-driver": "^2.0.5",
     "@vechain/connex-framework": "^2.0.5",
     "log4js": "^6.3.0",
+    "myvetools": "^1.5.0",
     "node-schedule": "^2.0.0",
+    "object-copy": "^1.0.0",
+    "sort-array": "^4.1.4",
+    "sqlite3": "^5.0.2",
     "thor-devkit": "^2.0.1",
     "typeorm": "^0.2.40",
     "web3": "^1.6.1"

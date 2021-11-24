@@ -2,12 +2,11 @@ import { Driver, SimpleNet, SimpleWallet } from "@vechain/connex-driver";
 import { Framework } from "@vechain/connex-framework";
 import path from "path";
 import Web3 from "web3";
-import { BridgePackTask } from "../../src/ValidationNode/bridgePackTask";
 import fs from 'fs';
-import * as Devkit from 'thor-devkit';
-import { tokenid, TokenInfo } from "../../src/common/utils/types/tokenInfo";
 import { createConnection } from "typeorm";
 import assert from 'assert';
+import { tokenid, TokenInfo } from "../common/utils/types/tokenInfo";
+import { BridgePackTask } from "../../validationnode/src/bridgePackTask";
 
 export class BridgePackTaskTestCase{
     public configPath = path.join(__dirname, './test.config.json');

@@ -12,10 +12,10 @@ export class WVETTestCase {
     public wallet = new SimpleWallet();
 
     public configPath = path.join(__dirname,'../test.config.json');
+    public contractdir = path.join(__dirname,"../../common/contracts/");
     public config:any = {};
 
-    private libPath = path.join(__dirname,"../../../src/SmartContracts/contracts/");
-    private contractPath = path.join(__dirname,"../../../src/SmartContracts/contracts/common/Contract_BridgeWrappedToken.sol");
+    private contractPath = path.join(this.contractdir,"/common/Contract_BridgeWrappedToken.sol");
     private contract!:EthContract;
 
     
@@ -33,7 +33,7 @@ export class WVETTestCase {
                     this.web3.eth.accounts.wallet.add(account.privateKey!.toString('hex'));
                 }
 
-                const abi = JSON.parse(compileContract(this.contractPath,"BridgeWrappedToken","abi",[this.libPath]));
+                const abi = JSON.parse(compileContract(this.contractPath,"BridgeWrappedToken","abi",[this.contractdir]));
                 this.contract = new this.web3.eth.Contract(abi);
 
             } catch (error) {
@@ -50,7 +50,7 @@ export class WVETTestCase {
         } else {
             let txhash = "";
             try {
-                const cdata = compileContract(this.contractPath, 'BridgeWrappedToken', 'bytecode',[this.libPath]);
+                const cdata = compileContract(this.contractPath, 'BridgeWrappedToken', 'bytecode',[this.contractdir]);
                 const deploy = this.contract.deploy({data:cdata,arguments:["Wrapped VET","WVET",18,this.wallet.list[0].address]});
                 
                 const gas = await deploy.estimateGas({

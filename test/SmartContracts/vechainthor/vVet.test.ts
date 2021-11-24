@@ -15,7 +15,9 @@ export class VVETTestCase{
     public contract!:Contract;
 
     public configPath = path.join(__dirname,'../test.config.json');
+    public contractdir = path.join(__dirname,"../../common/contracts/");
     public config:any = {};
+    
 
     public async init(){
         if(fs.existsSync(this.configPath)){
@@ -31,7 +33,7 @@ export class VVETTestCase{
                 this.driver = await Driver.connect(new SimpleNet(this.config.vechain.nodeHost as string),this.wallet);
                 this.connex = new Framework(this.driver);
 
-                const filePath = path.join(__dirname,"../../../src/SmartContracts/contracts/vechainthor/Contract_vVet.sol");
+                const filePath = path.join(this.contractdir,"/vechainthor/Contract_vVet.sol");
                 const abi = JSON.parse(compileContract(filePath, 'VVET', 'abi'));
                 const bin = compileContract(filePath, 'VVET', 'bytecode');
 

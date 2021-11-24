@@ -35,16 +35,20 @@
             "skipFiles": [
                 "<node_internals>/**"
             ],
-            "program": "${workspaceFolder}/src/ValidationNode/index.ts",
-            "outFiles": [
-                "${workspaceFolder}/**/*.js"
+            "program": "${workspaceFolder}/validationnode/bin/run",
+            "args": [
+                "node",
+                "--config",
+                "/Users/moglu/Developer/VeChainDevelop/Vechain-Asset-Bridge/validationnode/config/config_node.json",
+                "--datadir",
+                "/Users/moglu/Developer/dataCenter/vechainassetbridgenode/node_01"
             ]
         },
         {
             "type": "node",
             "request": "launch",
             "name": "Mocha Smart Contract",
-            "program": "${workspaceFolder}/node_modules/mocha/bin/mocha",
+            "program": "${workspaceFolder}/test/node_modules/mocha/bin/mocha",
             "args": [
                 "-r",
                 "ts-node/register",

@@ -1,24 +1,23 @@
 import Web3 from "web3";
 import path from 'path';
-import fs, { stat } from 'fs';
+import fs from 'fs';
 import { SimpleWallet } from "@vechain/connex-driver";
 import { Contract } from "web3-eth-contract";
 import * as Devkit from 'thor-devkit';
 import assert from 'assert';
 import { compileContract } from "myvetools/dist/utils";
-import { BridgeLedger, ledgerHash, ledgerID } from "../../../src/common/utils/types/bridgeLedger";
-import { BridgeSnapshoot, ZeroRoot } from "../../../src/common/utils/types/bridgeSnapshoot";
-import { tokenid, TokenInfo } from "../../../src/common/utils/types/tokenInfo";
-import { PromiseActionResult } from "../../../src/common/utils/components/actionResult";
-import { BridgeTx } from "../../../src/common/utils/types/bridgeTx";
+import { tokenid, TokenInfo } from "../../common/utils/types/tokenInfo";
+import { BridgeTx } from "../../common/utils/types/bridgeTx";
+import { BridgeSnapshoot, ZeroRoot } from "../../common/utils/types/bridgeSnapshoot";
+import BridgeStorage from "../../common/bridgeStorage";
 import { keccak256 } from "thor-devkit";
-import BridgeStorage from "../../../src/common/bridgeStorage";
+import "mocha";
 
 export class E2VBridgeVerifierTestCase{
     public web3!:Web3;
     public wallet = new SimpleWallet();
     public configPath = path.join(__dirname,'../test.config.json');
-    private libPath = path.join(__dirname,"../../../src/SmartContracts/contracts/");
+    public contractdir = path.join(__dirname,"../../common/contracts/");
     public config:any = {};
 
     public wEthContract!:Contract;
@@ -42,20 +41,20 @@ export class E2VBridgeVerifierTestCase{
 
             try {
 
-                const wEthFilePath = path.join(__dirname, "../../../src/SmartContracts/contracts/ethereum/Contract_wEth.sol");
+                const wEthFilePath = path.join(this.contractdir, "/ethereum/Contract_wEth.sol");
                 const wEthAbi = JSON.parse(compileContract(wEthFilePath,"WETH9","abi"));
                 this.wEthContract = new this.web3.eth.Contract(wEthAbi,this.config.ethereum.contracts.wEth.length == 42 ? this.config.ethereum.contracts.wEth : undefined);
 
-                const wVetFilePath = path.join(__dirname, "../../../src/SmartContracts/contracts/common/Contract_BridgeWrappedToken.sol");
-                const wVetAbi = JSON.parse(compileContract(wVetFilePath,"BridgeWrappedToken","abi",[this.libPath]));
+                const wVetFilePath = path.join(this.contractdir, "/common/Contract_BridgeWrappedToken.sol");
+                const wVetAbi = JSON.parse(compileContract(wVetFilePath,"BridgeWrappedToken","abi",[this.contractdir]));
                 this.wVetContract = new this.web3.eth.Contract(wVetAbi,this.config.ethereum.contracts.wVet.length == 42 ? this.config.ethereum.contracts.wVet : undefined);
 
-                const bridgeFilePath = path.join(__dirname, "../../../src/SmartContracts/contracts/common/Contract_BridgeHead.sol");
-                const bridgeAbi = JSON.parse(compileContract(bridgeFilePath,"BridgeHead","abi",[this.libPath]));
+                const bridgeFilePath = path.join(this.contractdir, "/common/Contract_BridgeHead.sol");
+                const bridgeAbi = JSON.parse(compileContract(bridgeFilePath,"BridgeHead","abi",[this.contractdir]));
                 this.bridgeContract = new this.web3.eth.Contract(bridgeAbi,this.config.ethereum.contracts.e2vBridge.length == 42 ? this.config.ethereum.contracts.e2vBridge : undefined);
 
-                const verifierFilePath = path.join(__dirname, "../../../src/SmartContracts/contracts/ethereum/Contract_E2VBridgeVerifier.sol");
-                const verifierAbi = JSON.parse(compileContract(verifierFilePath,"E2VBridgeVerifier","abi",[this.libPath]));
+                const verifierFilePath = path.join(this.contractdir, "/ethereum/Contract_E2VBridgeVerifier.sol");
+                const verifierAbi = JSON.parse(compileContract(verifierFilePath,"E2VBridgeVerifier","abi",[this.contractdir]));
                 this.bridgeVerifierContract = new this.web3.eth.Contract(verifierAbi,this.config.ethereum.contracts.e2vBridgeVerifier.length == 42 ? this.config.ethereum.contracts.e2vBridgeVerifier : undefined);
 
                 this.gasPrice = await this.web3.eth.getGasPrice();
@@ -72,8 +71,8 @@ export class E2VBridgeVerifierTestCase{
             this.bridgeVerifierContract.options.address = this.config.ethereum.contracts.e2vBridgeVerifier;
         } else {
             try {
-                const verifierFilePath = path.join(__dirname, "../../../src/SmartContracts/contracts/ethereum/Contract_E2VBridgeVerifier.sol");
-                const bytecode = compileContract(verifierFilePath,"E2VBridgeVerifier","bytecode",[this.libPath]);
+                const verifierFilePath = path.join(this.contractdir, "/ethereum/Contract_E2VBridgeVerifier.sol");
+                const bytecode = compileContract(verifierFilePath,"E2VBridgeVerifier","bytecode",[this.contractdir]);
                 const deployMethod = this.bridgeVerifierContract.deploy({data:bytecode});
                 const gas = await deployMethod.estimateGas({
                     from:this.wallet.list[0].address
@@ -293,8 +292,8 @@ export class E2VBridgeVerifierTestCase{
         let startBlockNum = 0;
         let txhash = "";
         try {
-            const bridgeFilePath = path.join(__dirname, "../../../src/SmartContracts/contracts/common/Contract_BridgeHead.sol");
-            const bytecode = compileContract(bridgeFilePath,"BridgeHead","bytecode",[this.libPath]);
+            const bridgeFilePath = path.join(this.contractdir, "/common/Contract_BridgeHead.sol");
+            const bytecode = compileContract(bridgeFilePath,"BridgeHead","bytecode",[this.contractdir]);
 
             const gas1 = await this.bridgeContract.deploy({data:bytecode,arguments:[this.config.ethereum.chainName.toString(),
                 this.config.ethereum.chainId.toString()]}).estimateGas({
@@ -344,7 +343,7 @@ export class E2VBridgeVerifierTestCase{
     }
 
     private async deployWETH():Promise<string>{
-        const bridgeFilePath = path.join(__dirname, "../../../src/SmartContracts/contracts/ethereum/Contract_wEth.sol");
+        const bridgeFilePath = path.join(this.contractdir, "/ethereum/Contract_wEth.sol");
         const bytecode = compileContract(bridgeFilePath,"WETH9","bytecode"); 
         let txhash = "";
 
@@ -386,8 +385,8 @@ export class E2VBridgeVerifierTestCase{
     }
 
     private async deployWVET(addr:string):Promise<string>{
-        const bridgeFilePath = path.join(__dirname, "../../../src/SmartContracts/contracts/common/Contract_BridgeWrappedToken.sol");
-        const bytecode = compileContract(bridgeFilePath,"BridgeWrappedToken","bytecode",[this.libPath]);
+        const bridgeFilePath = path.join(this.contractdir, "/common/Contract_BridgeWrappedToken.sol");
+        const bytecode = compileContract(bridgeFilePath,"BridgeWrappedToken","bytecode",[this.contractdir]);
         let txhash = "";
 
         try {

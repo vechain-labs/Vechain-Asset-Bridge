@@ -5,9 +5,9 @@ import assert from 'assert';
 import Web3 from "web3";
 import { Framework } from "@vechain/connex-framework";
 import * as Devkit from 'thor-devkit';
-import { BridgeSyncTask } from "../../src/ValidationNode/bridgeSyncTask";
-import { tokenid, TokenInfo } from "../../src/common/utils/types/tokenInfo";
 import { createConnection } from "typeorm";
+import { BridgeSyncTask } from "../../validationnode/src/bridgeSyncTask";
+import { tokenid, TokenInfo } from "../common/utils/types/tokenInfo";
 
 export class BridgeSyncTaskTestCase{
     public configPath = path.join(__dirname, './test.config.json');

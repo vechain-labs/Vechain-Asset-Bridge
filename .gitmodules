@@ -7,3 +7,6 @@
 [submodule "validationnode/src/common"]
 	path = validationnode/src/common
 	url = git@github.com:mongelly/Vechain-Asset-Bridge-Common.git
+[submodule "test/common"]
+	path = test/common
+	url = git@github.com:mongelly/Vechain-Asset-Bridge-Common.git

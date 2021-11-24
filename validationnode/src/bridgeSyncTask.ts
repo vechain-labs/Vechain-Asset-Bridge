@@ -1,20 +1,20 @@
 import { Framework } from "@vechain/connex-framework";
 import Web3 from "web3";
-import BridgeStorage from "../common/bridgeStorage";
-import { EthereumBridgeHead } from "../common/ethereumBridgeHead";
-import LedgerModel from "../common/model/ledgerModel";
-import { SnapshootModel } from "../common/model/snapshootModel";
-import BridgeTxModel from "../common/model/bridgeTxModel";
-import { ActionData, ActionResult, PromiseActionResult } from "../common/utils/components/actionResult";
-import { BridgeLedger } from "../common/utils/types/bridgeLedger";
-import { BridgeSnapshoot, ZeroRoot } from "../common/utils/types/bridgeSnapshoot";
-import { BridgeTx } from "../common/utils/types/bridgeTx";
-import { TokenInfo } from "../common/utils/types/tokenInfo";
-import { VeChainBridgeHead } from "../common/vechainBridgeHead";
-import TokenInfoModel from "../common/model/tokenInfoModel";
-import { Verifier } from "../common/utils/types/verifier";
-import VerifierModel from "../common/model/verifierModel";
-import { VeChainBridgeVerifiter } from "../common/vechainBridgeVerifier";
+import BridgeStorage from "./common/bridgeStorage";
+import { EthereumBridgeHead } from "./common/ethereumBridgeHead";
+import BridgeTxModel from "./common/model/bridgeTxModel";
+import LedgerModel from "./common/model/ledgerModel";
+import { SnapshootModel } from "./common/model/snapshootModel";
+import TokenInfoModel from "./common/model/tokenInfoModel";
+import VerifierModel from "./common/model/verifierModel";
+import { ActionData, ActionResult, PromiseActionResult } from "./common/utils/components/actionResult";
+import { BridgeLedger } from "./common/utils/types/bridgeLedger";
+import { BridgeSnapshoot, ZeroRoot } from "./common/utils/types/bridgeSnapshoot";
+import { BridgeTx } from "./common/utils/types/bridgeTx";
+import { TokenInfo } from "./common/utils/types/tokenInfo";
+import { Verifier } from "./common/utils/types/verifier";
+import { VeChainBridgeHead } from "./common/vechainBridgeHead";
+import { VeChainBridgeVerifiter } from "./common/vechainBridgeVerifier";
 
 export class BridgeSyncTask{
     constructor(env:any){
@@ -48,6 +48,16 @@ export class BridgeSyncTask{
             const syncVerifiersResult = await this.syncVerifiers();
             if(syncVerifiersResult.error){
                 result.copyBase(syncVerifiersResult);
+                return result;
+            }
+
+            const bridgeStatusResult = await this.checkBridgeStatus();
+            if(bridgeStatusResult.error){
+                result.copyBase(bridgeStatusResult);
+                return result;
+            }
+            if(bridgeStatusResult.data == true){
+                console.info(`Watting for bridge unlock.`);
                 return result;
             }
 
@@ -234,7 +244,7 @@ export class BridgeSyncTask{
             result.copyBase(vechainResult);
             return result;
         }
-        if(vechainResult.data){
+        if(vechainResult.data == true){
             return vechainResult;
         }
 
@@ -472,7 +482,7 @@ export class BridgeSyncTask{
             this.env.verifiersSync = {endBlock:this.config.vechain.startBlockNum};
         }
 
-        if(this.verifiers.length == 0){
+        if(this.env.verifiers.length == 0){
             const localVerifiersResult = await (new VerifierModel()).getVerifiers();
             if(localVerifiersResult.error){
                 result.error = localVerifiersResult.error;

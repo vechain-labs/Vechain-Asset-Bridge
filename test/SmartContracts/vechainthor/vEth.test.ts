@@ -14,6 +14,7 @@ export class VETHTestCase {
     public wallet = new SimpleWallet();
 
     public configPath = path.join(__dirname,'../test.config.json');
+    public contractdir = path.join(__dirname,"../../common/contracts/");
     public config:any = {};
     public contract!:Contract;
 
@@ -31,9 +32,8 @@ export class VETHTestCase {
                 this.driver = await Driver.connect(new SimpleNet(this.config.vechain.nodeHost as string),this.wallet);
                 this.connex = new Framework(this.driver);
                 
-                const libPath = path.join(__dirname,"../../../src/SmartContracts/contracts/");
-                const filePath = path.join(__dirname,"../../../src/SmartContracts/contracts/common/Contract_BridgeWrappedToken.sol");
-                const abi = JSON.parse(compileContract(filePath, 'BridgeWrappedToken', 'abi',[libPath]));
+                const filePath = path.join(this.contractdir,"/common/Contract_BridgeWrappedToken.sol");
+                const abi = JSON.parse(compileContract(filePath, 'BridgeWrappedToken', 'abi',[this.contractdir]));
                 const bin = compileContract(filePath, 'BridgeWrappedToken', 'bytecode');
 
                 this.contract = new Contract({ abi: abi, connex: this.connex, bytecode: bin });
