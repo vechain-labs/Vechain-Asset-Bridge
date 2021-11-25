@@ -65,7 +65,7 @@ export class SnapshootScanner{
                 return result;
             }
             if(bridgeStatusResult.data == true){
-                console.info(`Watting for bridge unlock.`);
+                console.info(`Waitting for bridge unlock.`);
                 return result;
             }
 

@@ -160,9 +160,9 @@ export default class BridgeController extends BaseMiddleware{
             return result;
         }
 
-        const getWattingClaimListResult = await this.getWattingClaimList(chainName,chainId,account,sn,tokenInfos,10,0);
-        if(getWattingClaimListResult.error){
-            result.error = getWattingClaimListResult.error;
+        const getWaittingClaimListResult = await this.getWaittingClaimList(chainName,chainId,account,sn,tokenInfos,10,0);
+        if(getWaittingClaimListResult.error){
+            result.error = getWaittingClaimListResult.error;
             return result;
         }
 
@@ -172,7 +172,7 @@ export default class BridgeController extends BaseMiddleware{
             return result;
         }
 
-        result.data = result.data.concat(getInProcessListResult.data!,getWattingClaimListResult.data!,getClaimedListResult.data!);
+        result.data = result.data.concat(getInProcessListResult.data!,getWaittingClaimListResult.data!,getClaimedListResult.data!);
         return result;
     }
 
@@ -338,13 +338,13 @@ export default class BridgeController extends BaseMiddleware{
         return result;
     }
 
-    private async getWattingClaimList(chainName:string,chainId:string,account:string,sn:BridgeSnapshoot,tokenInfos:Array<TokenInfo>,limit?:number,offset:number = 0):Promise<ActionData<ClaimMeta[]>>{
+    private async getWaittingClaimList(chainName:string,chainId:string,account:string,sn:BridgeSnapshoot,tokenInfos:Array<TokenInfo>,limit?:number,offset:number = 0):Promise<ActionData<ClaimMeta[]>>{
         let result = new ActionData<ClaimMeta[]>();
         result.data = new Array<ClaimMeta>();
 
         const targetTokenList = tokenInfos.filter(token => {return token.chainName == chainName && token.chainId == chainId});
         for(const token of targetTokenList){
-            const getWattingClaimByTokenResult = await this.getWattingClaimByToken(token,account,sn,tokenInfos,limit,offset);
+            const getWattingClaimByTokenResult = await this.getWaittingClaimByToken(token,account,sn,tokenInfos,limit,offset);
             if(getWattingClaimByTokenResult.error){
                 result.error = getWattingClaimByTokenResult.error;
                 return result;
@@ -358,7 +358,7 @@ export default class BridgeController extends BaseMiddleware{
         return result;
     }
 
-    private async getWattingClaimByToken(token:TokenInfo,account:string,sn:BridgeSnapshoot,tokenInfos:Array<TokenInfo>,limit?:number,offset:number = 0):Promise<ActionData<ClaimMeta>>{
+    private async getWaittingClaimByToken(token:TokenInfo,account:string,sn:BridgeSnapshoot,tokenInfos:Array<TokenInfo>,limit?:number,offset:number = 0):Promise<ActionData<ClaimMeta>>{
         let result = new ActionData<ClaimMeta>();
         const bridgeTxModel = new BridgeTxModel(this.environment);
         const snapshootModel = new SnapshootModel(this.environment);
