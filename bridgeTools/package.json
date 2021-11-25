@@ -50,6 +50,7 @@
     "@oclif/plugin-help": "^3.2.2",
     "@vechain/connex-driver": "^2.0.5",
     "@vechain/connex-framework": "^2.0.5",
+    "myvetools": "^1.5.0",
     "readline-sync": "^1.4.10",
     "thor-devkit": "^2.0.1",
     "tslib": "^1.14.1",

@@ -39,10 +39,12 @@ export class VETHTestCase {
                 this.contract = new Contract({ abi: abi, connex: this.connex, bytecode: bin });
 
             } catch (error) {
-                assert.fail('Failed to connect: ' + error);
+                //assert.fail('Failed to connect: ' + error);
+                console.error('Failed to connect: ' + error);
             }
         } else {
-            assert.fail(`can't load ${this.configPath}`);
+            //assert.fail(`can't load ${this.configPath}`);
+            console.error(`can't load ${this.configPath}`);
         }
     }
 
@@ -50,7 +52,7 @@ export class VETHTestCase {
         if(this.config.vechain.contracts.vEth != undefined && this.config.vechain.contracts.vEth.length == 42){
             this.contract.at(this.config.vechain.contracts.vEth);
         } else {
-            const clause1 = this.contract.deploy(0,"VeChain Wrapped ETH","VETH",18,this.wallet.list[1].address);
+            const clause1 = this.contract.deploy(0,"VeChain Wrapped ETH","VETH",18,this.config.vechain.contracts.v2eBridge);
 
             let txRep: Connex.Vendor.TxResponse = await this.connex.vendor.sign('tx', [clause1])
             .signer(this.wallet.list[0].address)
@@ -59,15 +61,20 @@ export class VETHTestCase {
             let receipt = await getReceipt(this.connex, 5, txRep.txid);
 
             if(receipt == null || receipt.reverted){
-                assert.fail("vETH deploy faild");
+                //assert.fail("vETH deploy faild");
+                console.error("vETH deploy faild");
             }
 
             this.contract.at(receipt.outputs[0]!.contractAddress!);
+
+            console.log(`vETH contract: ${receipt.outputs[0]!.contractAddress!}`);
+
             this.config.vechain.contracts.vEth = receipt.outputs[0].contractAddress;
             try {
                 fs.writeFileSync(this.configPath,JSON.stringify(this.config));
             } catch (error) {
-                assert.fail("save config faild");
+                //assert.fail("save config faild");
+                console.error("save config faild");
             }
         }
         return this.config.vechain.contracts.vEth;
@@ -230,31 +237,40 @@ export class VETHTestCase {
     }
 }
 
-describe('vETH Contract test',() =>{
+async function main() {
     let testcase:VETHTestCase = new VETHTestCase();
+    await testcase.init();
+    await testcase.deploy();
+}
 
-    before( async () => {
-        await testcase.init();
-    });
+main();
 
-    it("deploy vETH contract", async() => {
-        await testcase.deploy();
-    });
 
-    it("vEth mint", async() => {
-        await testcase.mint();
-    });
+// describe('vETH Contract test',() =>{
+//     let testcase:VETHTestCase = new VETHTestCase();
 
-    it("vEth burn", async() => {
-        await testcase.burn();
-    });
+//     before( async () => {
+//         await testcase.init();
+//     });
 
-    it("vEth transfer", async() => {
-        await testcase.transfer();
-    });
+//     it("deploy vETH contract", async() => {
+//         await testcase.deploy();
+//     });
 
-    it("vEth approve", async() => {
-        await testcase.approve();
-    });
-})
+//     // it("vEth mint", async() => {
+//     //     await testcase.mint();
+//     // });
+
+//     // it("vEth burn", async() => {
+//     //     await testcase.burn();
+//     // });
+
+//     // it("vEth transfer", async() => {
+//     //     await testcase.transfer();
+//     // });
+
+//     // it("vEth approve", async() => {
+//     //     await testcase.approve();
+//     // });
+// })
 

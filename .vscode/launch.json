@@ -106,6 +106,21 @@
             "protocol": "inspector",
             "sourceMaps": true,
             "trace": true
+        },
+        {
+            "type": "node",
+            "request": "launch",
+            "name": "Launch Bridge Tools",
+            "skipFiles": [
+                "<node_internals>/**"
+            ],
+            "program": "${workspaceFolder}/bridgeTools/bin/run",
+            "args": [
+                "deploy",
+                "--keystore",
+                "/Users/moglu/Developer/VeChainDevelop/Vechain-Asset-Bridge/bridgeTools/config/keystore.json"
+            ],
+            "console": "integratedTerminal"
         }
     ]
 }

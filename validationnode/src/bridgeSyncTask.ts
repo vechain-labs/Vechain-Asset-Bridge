@@ -489,6 +489,8 @@ export class BridgeSyncTask{
                 return result;
             }
             this.verifiers = localVerifiersResult.data!;
+        } else {
+            this.verifiers = this.env.verifiers;
         }
 
         if(this.verifiers.length > 0){
