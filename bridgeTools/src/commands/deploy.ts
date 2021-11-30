@@ -226,7 +226,9 @@ enter operation:
 
     try {
       console.info(`deploy vechain bridge contract.`);
-      const clause1 = bridgeContract.deploy(0,environment.config.vechain.chainName,environment.config.vechain.chainId);
+      const chainName = String(environment.config.vechain.chainName);
+      const chainId = String(environment.config.vechain.chainId);
+      const clause1 = bridgeContract.deploy(0,chainName,chainId);
       const txrep1 = await (environment.connex as Framework).vendor.sign('tx',[clause1])
         .signer((environment.wallet as SimpleWallet).list[0].address)
         .request();
@@ -294,8 +296,8 @@ VeChain verifier: ${v2eBridgeVerifier.address} blockNum:${receipt2.meta.blockNum
 
   private async deployEthereumBridge():Promise<any>{
     const bridgeFilePath = path.join(environment.contractdir, "/common/Contract_BridgeHead.sol");
-    const bridgeAbi = JSON.parse(compileContract(bridgeFilePath, 'BridgeHead', 'abi'));
-    const bridgeBin = compileContract(bridgeFilePath, 'BridgeHead', 'bytecode');
+    const bridgeAbi = JSON.parse(compileContract(bridgeFilePath, 'BridgeHead', 'abi',[environment.contractdir]));
+    const bridgeBin = compileContract(bridgeFilePath, 'BridgeHead', 'bytecode',[environment.contractdir]);
     let bridgeContract = new (environment.web3 as Web3).eth.Contract(bridgeAbi);
 
     const eBridgeVerifierPath = path.join(environment.contractdir, "/ethereum/Contract_E2VBridgeVerifier.sol");
@@ -309,11 +311,12 @@ VeChain verifier: ${v2eBridgeVerifier.address} blockNum:${receipt2.meta.blockNum
 
       console.log(`deploy ethereum bridge contract.`);
       let bridgeMeta:any = {};
-      const deployBridge = bridgeContract.deploy({data:bridgeBin,arguments:[environment.config.ethereum.chainName,environment.config.ethereum.chainId]});
-      const deployBridgeGas = await deployBridge.estimateGas({
+      const chainName = String(environment.config.ethereum.chainName);
+      const chainId = String(environment.config.ethereum.chainId);
+      const deployBridgeGas = await bridgeContract.deploy({data:bridgeBin,arguments:[chainName,chainId]}).estimateGas({
         from:(environment.wallet as SimpleWallet).list[0].address
       });
-      bridgeContract = await deployBridge.send({
+      bridgeContract = await bridgeContract.deploy({data:bridgeBin,arguments:[chainName,chainId]}).send({
         from:(environment.wallet as SimpleWallet).list[0].address,
         gas:deployBridgeGas,
         gasPrice:gasPrice

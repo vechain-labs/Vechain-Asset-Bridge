@@ -811,7 +811,7 @@ export class BridgePackTask{
         let result = new ActionData<BridgeSnapshoot>();
 
         const localDataResult = await this.loadLocalSnapshoot(parent);
-        if(localDataResult.error){
+        if(localDataResult.error){ 
             result.error = localDataResult.error;
             return result;
         }

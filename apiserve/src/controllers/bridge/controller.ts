@@ -206,6 +206,14 @@ export default class BridgeController extends BaseMiddleware{
         }
 
         const tokenInfos = tokenInfosResult.data!;
+        const wethIndex = (tokenInfos as Array<TokenInfo>).findIndex(token => {return token.chainId == chainId && token.chainName == chainName && token.symbol.toLowerCase() == "weth"});
+        const vvetIndex = (tokenInfos as Array<TokenInfo>).findIndex(token => {return token.chainId == chainId && token.chainName == chainName && token.symbol.toLowerCase() == "vvet"});
+        if(wethIndex != -1){
+            tokenInfos[wethIndex].nativeCoin = true;
+        }
+        if(vvetIndex != -1){
+            tokenInfos[vvetIndex].nativeCoin = true;
+        }
 
         const getLastSnapshootResult = await (new SnapshootModel(this.environment)).getLastSnapshoot();
         if(getLastSnapshootResult.error){
