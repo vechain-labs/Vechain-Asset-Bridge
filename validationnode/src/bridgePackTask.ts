@@ -36,6 +36,8 @@ export class BridgePackTask{
         this.status = STATUS.Entry;
     }
 
+    private static loopsleep = 5 * 1000;
+
     public async taskJob():Promise<ActionResult>{
         let result = new ActionResult();
 
@@ -45,7 +47,6 @@ export class BridgePackTask{
 
         let prevStatus = this.status;
         while(beginTs + this.processTimeout >= (new Date()).getTime()){
-            await sleep(5 * 1000);
             let processResult = new ActionResult();
 
             if(prevStatus != this.status){
@@ -62,6 +63,9 @@ export class BridgePackTask{
                 case STATUS.MerklerootMatch:
                     processResult = await this.merklerootMatchHandle();
                     break;
+                case STATUS.MerklerootNomatch:
+                    processResult = await this.merklerootNoMatchHandle();
+                    break;
                 case STATUS.VeChainNoLocked:
                     processResult = await this.vechainNoLockedHandle();
                     break;
@@ -77,8 +81,8 @@ export class BridgePackTask{
                 case STATUS.EthereumNoLocked:
                     processResult = await this.ethereumNoLockedHandle();
                     break;
-                case STATUS.EthereumLockTxSent:
-                    processResult = await this.ethereumLockTxSentHandle();
+                case STATUS.EthereumLockTxSend:
+                    processResult = await this.ethereumLockTxSendHandle();
                     break;
                 case STATUS.EthereumLockedUnconfirmed:
                     processResult = await this.ethereumLockedUnconfirmedHandle();
@@ -121,6 +125,10 @@ export class BridgePackTask{
                     console.info(`Bridge update merkelroot process end at ${(new Date()).getTime()} (${(new Date()).toString()})`);
                     this.status = STATUS.Entry;
                     return result;
+            }
+            if(processResult.error){
+                console.warn(`process error: ${processResult.error}`);
+                await sleep(BridgePackTask.loopsleep);
             }
         }
 
@@ -170,6 +178,7 @@ export class BridgePackTask{
             }
             if(confirmTxResult.data == "pendding"){
                 this.status = STATUS.VeChainLockedUnconfirmed;
+                await sleep(BridgePackTask.loopsleep);
                 return result;
             } else if(confirmTxResult.data == "confirmed"){
                 this.status = STATUS.VeChainLockedConfirmed;
@@ -188,6 +197,7 @@ export class BridgePackTask{
             }
             if(confirmTxResult.data == "pendding"){
                 this.status = STATUS.EthereumLockedUnconfirmed;
+                await sleep(BridgePackTask.loopsleep);
                 return result;
             } else if(confirmTxResult.data == "confirmed"){
                 this.status = STATUS.EthereumLockedConfirmed;
@@ -234,6 +244,37 @@ export class BridgePackTask{
         return result;
     }
 
+    private async merklerootNoMatchHandle():Promise<ActionResult>{
+        let result = new ActionResult();
+        const vbLockedResultPromise = this.vechainBridge.getLockedStatus();
+        const ebLockedResultPromise = this.ethereumBridge.getLockedStatus();
+        const vbMerkleRootPromise = this.vechainBridge.getMerkleRoot();
+        const ebMerkleRootPromise = this.ethereumBridge.getMerkleRoot();
+
+        const promiseResult = await PromiseActionResult.PromiseActionResult(Promise.all([vbLockedResultPromise,ebLockedResultPromise,vbMerkleRootPromise,ebMerkleRootPromise]));
+        if(promiseResult.error){
+            result.error = promiseResult.error;
+            return result;
+        }
+        const vbStatus = (promiseResult.data!.succeed[0] as ActionData<boolean>).data!
+        const ebStatus = (promiseResult.data!.succeed[1] as ActionData<boolean>).data!
+        const vbMerkleroot = (promiseResult.data!.succeed[2] as ActionData<string>).data!
+        const ebMerkleroot = (promiseResult.data!.succeed[3] as ActionData<string>).data!
+
+        if(vbStatus == false && ebStatus == true){
+            const parentMerklerootResult = await this.snapshootModel.getSnapshootByRoot(vbMerkleroot);
+            if(parentMerklerootResult.error){
+                result.error = parentMerklerootResult.error;
+                return result;
+            }
+            if(parentMerklerootResult.data!.parentMerkleRoot == ebMerkleroot){
+                this.status = STATUS.VeChainUpdateUnconfirmed;
+            }
+        }
+
+        return result;
+    }
+
     private async vechainNoLockedHandle():Promise<ActionResult>{
         let result = new ActionData();
         const retryLimit = 5;
@@ -242,7 +283,6 @@ export class BridgePackTask{
         try {
             while(retryCount <= retryLimit){
                 await sleep(10 * 1000);
-
                 const getMerkleRootRsult = await this.vechainBridge.getMerkleRoot();
                 if(getMerkleRootRsult.error){
                     console.warn(`Get vechain Merkleroot error: ${getMerkleRootRsult.error}`);
@@ -325,6 +365,7 @@ export class BridgePackTask{
             }
             if(confirmTxResult.data == "pendding"){
                 this.status = STATUS.VeChainLockedUnconfirmed;
+                await sleep(BridgePackTask.loopsleep);
                 return result;
             } else if(confirmTxResult.data == "confirmed"){
                 this.status = STATUS.VeChainLockedConfirmed;
@@ -401,6 +442,7 @@ export class BridgePackTask{
 
             if(getEthereumProposalResult.data && getEthereumProposalResult.data.executed){
                 this.status = STATUS.EthereumLockedUnconfirmed;
+                await sleep(BridgePackTask.loopsleep);
                 return result;
             }
 
@@ -424,7 +466,7 @@ export class BridgePackTask{
                         console.warn(`Lock ethereum bridge error: ${lockBridgeResult.error}`);
                         continue;
                     } else {
-                        this.status = STATUS.EthereumLockTxSent;
+                        this.status = STATUS.EthereumLockTxSend;
                         return result;
                     }
                 } catch (error) {
@@ -437,7 +479,7 @@ export class BridgePackTask{
         return result;
     }
 
-    private async ethereumLockTxSentHandle():Promise<ActionResult>{
+    private async ethereumLockTxSendHandle():Promise<ActionResult>{
         let result = new ActionResult();
         this.status = STATUS.EthereumNoLocked;
 
@@ -467,6 +509,7 @@ export class BridgePackTask{
             }
             if(confirmTxResult.data == "pendding"){
                 this.status = STATUS.EthereumLockedUnconfirmed;
+                await sleep(BridgePackTask.loopsleep);
                 return result;
             } else if(confirmTxResult.data == "confirmed"){
                 this.status = STATUS.EthereumLockedConfirmed;
@@ -609,7 +652,8 @@ export class BridgePackTask{
                 this.status = STATUS.VeChainUpdateConfirmed;
                 let index = sn.chains.findIndex(chain => {return chain.chainName == this.config.vechain.chainName && chain.chainId == this.config.vechain.chainId;});
                 if(index == -1){
-                    const chainInfo = vbLastSnapshootResult.data!.sn.chains.find(chain => {return chain.chainName == this.config.vechain.chainName && chain.chainId == this.config.vechain.chainId;})!;
+                    let chainInfo = vbLastSnapshootResult.data!.sn.chains.find(chain => {return chain.chainName == this.config.vechain.chainName && chain.chainId == this.config.vechain.chainId;})!;
+                    chainInfo.endBlockNum = vbLastSnapshootResult.data!.blocknum;
                     sn.chains.push(chainInfo);
                 } else {
                     sn.chains[index].endBlockNum = vbLastSnapshootResult.data!.blocknum;
@@ -646,13 +690,13 @@ export class BridgePackTask{
                 }
                 if(confirmTxResult.data == "pendding"){
                     this.status = STATUS.EthereumUpdateUnconfirmed;
+                    await sleep(BridgePackTask.loopsleep);
                     return result;
                 } else if(confirmTxResult.data == "confirmed"){
                     this.status = STATUS.EthereumUpdateConfirmed;
                     return result;
                 }
             }
-
         } catch (error) {
             result.error = error;
         }
@@ -747,12 +791,14 @@ export class BridgePackTask{
             if(confirmTxResult.data == "pendding"){
                 this.status = STATUS.EthereumUpdateUnconfirmed;
                 result.data = ebLastSnapshootResult.data!.sn;
+                await sleep(BridgePackTask.loopsleep);
                 return result;
             } else if(confirmTxResult.data == "confirmed"){
                 this.status = STATUS.EthereumUpdateConfirmed;
                 let index = sn.chains.findIndex(chain => {return chain.chainName == this.config.ethereum.chainName && chain.chainId == this.config.ethereum.chainId;});
                 if(index == -1){
-                    const chainInfo = ebLastSnapshootResult.data!.sn.chains.find(chain => {return chain.chainName == this.config.ethereum.chainName && chain.chainId == this.config.ethereum.chainId;})!;
+                    let chainInfo = ebLastSnapshootResult.data!.sn.chains.find(chain => {return chain.chainName == this.config.ethereum.chainName && chain.chainId == this.config.ethereum.chainId;})!;
+                    chainInfo.endBlockNum = ebLastSnapshootResult.data!.blocknum;
                     sn.chains.push(chainInfo);
                 } else {
                     sn.chains[index].endBlockNum = ebLastSnapshootResult.data!.blocknum;
@@ -962,7 +1008,7 @@ enum STATUS {
     VeChainLockTxSend = "VeChainLockTxSend",
     VeChainLockedConfirmed = "VeChainLockedConfirmed",
     EthereumNoLocked = "EthereumNoLocked",
-    EthereumLockTxSent = "EthereumLockTxSent",
+    EthereumLockTxSend = "EthereumLockTxSend",
     EthereumLockedUnconfirmed = "EthereumLockedUnconfirmed",
     EthereumLockedConfirmed = "EthereumLockedConfirmed",
     BridgeLocked = "BridgeLocked",
