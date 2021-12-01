@@ -218,11 +218,7 @@ enter operation:
     const vBridgeVerifierAbi = JSON.parse(compileContract(vBridgeVerifierPath, 'V2EBridgeVerifier', 'abi',[environment.contractdir]));
     const vBridgeVerifierBin = compileContract(vBridgeVerifierPath, 'V2EBridgeVerifier', 'bytecode',[environment.contractdir]);
     const v2eBridgeVerifier = new Contract({ abi: vBridgeVerifierAbi, connex: environment.connex, bytecode: vBridgeVerifierBin});
-    
-    environment.contract.vechain = {
-      bridgeContract:bridgeContract,
-      bridgeVerifier:v2eBridgeVerifier
-    }
+
 
     try {
       console.info(`deploy vechain bridge contract.`);
@@ -275,12 +271,14 @@ enter operation:
       }
 
       environment.config.vechain.contracts = {
-        v2eBridge:bridgeContract.address,
+        v2eBridge:bridgeContract.address, 
         v2eBridgeVerifier:v2eBridgeVerifier.address
       };
 
-      // (environment.contract.vechain.bridgeContract as Contract).at(bridgeContract.address);
-      // (environment.contract.vechain.verifierContract as Contract).at(v2eBridgeVerifier.address);
+      environment.contract.vechain = {
+        bridgeContract:bridgeContract,
+        bridgeVerifier:v2eBridgeVerifier
+      };
 
       console.info(`
 Deploy Finish.
@@ -376,8 +374,10 @@ VeChain verifier: ${v2eBridgeVerifier.address} blockNum:${receipt2.meta.blockNum
         e2vBridgeVerifier:e2vBridgeVerifier.options.address
       };
 
-      // (environment.contract.ethereum.bridgeContract as Contract).at(bridgeContract.options.address);
-      // (environment.contract.ethereum.verifierContract as Contract).at(e2vBridgeVerifier.options.address);
+      environment.contract.ethereum = {
+        bridgeContract:bridgeContract,
+        verifierContract:e2vBridgeVerifier
+      };
 
       console.info(`
 Deploy finish.
@@ -466,9 +466,9 @@ Ethereum verifier: ${e2vBridgeVerifier.options.address} blockNum:${verifierMeta.
           beginNum:0
         }
       } else {
-        const name = ReadlineSync.question(`Token name:`).trim();
-        const symbol = ReadlineSync.question(`Token symbol:`).trim().toLocaleUpperCase();
-        const decimals = Number(ReadlineSync.question(`Token decimals`).trim());
+        const name = ReadlineSync.question(`Token name: `).trim();
+        const symbol = ReadlineSync.question(`Token symbol: `).trim().toLocaleUpperCase();
+        const decimals = Number(ReadlineSync.question(`Token decimals: `).trim());
         originTokenInfo = {
           address:"",
           name:name,
@@ -481,12 +481,12 @@ Ethereum verifier: ${e2vBridgeVerifier.options.address} blockNum:${verifierMeta.
       const nativecoin = ReadlineSync.question(`Is VeChain Native Coin?(y/n)`).trim().toLowerCase();
       originTokenInfo.nativeCoin = nativecoin == "y" ? true : false;
       
-      let wname = ReadlineSync.question(`Ethereum Bridge Wrapped Token name (default ${"Bridge Wrapped" + originTokenInfo.name}):`).trim();
+      let wname = ReadlineSync.question(`Ethereum Bridge Wrapped Token name (default ${"Bridge Wrapped " + originTokenInfo.name}):`).trim();
       let wsymbol = ReadlineSync.question(`Ethereum Bridge Wrapped Token name (default ${"W" + originTokenInfo.symbol.substring(1)}):`).trim();
 
       bridgeWrappedTokenInfo = {
         address:"",
-        name:wname.length > 0 ? wname : "Bridge Wrapped" + originTokenInfo.name,
+        name:wname.length > 0 ? wname : "Bridge Wrapped " + originTokenInfo.name,
         symbol:wsymbol.length > 0 ? wsymbol : "W" + originTokenInfo.symbol.substring(1),
         decimals:originTokenInfo.decimals,
         beginNum:0
@@ -503,15 +503,15 @@ Ethereum verifier: ${e2vBridgeVerifier.options.address} blockNum:${verifierMeta.
       if(originTokenInfo.address == ""){
         console.log(`Deploy ${originTokenInfo.symbol} token to VeChain.`);
         const clause1 = fTokenContract.deploy(0,originTokenInfo.name,originTokenInfo.symbol,originTokenInfo.decimals);
-        const txrep = await (environment.connex as Framework).vendor.sign('tx',[clause1])
+        const txrep1 = await (environment.connex as Framework).vendor.sign('tx',[clause1])
           .signer((environment.wallet as SimpleWallet).list[0].address)
           .request();
-        const receipt = await getReceipt(environment.connex, 5, txrep.txid);
-        if(receipt == null || receipt.reverted || receipt.outputs[0].contractAddress == undefined){
-          console.error(`deploy token faild.`);
+        const receipt1 = await getReceipt(environment.connex, 5, txrep1.txid);
+        if(receipt1 == null || receipt1.reverted || receipt1.outputs[0].contractAddress == undefined){
+          console.error(`Deploy token faild.`);
           return;
         }
-        originTokenInfo.address = receipt.outputs[0].contractAddress;
+        originTokenInfo.address = receipt1.outputs[0].contractAddress;
       }
 
       console.log(`Deploy ${bridgeWrappedTokenInfo.symbol} token to Ethereum`);
@@ -527,11 +527,189 @@ Ethereum verifier: ${e2vBridgeVerifier.options.address} blockNum:${verifierMeta.
       bridgeWrappedTokenInfo.address = wTokenContract.options.address;
 
       console.log(`Register ${originTokenInfo.symbol} to VeChain bridge`);
+      const vbestBlock = (environment.connex as Framework).thor.status.head.number;
+      let clause2;
+      if(originTokenInfo.nativeCoin == true){
+        clause2 = (environment.contract.vechain.bridgeContract as Contract).send("setWrappedNativeCoin",0,originTokenInfo.address,bridgeWrappedTokenInfo.address,vbestBlock,0);
+      } else {
+        clause2 = (environment.contract.vechain.bridgeContract as Contract).send("setToken",0,originTokenInfo.address,1,bridgeWrappedTokenInfo.address,vbestBlock,0);
+      }      
+      const txrep2 = await (environment.connex as Framework).vendor.sign('tx',[clause2])
+          .signer((environment.wallet as SimpleWallet).list[0].address)
+          .request();
+      const receipt2 = await getReceipt(environment.connex, 5, txrep2.txid);
+      if(receipt2 == null || receipt2.reverted){
+        console.error(`Register token faild. txid: ${txrep2.txid}`);
+        return;
+      }
+
+      console.log(`Register ${bridgeWrappedTokenInfo.symbol} token to Ethereum`);
+      const eBestBlock = (await (environment.web3 as Web3).eth.getBlock('latest')).number;
+
+      let env = environment;
+
+      const setMethod = (environment.contract.ethereum.bridgeContract as EthContract).methods.setToken(bridgeWrappedTokenInfo.address,2,originTokenInfo.address,eBestBlock,0);
+      const setGas = await setMethod.estimateGas({
+        from:(environment.wallet as SimpleWallet).list[0].address
+      });
+      wTokenContract = await setMethod.send({
+        from:(environment.wallet as SimpleWallet).list[0].address,
+        gas:setGas,
+        gasPrice:gasPrice
+      });
+
+      console.log(`${originTokenInfo.symbol} address: ${originTokenInfo.address}`);
+      console.log(`${bridgeWrappedTokenInfo.symbol} address: ${bridgeWrappedTokenInfo.address}`);
     } catch (error) {
-      console.error(`deploy & register token faild.`);
+      console.error(`deploy & register token faild, error: ${error}`);
     }
   }
 
   private async deployTokenToEthereum():Promise<any>{
+    const fTokenFilePath = path.join(environment.contractdir, "/common/Contract_FungibleToken.sol");
+    const fTokenAbi = JSON.parse(compileContract(fTokenFilePath, 'FungibleToken', 'abi'));
+    const fTokenBin = compileContract(fTokenFilePath, 'FungibleToken', 'bytecode');
+    let fTokenContract = new (environment.web3 as Web3).eth.Contract(fTokenAbi);
+
+    const wTokenFilePath = path.join(environment.contractdir, "/common/Contract_BridgeWrappedToken.sol");
+    const wTokenAbi = JSON.parse(compileContract(wTokenFilePath, 'BridgeWrappedToken', 'abi'));
+    const wTokenBin = compileContract(wTokenFilePath, 'BridgeWrappedToken', 'bytecode');
+    let wTokenContract = new Contract({ abi: wTokenAbi, connex: environment.connex, bytecode: wTokenBin });
+
+    console.log(`Deploy and register token to Ethereum`);
+    const value = ReadlineSync.question(`Enter exists token address (empty will deploy new contract):`).trim();
+    let originTokenInfo = {
+      address:"",
+      name:"",
+      symbol:"",
+      decimals:0,
+      nativeCoin:false,
+      beginNum:0
+    }
+    let bridgeWrappedTokenInfo = {
+      address:"",
+      name:"",
+      symbol:"",
+      decimals:0,
+      beginNum:0
+    }
+
+    try {
+      const gasPrice = await (environment.web3 as Web3).eth.getGasPrice();
+      if(value.length == 42){
+        fTokenContract.options.address = value;
+        const name = String((await fTokenContract.methods.name().call()));
+        const symbol = String((await fTokenContract.methods.symbol().call())).toLocaleUpperCase();
+        const decimals = Number((await fTokenContract.methods.decimals().call()));
+        originTokenInfo = {
+          address:value,
+          name:name,
+          symbol:symbol,
+          decimals:decimals,
+          nativeCoin:false,
+          beginNum:0
+        }
+      } else {
+        const name = ReadlineSync.question(`Token name: `).trim();
+        const symbol = ReadlineSync.question(`Token symbol: `).trim().toLocaleUpperCase();
+        const decimals = Number(ReadlineSync.question(`Token decimals: `).trim());
+        originTokenInfo = {
+          address:"",
+          name:name,
+          symbol:symbol,
+          decimals:decimals,
+          nativeCoin:false,
+          beginNum:0
+        }
+      }
+      const nativecoin = ReadlineSync.question(`Is VeChain Native Coin?(y/n)`).trim().toLowerCase();
+      originTokenInfo.nativeCoin = nativecoin == "y" ? true : false;
+
+      let wname = ReadlineSync.question(`VeChain Bridge Wrapped Token name (default ${"Bridge Wrapped " + originTokenInfo.name}):`).trim();
+      let wsymbol = ReadlineSync.question(`VeChain Bridge Wrapped Token name (default ${"V" + originTokenInfo.symbol.substring(1)}):`).trim();
+
+      bridgeWrappedTokenInfo = {
+        address:"",
+        name:wname.length > 0 ? wname : "Bridge Wrapped " + originTokenInfo.name,
+        symbol:wsymbol.length > 0 ? wsymbol : "V" + originTokenInfo.symbol.substring(1),
+        decimals:originTokenInfo.decimals,
+        beginNum:0
+      }
+
+      console.log(`Origin Token address:${originTokenInfo.address} name:${originTokenInfo.name} symbol:${originTokenInfo.symbol} decimals:${originTokenInfo.decimals} NativeCoin:${originTokenInfo.nativeCoin}`);
+      console.log(`Bridge Wrapped address:${bridgeWrappedTokenInfo.address} name:${bridgeWrappedTokenInfo.name} symbol:${bridgeWrappedTokenInfo.symbol} decimals:${bridgeWrappedTokenInfo.decimals}`);
+
+      const next = ReadlineSync.question(`Continue to deploy & register token (y/n)`).trim().toLocaleLowerCase();
+      if(next == "n"){
+        console.info(`Quit deploy`);
+        return;
+      }
+
+      if(originTokenInfo.address == ""){
+        console.log(`Deploy ${originTokenInfo.symbol} token to Ethereum.`);
+        const gas1 = await fTokenContract.deploy({data:fTokenBin,arguments:[originTokenInfo.name,originTokenInfo.symbol,originTokenInfo.decimals]})
+          .estimateGas({
+            from:(environment.wallet as SimpleWallet).list[0].address
+        });
+        fTokenContract = await fTokenContract.deploy({data:fTokenBin,arguments:[originTokenInfo.name,originTokenInfo.symbol,originTokenInfo.decimals]})
+          .send({
+            from:(environment.wallet as SimpleWallet).list[0].address,
+            gas:gas1,
+            gasPrice:gasPrice
+        }).on("receipt",function(receipt){
+          originTokenInfo.address = receipt.contractAddress!;
+        });
+      }
+      console.log(`Deploy ${bridgeWrappedTokenInfo.symbol} token to VeChain`);
+      const clause1 = wTokenContract.deploy(0,bridgeWrappedTokenInfo.name,bridgeWrappedTokenInfo.symbol,bridgeWrappedTokenInfo.decimals,environment.config.vechain.contracts.v2eBridge);
+      const txrep1 = await (environment.connex as Framework).vendor.sign('tx',[clause1])
+        .signer((environment.wallet as SimpleWallet).list[0].address)
+        .request();
+      const receipt1 = await getReceipt(environment.connex,5,txrep1.txid);
+      if(receipt1 == null || receipt1.reverted || receipt1.outputs[0].contractAddress == undefined){
+        console.error(`Deploy token faild. txid: ${txrep1.txid}`);
+        return;
+      }
+      bridgeWrappedTokenInfo.address = receipt1.outputs[0].contractAddress;
+
+      console.log(`Register ${originTokenInfo.symbol} to Ethereum bridge`);
+      const eBestBlock = (await (environment.web3 as Web3).eth.getBlock('latest')).number;
+      let setMethod;
+      let setGas;
+      if(originTokenInfo.nativeCoin == true){
+        setMethod = (environment.contract.ethereum.bridgeContract as EthContract).methods.setWrappedNativeCoin(originTokenInfo.address,bridgeWrappedTokenInfo.address,eBestBlock,0);
+        setGas = await setMethod.estimateGas({
+          from:(environment.wallet as SimpleWallet).list[0].address
+        });
+      } else {
+        setMethod = (environment.contract.ethereum.bridgeContract as EthContract).methods.setToken(originTokenInfo.address,1,bridgeWrappedTokenInfo.address,eBestBlock,0);
+        setGas = await setMethod.estimateGas({
+          from:(environment.wallet as SimpleWallet).list[0].address
+        });
+      }
+
+      wTokenContract = await setMethod.send({
+        from:(environment.wallet as SimpleWallet).list[0].address,
+        gas:setGas,
+        gasPrice:gasPrice
+      });
+
+      console.log(`Register ${bridgeWrappedTokenInfo.symbol} to VeChain bridge`);
+      const vbestBlock = (environment.connex as Framework).thor.status.head.number;
+      const clause2 = (environment.contract.vechain.bridgeContract as Contract).send("setToken",0,bridgeWrappedTokenInfo.address,2,originTokenInfo.address,vbestBlock,0);
+      const txrep2 = await (environment.connex as Framework).vendor.sign('tx',[clause2])
+      .signer((environment.wallet as SimpleWallet).list[0].address)
+      .request();
+      const receipt2 = await getReceipt(environment.connex,5,txrep2.txid);
+      if(receipt2 == null || receipt2.reverted){
+        console.error(`Register token faild. txid: ${txrep2.txid}`);
+        return;
+      }
+
+      console.log(`${originTokenInfo.symbol} address: ${originTokenInfo.address}`);
+      console.log(`${bridgeWrappedTokenInfo.symbol} address: ${bridgeWrappedTokenInfo.address}`);
+    } catch (error) {
+      console.error(`Deploy & register token faild, error: ${error}`);
+    }
   }
 }

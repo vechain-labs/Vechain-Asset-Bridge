@@ -742,6 +742,7 @@ export class BridgePackTask{
                      const updateResult = await this.ethereumVerifier.updateBridgeMerkleRoot(parent,proposal.hash,proposal.signatures);
                      console.info(`send ethereum update merkleroot, txid:${updateResult.data!}`);
                      if(updateResult.error){
+                         console.warn(`send ethereum update merkleroot error: ${updateResult.error}`);
                          continue;
                      } else {
                          this.status = STATUS.EthereumUpdateTxSend;
