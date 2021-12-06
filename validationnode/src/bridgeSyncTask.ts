@@ -56,10 +56,10 @@ export class BridgeSyncTask{
                 result.copyBase(bridgeStatusResult);
                 return result;
             }
-            if(bridgeStatusResult.data == true){
-                console.info(`Watting for bridge unlock.`);
-                return result;
-            }
+            // if(bridgeStatusResult.data == true){
+            //     console.info(`Watting for bridge unlock.`);
+            //     return result;
+            // }
 
             console.info(`Get LastSyncedSnapshoot`);
             const lastSyncSnRsult = await this.getLastSyncedSnapshoot();
@@ -517,11 +517,10 @@ export class BridgeSyncTask{
             }
             this.env.verifiersSync.endBlock = this.connex.thor.status.head.number;
         }
-
-        this.env.verifiers = this.verifiers;
         if(needUpdate){
             await (new VerifierModel()).save(this.verifiers);
         }
+        this.env.verifiers = this.verifiers.filter(v => {return v.status == true;});
         return result;
     }
  

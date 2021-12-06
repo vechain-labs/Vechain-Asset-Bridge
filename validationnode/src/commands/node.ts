@@ -1,6 +1,5 @@
 import {Command, flags} from '@oclif/command'
 import * as fileIO from 'fs';
-import Environment from '../environment';
 const path = require('path');
 import * as ReadlineSync from 'readline-sync';
 import { Keystore } from 'thor-devkit';
@@ -11,8 +10,8 @@ import { createConnection } from 'typeorm';
 import { Framework } from '@vechain/connex-framework';
 import Web3 from 'web3';
 import BridgeValidationNode from '../vnode';
+import Environment from '../environment';
 
-export var environment:any = {};environment.configPath = path.join(__dirname,"../../config");
 export default class Node extends Command {
   static description = ''
 
@@ -26,6 +25,8 @@ export default class Node extends Command {
 
   static args = []
 
+  private environment:any = {};
+
   async run() {
     const {args, flags} = this.parse(Node);
 
@@ -35,17 +36,18 @@ export default class Node extends Command {
 
     console.info(`
     ******************** VeChain Asset Bridge Info ********************
-    | VeChain ChainId Info    | ${environment.config.vechain.chainName} ${environment.config.vechain.chainId} ${environment.config.vechain.nodeHost}
-    | Ethereum ChainId Info   | ${environment.config.ethereum.chainName}  ${environment.config.ethereum.chainId}  ${environment.config.ethereum.nodeHost}
-    | Node Key Address        | ${(environment.wallet as SimpleWallet).list[0].address}
-    | Database                | ${environment.database}
+    | VeChain ChainId Info    | ${this.environment.config.vechain.chainName} ${this.environment.config.vechain.chainId} ${this.environment.config.vechain.nodeHost}
+    | Ethereum ChainId Info   | ${this.environment.config.ethereum.chainName}  ${this.environment.config.ethereum.chainId}  ${this.environment.config.ethereum.nodeHost}
+    | Node Key Address        | ${(this.environment.wallet as SimpleWallet).list[0].address}
+    | Database                | ${this.environment.database}
     *******************************************************************
     `);
 
-    const node = new BridgeValidationNode(environment);
+    const node = new BridgeValidationNode(this.environment);
   }
 
   private async intiEnv(flags:any):Promise<any> {
+    this.environment.configPath = path.join(__dirname,"../../config");
     if(flags.config){
       var configPath = flags.config.trim();
       configPath = configPath.substring(0,1) == '\'' ? configPath.substring(1) : configPath;
@@ -54,9 +56,9 @@ export default class Node extends Command {
         try {
           const config = require(configPath);
           config.serveName = "VeChain Asset Bridge Node";
-          environment = new Environment(config);
-          environment.tokenInfo = new Array<TokenInfo>();
-          environment.verifiers = new Array<Verifier>();
+          this.environment = new Environment(config);
+          this.environment.tokenInfo = new Array<TokenInfo>();
+          this.environment.verifiers = new Array<Verifier>();
         } catch (error) {
           console.error(`Read config faild.`);
           process.exit();
@@ -73,29 +75,26 @@ export default class Node extends Command {
 
   private async initDatabase(flags:any):Promise<any> {
     const databaseName = "vechain_asset_bridge_node.sqlite3";
-    environment.datadir = "";
+    this.environment.datadir = "";
     if(flags.datadir){
       try {
         var fdir = flags.datadir.trim();
         fdir = fdir.substring(0,1) == '\'' ? fdir.substring(1) : fdir;
         fdir = fdir.substring(fdir.length - 1,1) == '\'' ? fdir.substring(0,fdir.length - 1) : fdir;
         fileIO.mkdirSync(fdir,{recursive:true});
-        environment.datadir = fdir;
-        environment.database = path.join(fdir,databaseName);
+        this.environment.datadir = fdir;
+        this.environment.database = path.join(fdir,databaseName);
         const connectionOptions:any = {
           type:"sqlite",
-          database:environment.database,
-          enableWAL:environment.config.dbconfig && environment.config.dbconfig.enableWAL != undefined ? environment.config.dbconfig.enableWAL : true,
+          database:this.environment.database,
+          enableWAL:this.environment.config.dbconfig && this.environment.config.dbconfig.enableWAL != undefined ? this.environment.config.dbconfig.enableWAL : true,
           entities:[path.join(__dirname,"../common/model/entities/**.entity{.ts,.js}")]
         }
-
-        console.debug(`connectionOptions:` + JSON.stringify(connectionOptions));
-
         const connection = await createConnection(connectionOptions);
         if(connection.isConnected){
           await connection.synchronize();
         } else {
-          console.error(`DataBase [db:${environment.database}] initialize faild`);
+          console.error(`DataBase [db:${this.environment.database}] initialize faild`);
           process.exit();
         }
       } catch (error) {
@@ -110,8 +109,8 @@ export default class Node extends Command {
   }
 
   private async initBlockChain(flags:any):Promise<any> {
-    environment.configPath = path.join(environment.datadir,"/.config/");
-    environment.contractdir = path.join(__dirname,"../common/contracts/");
+    this.environment.configPath = path.join(this.environment.datadir,"/.config/");
+    this.environment.contractdir = path.join(__dirname,"../common/contracts/");
     let prikey = "";
 
     if(flags.keystore){
@@ -119,8 +118,8 @@ export default class Node extends Command {
       keystorePath = keystorePath.substring(0,1) == '\'' ? keystorePath.substring(1) : keystorePath;
       keystorePath = keystorePath.substring(keystorePath.length - 1,1) == '\'' ? keystorePath.substring(0,keystorePath.length - 1) : keystorePath;
       prikey = await this.loadNodeKey(keystorePath);
-    } else if (fileIO.existsSync(path.join(environment.configPath,"node.key"))){
-      const key = fileIO.readFileSync(path.join(environment.configPath,"node.key")).toString('utf8').toLocaleLowerCase();
+    } else if (fileIO.existsSync(path.join(this.environment.configPath,"node.key"))){
+      const key = fileIO.readFileSync(path.join(this.environment.configPath,"node.key")).toString('utf8').toLocaleLowerCase();
       if(key.length == 64 && /^[0-9a-f]*$/i.test(prikey)){
         prikey = key;
       } else {
@@ -144,10 +143,10 @@ export default class Node extends Command {
         const pwd = ReadlineSync.question(`keystore password:`, { hideEchoBack: true });
         const prikey = await Keystore.decrypt((ks as any), pwd); 
 
-        if(!fileIO.existsSync(environment.configPath)){
-          fileIO.mkdirSync(environment.configPath);
+        if(!fileIO.existsSync(this.environment.configPath)){
+          fileIO.mkdirSync(this.environment.configPath);
         }
-        fileIO.writeFileSync(path.join(environment.configPath,"node.key"),prikey.toString('hex'));
+        fileIO.writeFileSync(path.join(this.environment.configPath,"node.key"),prikey.toString('hex'));
         return prikey.toString('hex');
       } catch (error) {
         console.error(`Keystore or password invalid. ${error}`);
@@ -163,9 +162,9 @@ export default class Node extends Command {
     try {
       const wallet  = new SimpleWallet();
       wallet.import(priKey);
-      environment.wallet = wallet;
-      const driver = await Driver.connect(new SimpleNet(environment.config.vechain.nodeHost as string),environment.wallet);
-      environment.connex = new Framework(driver);
+      this.environment.wallet = wallet;
+      const driver = await Driver.connect(new SimpleNet(this.environment.config.vechain.nodeHost as string),this.environment.wallet);
+      this.environment.connex = new Framework(driver);
     } catch (error) {
       console.error(`Init connex faild`);
       process.exit(); 
@@ -174,9 +173,9 @@ export default class Node extends Command {
 
   private async initWeb3(priKey:string):Promise<any>{
     try {
-      const web3 = new Web3(new Web3.providers.HttpProvider(environment.config.ethereum.nodeHost));
+      const web3 = new Web3(new Web3.providers.HttpProvider(this.environment.config.ethereum.nodeHost));
       web3.eth.accounts.wallet.add(priKey);
-      environment.web3 = web3;
+      this.environment.web3 = web3;
     } catch (error) {
       console.error(`Init web3 faild`);
       process.exit(); 

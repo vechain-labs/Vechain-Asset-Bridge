@@ -3,11 +3,11 @@ import { createConnection } from "typeorm";
 import { Driver, SimpleNet, SimpleWallet } from "@vechain/connex-driver";
 import { Framework } from "@vechain/connex-framework";
 import Web3 from "web3";
-import { environment } from ".";
 import IActiveSupportServices from "./utils/iActiveSupportService";
 import { ActionResult } from "./common/utils/components/actionResult";
 import { TokenInfo } from "./common/utils/types/tokenInfo";
 import path from "path";
+import { environment } from ".";
 
 export default class ActiveSupportServices implements IActiveSupportServices{
     public async activieSupportServices():Promise<ActionResult> {
