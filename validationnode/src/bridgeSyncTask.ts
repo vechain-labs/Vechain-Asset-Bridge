@@ -51,16 +51,6 @@ export class BridgeSyncTask{
                 return result;
             }
 
-            const bridgeStatusResult = await this.checkBridgeStatus();
-            if(bridgeStatusResult.error){
-                result.copyBase(bridgeStatusResult);
-                return result;
-            }
-            // if(bridgeStatusResult.data == true){
-            //     console.info(`Watting for bridge unlock.`);
-            //     return result;
-            // }
-
             console.info(`Get LastSyncedSnapshoot`);
             const lastSyncSnRsult = await this.getLastSyncedSnapshoot();
             if(lastSyncSnRsult.error){

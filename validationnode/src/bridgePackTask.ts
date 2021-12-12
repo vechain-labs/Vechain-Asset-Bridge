@@ -115,7 +115,6 @@ export class BridgePackTask {
     public async taskJob():Promise<ActionResult>{
         let result = new ActionResult();
         const beginTs = (new Date()).getTime();
-        let newSnapshoot:BridgeSnapshoot;
         console.info(`Bridge lock process begin at ${beginTs} (${(new Date()).toString()})`);
 
         this._status = STATUS.Entry;
@@ -175,12 +174,11 @@ export class BridgePackTask {
                     break;
                 case STATUS.Finished:
                     console.info(`Bridge update merkelroot process end at ${(new Date()).getTime()} (${(new Date()).toString()})`);
-                    this.status = STATUS.Entry;
                     return result;
-                    break;
                 case STATUS.UnmanageableStatus:
-                    console.error(`the bridge unmanageableStatus, bridgeStatus: ${this.bridgeStatusCache} txCache: ${this.txCache}`);
-                    break;
+                    console.error(`the bridge unmanageableStatus, bridgeStatus: ${JSON.stringify(this.bridgeStatusCache)} txCache: ${JSON.stringify(this.txCache)}`);
+                    await sleep(this.loopsleep);
+                    return result;
             }
             if(processResult.error){
                 console.warn(`process error: ${processResult.error}`);
@@ -241,10 +239,10 @@ export class BridgePackTask {
             this.status = STATUS.VeChainNeedToUpdate;
             return result;
         }else if(this.bridgeStatusCache.vechainLock == false && this.bridgeStatusCache.ethereumLock == true 
-            && this.bridgeStatusCache.ethereumMerkleroot == this.bridgeStatusCache.parentMerkleroot){
+            && this.bridgeStatusCache.ethereumMerkleroot == this.bridgeStatusCache.newSnapshoot.parentMerkleRoot){
             this.status = STATUS.EthereumNeedToUpdate;
             return result;
-        }else if(this.bridgeStatusCache.vechainLock == false && this.bridgeStatusCache.ethereumLock == false && !this.bridgeStatusCache.merklerootMatch() 
+        }else if(this.bridgeStatusCache.vechainLock == false && this.bridgeStatusCache.ethereumLock == false && this.bridgeStatusCache.merklerootMatch() 
             && this.bridgeStatusCache.vechainMerkleroot != this.bridgeStatusCache.parentMerkleroot){
             this.status = STATUS.Finished;
             return result;
@@ -368,55 +366,41 @@ export class BridgePackTask {
 
     private async veChainNeedToLockHandle():Promise<ActionResult>{
         let result = new ActionResult();
-        const retryLimit = 5;
-        let retryCount = 0;
 
         try {
-            while(retryCount <= retryLimit){
-                if(retryCount != 0){
-                    await sleep(5 * 1000);
-                }
-                retryCount++;
-                const getMerkleRootRsult = await this.vechainBridge.getMerkleRoot();
-                if(getMerkleRootRsult.error){
-                    console.warn(`Get vechain Merkleroot error: ${getMerkleRootRsult.error}`);
-                    continue;
-                }
-                const root = getMerkleRootRsult.data!;
-                const getLockBridgeProposalResult = await this.vechainVerifier.getLockBridgeProposal(root);
-                if(getLockBridgeProposalResult.error){
-                    console.warn(`Get vechain LockBridgeProposal error: ${getLockBridgeProposalResult.error}`);
-                    continue;
-                }
-                const msgHash = this.signEncodePacked("lockBridge",root);
-                const sign = "0x" + (await this.wallet.list[0].sign(msgHash)).toString('hex');
-
-                if(getLockBridgeProposalResult.data != undefined){
-                    const proposal = getLockBridgeProposalResult.data;
-                    if(proposal.executed){
-                        this.status = STATUS.VeChainLockedUnconfirmed;
-                        return result;
-                    }
-                    if(proposal.signatures != undefined && proposal.signatures.findIndex(item => {return item.toLocaleLowerCase() == sign.toLocaleLowerCase();}) != -1){
-                        this.status = STATUS.VeChainLockTxSent;
-                        return result;
-                    }
-                }
-                const lockBridgeResult =  await this.vechainVerifier.lockBridge(root);
-                if(lockBridgeResult.error){
-                    console.warn(`Lock vechain Bridge error: ${lockBridgeResult.error}`);
-                    continue;
-                }
-                const receipt = await getReceipt(this.connex,this.config.vechain.expiration,lockBridgeResult.data!);
-                console.info(`Send vechain lock bridge, txid:${lockBridgeResult.data!}`);
-                if(receipt.reverted == true){
-                    console.warn(`Send vechain lock bridge transaction reverted, txid:${lockBridgeResult.data!}`)
-                    continue;
-                }
-                this.status = STATUS.VeChainLockTxSent;
-                return result;
+            const getMerkleRootRsult = await this.vechainBridge.getMerkleRoot();
+            if(getMerkleRootRsult.error){
+                console.warn(`Get vechain Merkleroot error: ${getMerkleRootRsult.error}`);
             }
-            result.error = new Error(`Lock vechain bridge retry exceeded`);
+            const root = getMerkleRootRsult.data!;
+            const getLockBridgeProposalResult = await this.vechainVerifier.getLockBridgeProposal(root);
+            if(getLockBridgeProposalResult.error){
+                console.warn(`Get vechain LockBridgeProposal error: ${getLockBridgeProposalResult.error}`);
+            }
+            const msgHash = this.signEncodePacked("lockBridge",root);
+            const sign = "0x" + (await this.wallet.list[0].sign(msgHash)).toString('hex');
+
+            if(getLockBridgeProposalResult.data != undefined){
+                const proposal = getLockBridgeProposalResult.data;
+                if(proposal.executed){
+                    this.status = STATUS.VeChainLockedUnconfirmed;
+                    return result;
+                }
+                if(proposal.signatures != undefined && proposal.signatures.findIndex(item => {return item.toLocaleLowerCase() == sign.toLocaleLowerCase();}) != -1){
+                    this.status = STATUS.VeChainLockTxSent;
+                }
+            }
+            const lockBridgeResult =  await this.vechainVerifier.lockBridge(root);
+            if(lockBridgeResult.error){
+                console.warn(`Lock vechain Bridge error: ${lockBridgeResult.error}`);
+            }
+            const receipt = await getReceipt(this.connex,this.config.vechain.expiration,lockBridgeResult.data!);
+            console.info(`Send vechain lock bridge, txid:${lockBridgeResult.data!}`);
+            if(receipt.reverted == true){
+                console.warn(`Send vechain lock bridge transaction reverted, txid:${lockBridgeResult.data!}`)
+            }
+            this.status = STATUS.VeChainLockTxSent;
+            return result;
         } catch (error) {
             result.error = new Error(`VeChainNeedToLockHandle error: ${error}`);;
         }
@@ -447,6 +431,12 @@ export class BridgePackTask {
             result.error = getLastLockedResult.error;
             return result;
         }
+
+        if(getLastLockedResult.data == undefined){
+            await sleep(this.loopsleep);
+            return result;
+        }
+
         const txid = getLastLockedResult.data!.txid;
         const blockNum = getLastLockedResult.data!.blocknum;
         const confirmTxResult = await this.vechainVerifier.checkTxStatus(txid,blockNum);
@@ -479,19 +469,12 @@ export class BridgePackTask {
 
     private async ethereumNeedToLockHandle():Promise<ActionResult>{
         let result = new ActionResult();
-        const retryLimit = 5;
-        let retryCount = 0;
-        let beginBlock = (await this.web3.eth.getBlock('latest')).number
+        let beginBlock = (await this.web3.eth.getBlock('latest')).number;
 
-        while(retryCount <= retryLimit){
-            if(retryCount != 0){
-                await sleep(5 * 1000);
-            }
-            retryCount++;
+        try {
             const getMerkleRootRsult = await this.ethereumBridge.getMerkleRoot();
             if(getMerkleRootRsult.error){
                 console.warn(`Get ethereum Merkleroot error:${getMerkleRootRsult.error}`);
-                continue;
             }
             const root = getMerkleRootRsult.data!;
 
@@ -499,7 +482,6 @@ export class BridgePackTask {
             if(getEthereumProposalResult.error){
                 result.error = getEthereumProposalResult.error;
                 console.warn(`Get ethereum Proposal error:${getEthereumProposalResult.error}`);
-                continue;
             }
 
             if(getEthereumProposalResult.data && getEthereumProposalResult.data.executed){
@@ -510,7 +492,6 @@ export class BridgePackTask {
             const getVeChainProposalResult = await this.vechainVerifier.getLockBridgeProposal(root);
             if(getVeChainProposalResult.error){
                 console.warn(`ethereumNeedToLockHandle error: ${getVeChainProposalResult.error}`);
-                continue;
             }
 
             if(getVeChainProposalResult.data == undefined || getVeChainProposalResult.data.executed == false){
@@ -522,24 +503,19 @@ export class BridgePackTask {
 
             let needSendLockTx = await this.needSendEthereumTx(root,beginBlock);
             if(needSendLockTx){
-                try {
-                    const lockBridgeResult = await this.ethereumVerifier.lockBridge(root,proposal.signatures);
-                    if(lockBridgeResult.error){
-                        console.warn(`Lock ethereum bridge error: ${lockBridgeResult.error}`);
-                        continue;
-                    } else {
-                        this.status = STATUS.EthereumLockTxSent;
-                        return result;
-                    }
-                } catch (error) {
-                    result.error = error;
+                const lockBridgeResult = await this.ethereumVerifier.lockBridge(root,proposal.signatures);
+                if(lockBridgeResult.error){
+                    console.warn(`Lock ethereum bridge error: ${lockBridgeResult.error}`);
                 }
+                this.status = STATUS.EthereumLockTxSent;
+                return result;
             } else {
                 this.status = STATUS.EthereumLockTxSent;
                 return result;
-            }
+            }   
+        } catch (error) {
+            result.error = new Error(`EthereumNeedToLockHandle error: ${error}`);;
         }
-        result.error = new Error(`lock ethereum bridge retry exceeded`);
         return result;
     }
 
@@ -567,6 +543,10 @@ export class BridgePackTask {
             const ebLastLockedResult = await this.ethereumBridge.getLastLocked();
             if(ebLastLockedResult.error){
                 result.error = ebLastLockedResult.error;
+                return result;
+            }
+
+            if(ebLastLockedResult.data == undefined){
                 return result;
             }
 
@@ -606,64 +586,51 @@ export class BridgePackTask {
 
     private async veChainNeedToUpdateHandle():Promise<ActionResult>{
         let result = new ActionResult();
-        const retryLimit = 5;
-        let retryCount = 0;
         let newSnapshoot:BridgeSnapshoot|undefined;
 
         try {
-            while(retryCount <= retryLimit){
-                if(retryCount != 0){
-                    await sleep(5 * 1000);
+            if(newSnapshoot == undefined){
+                const getMerkleRootRsult = await this.vechainBridge.getMerkleRoot();
+                if(getMerkleRootRsult.error){
+                    console.warn(`Get vechain merkleroot error:${getMerkleRootRsult.error}`);
                 }
-                retryCount++;
-
-                if(newSnapshoot == undefined){
-                    const getMerkleRootRsult = await this.vechainBridge.getMerkleRoot();
-                    if(getMerkleRootRsult.error){
-                        console.warn(`Get vechain merkleroot error:${getMerkleRootRsult.error}`);
-                        continue;
-                    }
-                    const root = getMerkleRootRsult.data!;
-                    const buildNewSnResult = await this.buildNewSnapshoot(root);
-                    if(buildNewSnResult.error){
-                        console.warn(`Build new snapshoot error:${buildNewSnResult.error}`);
-                        continue;
-                    }
-                    newSnapshoot = buildNewSnResult.data!;
+                const root = getMerkleRootRsult.data!;
+                const buildNewSnResult = await this.buildNewSnapshoot(root);
+                if(buildNewSnResult.error){
+                    console.warn(`Build new snapshoot error:${buildNewSnResult.error}`);
                 }
-                const getUpdateProposalResult = await this.vechainVerifier.getMerkleRootProposals(newSnapshoot.merkleRoot);
-                if(getUpdateProposalResult.error){
-                    continue;
-                }
-                const msgHash = this.signEncodePacked("updateBridgeMerkleRoot",newSnapshoot.merkleRoot);
-                const sign = "0x" + (await this.wallet.list[0].sign(msgHash)).toString('hex');
-                if(getUpdateProposalResult.data != undefined){
-                    const proposal = getUpdateProposalResult.data;
-                    if(proposal.executed){
-                        this.status = STATUS.VeChainUpdateUnconfirmed;
-                        return result;
-                    }
-                    if(proposal.signatures != undefined && proposal.signatures.findIndex(item => {return item.toLocaleLowerCase() == sign.toLocaleLowerCase();}) != -1){
-                        this.status = STATUS.VeChainUpdateTxSent;
-                        return result;
-                    }
-                }
-                const updateRootResult = await this.vechainVerifier.updateBridgeMerkleRoot(newSnapshoot.parentMerkleRoot,newSnapshoot.merkleRoot);
-                if(updateRootResult.error){
-                    console.warn(`vechain bridge update error: ${updateRootResult.error}`);
-                    continue;
-                }
-                const receipt = await getReceipt(this.connex,this.config.vechain.expiration,updateRootResult.data!);
-                console.info(`send vechain update merkleroot, txid:${updateRootResult.data!}`);
-                if(receipt.reverted == true){
-                    console.warn(`send update merkleroot transaction reverted, txid:${updateRootResult.data!}`)
-                    continue;
-                }
-                this.bridgeStatusCache.newSnapshoot = newSnapshoot;
-                this.status = STATUS.VeChainUpdateTxSent;
+                newSnapshoot = buildNewSnResult.data!;
             }
+            const getUpdateProposalResult = await this.vechainVerifier.getMerkleRootProposals(newSnapshoot.merkleRoot);
+            if(getUpdateProposalResult.error){
+                console.warn(`Get vechain merkleroot proposals error: ${getUpdateProposalResult.error}`);
+            }
+            const msgHash = this.signEncodePacked("updateBridgeMerkleRoot",newSnapshoot.merkleRoot);
+            const sign = "0x" + (await this.wallet.list[0].sign(msgHash)).toString('hex');
+            if(getUpdateProposalResult.data != undefined){
+                const proposal = getUpdateProposalResult.data;
+                if(proposal.executed){
+                    this.status = STATUS.VeChainUpdateUnconfirmed;
+                    return result;
+                }
+                if(proposal.signatures != undefined && proposal.signatures.findIndex(item => {return item.toLocaleLowerCase() == sign.toLocaleLowerCase();}) != -1){
+                    this.status = STATUS.VeChainUpdateTxSent;
+                    return result;
+                }
+            }
+            const updateRootResult = await this.vechainVerifier.updateBridgeMerkleRoot(newSnapshoot.parentMerkleRoot,newSnapshoot.merkleRoot);
+            if(updateRootResult.error){
+                console.warn(`vechain bridge update error: ${updateRootResult.error}`);
+            }
+            const receipt = await getReceipt(this.connex,this.config.vechain.expiration,updateRootResult.data!);
+            console.info(`send vechain update merkleroot, txid:${updateRootResult.data!}`);
+            if(receipt.reverted == true){
+                console.warn(`send update merkleroot transaction reverted, txid:${updateRootResult.data!}`);
+            }
+            this.bridgeStatusCache.newSnapshoot = newSnapshoot;
+            this.status = STATUS.VeChainUpdateTxSent;
         } catch (error) {
-            result.error = error;
+            result.error = new Error(`VeChainNeedToUpdateHandle error : ${error}`);
         }
         return result;
     }
@@ -680,6 +647,7 @@ export class BridgePackTask {
              this.status = STATUS.VeChainUpdateUnconfirmed;
         } else {
             this.status = STATUS.VeChainNeedToUpdate;
+            await sleep(this.loopsleep);
         }
 
         return result;
@@ -692,6 +660,10 @@ export class BridgePackTask {
             const vbLastSnapshootResult = await this.vechainBridge.getLastSnapshoot();
             if(vbLastSnapshootResult.error){
                 result.error = vbLastSnapshootResult.error;
+                return result;
+            }
+
+            if(vbLastSnapshootResult.data == undefined){
                 return result;
             }
 
@@ -743,16 +715,9 @@ export class BridgePackTask {
 
     private async ethereumNeedToUpdateHandle():Promise<ActionResult>{
         let result = new ActionResult();
-        const retryLimit = 5;
-        let retryCount = 0;
         let beginBlock = await this.web3.eth.getBlockNumber();
 
-        while(retryCount <= retryLimit){
-            if(retryCount != 0){
-                await sleep(5 * 1000);
-            }
-            retryCount++;
-
+        try {
             const getebProposalResult = await this.ethereumVerifier.getUpdateMerkleRootProposal(this.bridgeStatusCache.newSnapshoot!.merkleRoot);
             if(getebProposalResult.error){
                 result.error = getebProposalResult.error;
@@ -783,7 +748,6 @@ export class BridgePackTask {
                      console.info(`send ethereum update merkleroot, txid:${updateResult.data!}`);
                      if(updateResult.error){
                          console.warn(`send ethereum update merkleroot error: ${updateResult.error}`);
-                         continue;
                      } else {
                          this.status = STATUS.EthereumUpdateTxSent;
                          return result;
@@ -793,10 +757,10 @@ export class BridgePackTask {
                  }
              } else {
                  this.status = STATUS.EthereumUpdateTxSent;
-                 break;
              }
+        } catch (error) {
+            result.error = new Error(`lock ethereum bridge retry exceeded`);
         }
-        result.error = new Error(`lock ethereum bridge retry exceeded`);
         return result;
     }
 
@@ -810,6 +774,9 @@ export class BridgePackTask {
         }
         if(getMerkleRootResult.data! == this.bridgeStatusCache.newSnapshoot!.merkleRoot){
             this.status = STATUS.EthereumUpdateUnconfirmed;
+        } else {
+            this.status = STATUS.EthereumNeedToUpdate;
+            await sleep(this.loopsleep);
         }
 
         return result;
@@ -822,6 +789,10 @@ export class BridgePackTask {
             const ebLastSnapshootResult = await this.ethereumBridge.getLastSnapshoot();
             if(ebLastSnapshootResult.error){
                 result.error = ebLastSnapshootResult.error;
+                return result;
+            }
+
+            if(ebLastSnapshootResult.data == undefined){
                 return result;
             }
 
@@ -864,6 +835,7 @@ export class BridgePackTask {
 
     private async ethereumUpdateConfirmedHandle():Promise<ActionResult>{
         this.status = STATUS.Finished;
+        this.bridgeStatusCache.parentMerkleroot = this.bridgeStatusCache.newSnapshoot!.merkleRoot;
         return new ActionResult();
     }
 

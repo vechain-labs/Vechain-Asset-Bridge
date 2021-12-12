@@ -35,7 +35,7 @@ export default class BridgeValidationNode {
 
     private async packRule():Promise<boolean>{
         const bestBlock = await (this.env.connex as Framework).thor.block().get();
-        return bestBlock && bestBlock.number % 150 <= 5 ? true : false;
+        return bestBlock && bestBlock.number % 100 <= 5 ? true : false;
     }
 
     private env:any;
