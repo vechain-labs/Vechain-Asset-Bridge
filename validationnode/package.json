@@ -57,7 +57,7 @@
     "object-copy": "^1.0.0",
     "readline-sync": "^1.4.10",
     "sort-array": "^4.1.4",
-    "sqlite3": "^5.0.2",
+    "sqlite3": "^4.2.0",
     "tslib": "^1.14.1",
     "typeorm": "^0.2.41",
     "web3": "^1.6.1"
