@@ -1,15 +1,8 @@
-[submodule "apiserve/src/common"]
-	path = apiserve/src/common
-	url = git@github.com:mongelly/Vechain-Asset-Bridge-Common.git
-[submodule "apibackend/src/common"]
-	path = apibackend/src/common
-	url = git@github.com:mongelly/Vechain-Asset-Bridge-Common.git
 [submodule "validationnode/src/common"]
 	path = validationnode/src/common
 	url = git@github.com:mongelly/Vechain-Asset-Bridge-Common.git
-[submodule "test/common"]
-	path = test/common
-	url = git@github.com:mongelly/Vechain-Asset-Bridge-Common.git
+	branch = 2.0
 [submodule "bridgeTools/src/common"]
 	path = bridgeTools/src/common
 	url = git@github.com:mongelly/Vechain-Asset-Bridge-Common.git
+	branch = 2.0
