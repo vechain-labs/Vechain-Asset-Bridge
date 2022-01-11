@@ -10,13 +10,19 @@
             {
                 "indexed": true,
                 "internalType": "address",
-                "name": "_addr",
+                "name": "_prev",
+                "type": "address"
+            },
+            {
+                "indexed": true,
+                "internalType": "address",
+                "name": "_new",
                 "type": "address"
             }
         ],
         "name": "BridgeUpdate",
         "type": "event",
-        "signature": "0xbae6bfb41d5dd3ccf562bd03be1acbd3cb8453b581874f716d1b4042d7a72283"
+        "signature": "0x9525256a7aaad70771ca84df72d4255fcf8eadb510c7c71fc20a8222e10e7140"
     },
     {
         "anonymous": false,
@@ -38,41 +44,39 @@
             {
                 "indexed": true,
                 "internalType": "address",
-                "name": "_addr",
+                "name": "_prev",
+                "type": "address"
+            },
+            {
+                "indexed": true,
+                "internalType": "address",
+                "name": "_new",
                 "type": "address"
             }
         ],
         "name": "GovernanceUpdate",
         "type": "event",
-        "signature": "0x1cd048b45ea5203385ebe96168ec6a921aa265172a5571433980be648e6943c9"
+        "signature": "0xdccb90b244d54b3bb9e633ea2b02f93367526ac8a78357788764295d8949ee64"
     },
     {
         "anonymous": false,
         "inputs": [
             {
                 "indexed": true,
-                "internalType": "bytes32",
-                "name": "_value",
-                "type": "bytes32"
-            }
-        ],
-        "name": "LockBridge",
-        "type": "event",
-        "signature": "0x1325bca99982677a0330bda188c87b49684276196fa8353c2629e721838314c8"
-    },
-    {
-        "anonymous": false,
-        "inputs": [
+                "internalType": "address",
+                "name": "_prev",
+                "type": "address"
+            },
             {
                 "indexed": true,
-                "internalType": "bytes32",
-                "name": "_value",
-                "type": "bytes32"
+                "internalType": "address",
+                "name": "_new",
+                "type": "address"
             }
         ],
-        "name": "UnlockBridge",
+        "name": "MasterChanged",
         "type": "event",
-        "signature": "0x93168db65eaff47ce7fcacb6782bfb5693f1de953a0dac237a28732d64430fbf"
+        "signature": "0x605b9e797fb93e2a4c0b8e6865e8c52ff84d9e8c543ec9590f2e024f60ba3df3"
     },
     {
         "anonymous": false,
@@ -94,7 +98,7 @@
             {
                 "indexed": true,
                 "internalType": "address",
-                "name": "_verifier",
+                "name": "_validator",
                 "type": "address"
             },
             {
@@ -104,23 +108,23 @@
                 "type": "bool"
             }
         ],
-        "name": "VerifierChanged",
+        "name": "ValidatorChanged",
         "type": "event",
-        "signature": "0x236add70c20c2f60e43dcc488294664ab5296e7026500747f9ef20fc2ad600c8"
+        "signature": "0xd2b4a3ae4917617aaa5e6caa5541a3331944d66baa187ef6c350f1ce4012d819"
     },
     {
         "inputs": [
             {
                 "internalType": "address",
-                "name": "_verifier",
+                "name": "_new",
                 "type": "address"
             }
         ],
-        "name": "addVerifier",
+        "name": "addValidator",
         "outputs": [],
         "stateMutability": "nonpayable",
         "type": "function",
-        "signature": "0x9000b3d6"
+        "signature": "0x4d238c8e"
     },
     {
         "inputs": [],
@@ -153,54 +157,19 @@
         "signature": "0x5aa6e675"
     },
     {
-        "inputs": [
-            {
-                "internalType": "bytes32",
-                "name": "_lastRoot",
-                "type": "bytes32"
-            },
-            {
-                "internalType": "bytes[]",
-                "name": "_sigs",
-                "type": "bytes[]"
-            },
-            {
-                "internalType": "uint256",
-                "name": "_blockRef",
-                "type": "uint256"
-            },
-            {
-                "internalType": "uint256",
-                "name": "_expirnum",
-                "type": "uint256"
-            }
-        ],
-        "name": "lockBridge",
-        "outputs": [],
-        "stateMutability": "nonpayable",
-        "type": "function",
-        "signature": "0xb1d673d3"
-    },
-    {
-        "inputs": [
-            {
-                "internalType": "bytes32",
-                "name": "",
-                "type": "bytes32"
-            }
-        ],
-        "name": "lockBridgeProposals",
+        "inputs": [],
+        "name": "master",
         "outputs": [
             {
-                "internalType": "bool",
+                "internalType": "address",
                 "name": "",
-                "type": "bool"
+                "type": "address"
             }
         ],
         "stateMutability": "view",
         "type": "function",
         "constant": true,
-        "signature": "0xc3464c2c"
+        "signature": "0xee97f7f3"
     },
     {
         "inputs": [
@@ -227,21 +196,21 @@
         "inputs": [
             {
                 "internalType": "address",
-                "name": "_verifier",
+                "name": "_old",
                 "type": "address"
             }
         ],
-        "name": "removeVerifier",
+        "name": "removeValidator",
         "outputs": [],
         "stateMutability": "nonpayable",
         "type": "function",
-        "signature": "0xca2dfd0a"
+        "signature": "0x40a141ff"
     },
     {
         "inputs": [
             {
                 "internalType": "address",
-                "name": "_addr",
+                "name": "_new",
                 "type": "address"
             }
         ],
@@ -255,7 +224,7 @@
         "inputs": [
             {
                 "internalType": "address",
-                "name": "_addr",
+                "name": "_new",
                 "type": "address"
             }
         ],
@@ -268,64 +237,28 @@
     {
         "inputs": [
             {
-                "internalType": "bytes32",
-                "name": "_lastRoot",
-                "type": "bytes32"
-            },
-            {
-                "internalType": "bytes[]",
-                "name": "_sigs",
-                "type": "bytes[]"
-            },
-            {
-                "internalType": "uint256",
-                "name": "_blockRef",
-                "type": "uint256"
-            },
-            {
-                "internalType": "uint256",
-                "name": "_expirnum",
-                "type": "uint256"
+                "internalType": "address",
+                "name": "_new",
+                "type": "address"
             }
         ],
-        "name": "unlockBridge",
+        "name": "setMaster",
         "outputs": [],
         "stateMutability": "nonpayable",
         "type": "function",
-        "signature": "0xa69d1f36"
+        "signature": "0x26fae0d3"
     },
     {
         "inputs": [
-            {
-                "internalType": "bytes32",
-                "name": "",
-                "type": "bytes32"
-            }
-        ],
-        "name": "unlockBridgeProposals",
-        "outputs": [
-            {
-                "internalType": "bool",
-                "name": "",
-                "type": "bool"
-            }
-        ],
-        "stateMutability": "view",
-        "type": "function",
-        "constant": true,
-        "signature": "0x1e61c73d"
-    },
-    {
-        "inputs": [
-            {
-                "internalType": "bytes32",
-                "name": "_lastRoot",
-                "type": "bytes32"
-            },
             {
                 "internalType": "bytes32",
                 "name": "_root",
                 "type": "bytes32"
+            },
+            {
+                "internalType": "bytes[]",
+                "name": "_args",
+                "type": "bytes[]"
             },
             {
                 "internalType": "bytes[]",
@@ -347,11 +280,11 @@
         "outputs": [],
         "stateMutability": "nonpayable",
         "type": "function",
-        "signature": "0xbbf30750"
+        "signature": "0xf8b44f4d"
     },
     {
         "inputs": [],
-        "name": "verifierCount",
+        "name": "validatorCount",
         "outputs": [
             {
                 "internalType": "uint8",
@@ -362,7 +295,7 @@
         "stateMutability": "view",
         "type": "function",
         "constant": true,
-        "signature": "0xfb4adf52"
+        "signature": "0x0f43a677"
     },
     {
         "inputs": [
@@ -372,7 +305,7 @@
                 "type": "address"
             }
         ],
-        "name": "verifiers",
+        "name": "validators",
         "outputs": [
             {
                 "internalType": "bool",
@@ -383,6 +316,6 @@
         "stateMutability": "view",
         "type": "function",
         "constant": true,
-        "signature": "0x6c824487"
+        "signature": "0xfa52c7d8"
     }
 ]

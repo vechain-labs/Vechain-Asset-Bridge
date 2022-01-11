@@ -5,12 +5,13 @@ import * as ReadlineSync from 'readline-sync';
 import { Keystore } from 'thor-devkit';
 import { Driver, SimpleNet, SimpleWallet } from '@vechain/connex-driver';
 import { TokenInfo } from '../common/utils/types/tokenInfo';
-import { Verifier } from '../common/utils/types/verifier';
+import { Validator } from '../common/utils/types/validator';
 import { createConnection } from 'typeorm';
 import { Framework } from '@vechain/connex-framework';
 import Web3 from 'web3';
 import BridgeValidationNode from '../vnode';
 import Environment from '../environment';
+import createBlockIndex from '../common/model/entities/blockIndex.entity';
 
 export default class Node extends Command {
   static description = ''
@@ -58,7 +59,7 @@ export default class Node extends Command {
           config.serveName = "VeChain Asset Bridge Node";
           this.environment = new Environment(config);
           this.environment.tokenInfo = new Array<TokenInfo>();
-          this.environment.verifiers = new Array<Verifier>();
+          this.environment.validators = new Array<Validator>();
         } catch (error) {
           console.error(`Read config faild.`);
           process.exit();

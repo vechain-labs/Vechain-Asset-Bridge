@@ -20,26 +20,6 @@
         "inputs": [
             {
                 "indexed": true,
-                "internalType": "bytes32",
-                "name": "_root",
-                "type": "bytes32"
-            },
-            {
-                "indexed": true,
-                "internalType": "bool",
-                "name": "_status",
-                "type": "bool"
-            }
-        ],
-        "name": "BridgeLockChange",
-        "type": "event",
-        "signature": "0x1ca233e8649eb688a940d1c2dfae3c5d89e9d7ed1c35a5d39f9232332189d45c"
-    },
-    {
-        "anonymous": false,
-        "inputs": [
-            {
-                "indexed": true,
                 "internalType": "address",
                 "name": "_token",
                 "type": "address"
@@ -58,8 +38,7 @@
             }
         ],
         "name": "Claim",
-        "type": "event",
-        "signature": "0x70eb43c4a8ae8c40502dcf22436c509c28d6ff421cf07c491be56984bd987068"
+        "type": "event"
     },
     {
         "anonymous": false,
@@ -67,13 +46,12 @@
             {
                 "indexed": true,
                 "internalType": "bool",
-                "name": "_status",
+                "name": "_value",
                 "type": "bool"
             }
         ],
-        "name": "GovLockChanged",
-        "type": "event",
-        "signature": "0x6836e6fd64d3048fe1043c9131f1fb8d09420363b7846124b88074c0087cfbd7"
+        "name": "GovLockChanaged",
+        "type": "event"
     },
     {
         "anonymous": false,
@@ -81,13 +59,50 @@
             {
                 "indexed": true,
                 "internalType": "address",
-                "name": "_addr",
+                "name": "_prev",
+                "type": "address"
+            },
+            {
+                "indexed": true,
+                "internalType": "address",
+                "name": "_new",
                 "type": "address"
             }
         ],
-        "name": "GovernanceUpdated",
-        "type": "event",
-        "signature": "0x9d3e522e1e47a2f6009739342b9cc7b252a1888154e843ab55ee1c81745795ab"
+        "name": "GovernanceChanged",
+        "type": "event"
+    },
+    {
+        "anonymous": false,
+        "inputs": [
+            {
+                "indexed": true,
+                "internalType": "address",
+                "name": "_prev",
+                "type": "address"
+            },
+            {
+                "indexed": true,
+                "internalType": "address",
+                "name": "_new",
+                "type": "address"
+            }
+        ],
+        "name": "MasterChanged",
+        "type": "event"
+    },
+    {
+        "anonymous": false,
+        "inputs": [
+            {
+                "indexed": true,
+                "internalType": "bool",
+                "name": "_value",
+                "type": "bool"
+            }
+        ],
+        "name": "MasterLockChanged",
+        "type": "event"
     },
     {
         "anonymous": false,
@@ -95,13 +110,31 @@
             {
                 "indexed": true,
                 "internalType": "uint16",
-                "name": "_reward",
+                "name": "_prev",
+                "type": "uint16"
+            },
+            {
+                "indexed": true,
+                "internalType": "uint16",
+                "name": "_value",
                 "type": "uint16"
             }
         ],
         "name": "RewardChanged",
-        "type": "event",
-        "signature": "0x11f4e5e05c3866632a18174ff8807eb7a09f0cf860f678e329a1e971cd1f10a3"
+        "type": "event"
+    },
+    {
+        "anonymous": false,
+        "inputs": [
+            {
+                "indexed": true,
+                "internalType": "bytes32",
+                "name": "_value",
+                "type": "bytes32"
+            }
+        ],
+        "name": "SubmitHashEvent",
+        "type": "event"
     },
     {
         "anonymous": false,
@@ -135,11 +168,29 @@
                 "internalType": "uint256",
                 "name": "_reward",
                 "type": "uint256"
+            },
+            {
+                "indexed": false,
+                "internalType": "uint256",
+                "name": "_swapcount",
+                "type": "uint256"
             }
         ],
         "name": "Swap",
-        "type": "event",
-        "signature": "0xcd3829a3813dc3cdd188fd3d01dcf3268c16be2fdd2dd21d0665418816e46062"
+        "type": "event"
+    },
+    {
+        "anonymous": false,
+        "inputs": [
+            {
+                "indexed": true,
+                "internalType": "address",
+                "name": "_tokenAdd",
+                "type": "address"
+            }
+        ],
+        "name": "TokenUpdated",
+        "type": "event"
     },
     {
         "anonymous": false,
@@ -149,11 +200,22 @@
                 "internalType": "address",
                 "name": "_token",
                 "type": "address"
+            },
+            {
+                "indexed": true,
+                "internalType": "address",
+                "name": "_recipient",
+                "type": "address"
+            },
+            {
+                "indexed": false,
+                "internalType": "uint256",
+                "name": "_amount",
+                "type": "uint256"
             }
         ],
-        "name": "TokenUpdated",
-        "type": "event",
-        "signature": "0x5ba6b30cd4b2f9e9e67f4feb9b9df10d5da3b057598e6901b217b7d590345e30"
+        "name": "TransaferByMaster",
+        "type": "event"
     },
     {
         "anonymous": false,
@@ -165,21 +227,14 @@
                 "type": "bytes32"
             },
             {
-                "indexed": true,
-                "internalType": "uint256",
-                "name": "_from",
-                "type": "uint256"
-            },
-            {
-                "indexed": true,
-                "internalType": "bytes32",
-                "name": "_parentRoot",
-                "type": "bytes32"
+                "indexed": false,
+                "internalType": "bytes[]",
+                "name": "_args",
+                "type": "bytes[]"
             }
         ],
         "name": "UpdateMerkleRoot",
-        "type": "event",
-        "signature": "0xd2a4a986f2f28739ae766dfae611eed5644dfed24f88aecb7598ee21e9d8c9d5"
+        "type": "event"
     },
     {
         "anonymous": false,
@@ -187,18 +242,18 @@
             {
                 "indexed": true,
                 "internalType": "address",
-                "name": "_addr",
+                "name": "_prev",
+                "type": "address"
+            },
+            {
+                "indexed": true,
+                "internalType": "address",
+                "name": "_new",
                 "type": "address"
             }
         ],
-        "name": "VerifierUpdated",
-        "type": "event",
-        "signature": "0xd24015cc99cc1700cafca3042840a1d8ac1e3964fd2e0e37ea29c654056ee327"
-    },
-    {
-        "stateMutability": "payable",
-        "type": "fallback",
-        "payable": true
+        "name": "VerifierChanged",
+        "type": "event"
     },
     {
         "inputs": [],
@@ -211,9 +266,7 @@
             }
         ],
         "stateMutability": "view",
-        "type": "function",
-        "constant": true,
-        "signature": "0xd83af147"
+        "type": "function"
     },
     {
         "inputs": [],
@@ -226,9 +279,7 @@
             }
         ],
         "stateMutability": "view",
-        "type": "function",
-        "constant": true,
-        "signature": "0xd122819d"
+        "type": "function"
     },
     {
         "inputs": [],
@@ -241,9 +292,7 @@
             }
         ],
         "stateMutability": "view",
-        "type": "function",
-        "constant": true,
-        "signature": "0xc63fb02e"
+        "type": "function"
     },
     {
         "inputs": [
@@ -267,9 +316,7 @@
             }
         ],
         "stateMutability": "view",
-        "type": "function",
-        "constant": true,
-        "signature": "0x5734fafb"
+        "type": "function"
     },
     {
         "inputs": [],
@@ -282,9 +329,7 @@
             }
         ],
         "stateMutability": "view",
-        "type": "function",
-        "constant": true,
-        "signature": "0xcd84980e"
+        "type": "function"
     },
     {
         "inputs": [],
@@ -297,9 +342,7 @@
             }
         ],
         "stateMutability": "view",
-        "type": "function",
-        "constant": true,
-        "signature": "0xb7dfef19"
+        "type": "function"
     },
     {
         "inputs": [
@@ -315,8 +358,18 @@
             },
             {
                 "internalType": "uint256",
-                "name": "_balance",
+                "name": "_amount",
                 "type": "uint256"
+            },
+            {
+                "internalType": "uint256",
+                "name": "_swapcount",
+                "type": "uint256"
+            },
+            {
+                "internalType": "bytes32",
+                "name": "_root",
+                "type": "bytes32"
             },
             {
                 "internalType": "bytes32[]",
@@ -333,8 +386,7 @@
             }
         ],
         "stateMutability": "nonpayable",
-        "type": "function",
-        "signature": "0xfabed412"
+        "type": "function"
     },
     {
         "inputs": [
@@ -345,8 +397,18 @@
             },
             {
                 "internalType": "uint256",
-                "name": "_balance",
+                "name": "_amount",
                 "type": "uint256"
+            },
+            {
+                "internalType": "uint256",
+                "name": "_swapcount",
+                "type": "uint256"
+            },
+            {
+                "internalType": "bytes32",
+                "name": "_root",
+                "type": "bytes32"
             },
             {
                 "internalType": "bytes32[]",
@@ -363,8 +425,7 @@
             }
         ],
         "stateMutability": "nonpayable",
-        "type": "function",
-        "signature": "0x2a64175a"
+        "type": "function"
     },
     {
         "inputs": [
@@ -388,9 +449,7 @@
             }
         ],
         "stateMutability": "view",
-        "type": "function",
-        "constant": true,
-        "signature": "0x8b45d08f"
+        "type": "function"
     },
     {
         "inputs": [],
@@ -403,9 +462,7 @@
             }
         ],
         "stateMutability": "view",
-        "type": "function",
-        "constant": true,
-        "signature": "0x87c53dde"
+        "type": "function"
     },
     {
         "inputs": [],
@@ -418,20 +475,18 @@
             }
         ],
         "stateMutability": "view",
-        "type": "function",
-        "constant": true,
-        "signature": "0x5aa6e675"
+        "type": "function"
     },
     {
         "inputs": [
             {
                 "internalType": "bytes32",
-                "name": "_merkleroot",
+                "name": "_root",
                 "type": "bytes32"
             },
             {
                 "internalType": "bytes32",
-                "name": "nodehash",
+                "name": "_swaphash",
                 "type": "bytes32"
             }
         ],
@@ -444,35 +499,24 @@
             }
         ],
         "stateMutability": "view",
-        "type": "function",
-        "constant": true,
-        "signature": "0x8a946788"
+        "type": "function"
     },
     {
-        "inputs": [
+        "inputs": [],
+        "name": "master",
+        "outputs": [
             {
-                "internalType": "bytes32",
-                "name": "_root",
-                "type": "bytes32"
+                "internalType": "address",
+                "name": "",
+                "type": "address"
             }
         ],
-        "name": "lock",
-        "outputs": [],
-        "stateMutability": "nonpayable",
-        "type": "function",
-        "signature": "0x01670ba9"
+        "stateMutability": "view",
+        "type": "function"
     },
     {
         "inputs": [],
-        "name": "lockByGov",
-        "outputs": [],
-        "stateMutability": "nonpayable",
-        "type": "function",
-        "signature": "0x02630e06"
-    },
-    {
-        "inputs": [],
-        "name": "locked",
+        "name": "masterLocked",
         "outputs": [
             {
                 "internalType": "bool",
@@ -481,24 +525,55 @@
             }
         ],
         "stateMutability": "view",
-        "type": "function",
-        "constant": true,
-        "signature": "0xcf309012"
+        "type": "function"
     },
     {
-        "inputs": [],
-        "name": "merkleRoot",
-        "outputs": [
+        "inputs": [
             {
                 "internalType": "bytes32",
                 "name": "",
                 "type": "bytes32"
             }
         ],
+        "name": "merkleroots",
+        "outputs": [
+            {
+                "internalType": "bool",
+                "name": "",
+                "type": "bool"
+            }
+        ],
         "stateMutability": "view",
-        "type": "function",
-        "constant": true,
-        "signature": "0x2eb4a7ab"
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "bytes32",
+                "name": "_root",
+                "type": "bytes32"
+            },
+            {
+                "internalType": "bytes32",
+                "name": "_leaf",
+                "type": "bytes32"
+            },
+            {
+                "internalType": "bytes32[]",
+                "name": "_proof",
+                "type": "bytes32[]"
+            }
+        ],
+        "name": "proofVerify",
+        "outputs": [
+            {
+                "internalType": "bool",
+                "name": "",
+                "type": "bool"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
     },
     {
         "inputs": [],
@@ -511,23 +586,59 @@
             }
         ],
         "stateMutability": "view",
-        "type": "function",
-        "constant": true,
-        "signature": "0x228cb733"
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "bool",
+                "name": "_value",
+                "type": "bool"
+            }
+        ],
+        "name": "setGovLock",
+        "outputs": [],
+        "stateMutability": "nonpayable",
+        "type": "function"
     },
     {
         "inputs": [
             {
                 "internalType": "address",
-                "name": "_addr",
+                "name": "_new",
                 "type": "address"
             }
         ],
         "name": "setGovernance",
         "outputs": [],
         "stateMutability": "nonpayable",
-        "type": "function",
-        "signature": "0xab033ea9"
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "address",
+                "name": "_new",
+                "type": "address"
+            }
+        ],
+        "name": "setMaster",
+        "outputs": [],
+        "stateMutability": "nonpayable",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "bool",
+                "name": "_value",
+                "type": "bool"
+            }
+        ],
+        "name": "setMasterLock",
+        "outputs": [],
+        "stateMutability": "nonpayable",
+        "type": "function"
     },
     {
         "inputs": [
@@ -540,14 +651,13 @@
         "name": "setReward",
         "outputs": [],
         "stateMutability": "nonpayable",
-        "type": "function",
-        "signature": "0xc244bbaf"
+        "type": "function"
     },
     {
         "inputs": [
             {
                 "internalType": "address",
-                "name": "_addr",
+                "name": "_token",
                 "type": "address"
             },
             {
@@ -557,8 +667,18 @@
             },
             {
                 "internalType": "address",
-                "name": "_target",
+                "name": "_ttoken",
                 "type": "address"
+            },
+            {
+                "internalType": "string",
+                "name": "_tchainname",
+                "type": "string"
+            },
+            {
+                "internalType": "string",
+                "name": "_tchainid",
+                "type": "string"
             },
             {
                 "internalType": "uint256",
@@ -574,34 +694,55 @@
         "name": "setToken",
         "outputs": [],
         "stateMutability": "nonpayable",
-        "type": "function",
-        "signature": "0xefe7e8d4"
+        "type": "function"
     },
     {
         "inputs": [
             {
                 "internalType": "address",
-                "name": "_addr",
+                "name": "_new",
                 "type": "address"
             }
         ],
-        "name": "setVerifier",
+        "name": "setTokenStorage",
         "outputs": [],
         "stateMutability": "nonpayable",
-        "type": "function",
-        "signature": "0x5437988d"
+        "type": "function"
     },
     {
         "inputs": [
             {
                 "internalType": "address",
-                "name": "_native",
+                "name": "_new",
+                "type": "address"
+            }
+        ],
+        "name": "setValidator",
+        "outputs": [],
+        "stateMutability": "nonpayable",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "address",
+                "name": "_token",
                 "type": "address"
             },
             {
                 "internalType": "address",
-                "name": "_target",
+                "name": "_ttoken",
                 "type": "address"
+            },
+            {
+                "internalType": "string",
+                "name": "_tchainname",
+                "type": "string"
+            },
+            {
+                "internalType": "string",
+                "name": "_tchainid",
+                "type": "string"
             },
             {
                 "internalType": "uint256",
@@ -617,8 +758,7 @@
         "name": "setWrappedNativeCoin",
         "outputs": [],
         "stateMutability": "nonpayable",
-        "type": "function",
-        "signature": "0x816ab820"
+        "type": "function"
     },
     {
         "inputs": [
@@ -647,8 +787,20 @@
             }
         ],
         "stateMutability": "nonpayable",
-        "type": "function",
-        "signature": "0x6d069a67"
+        "type": "function"
+    },
+    {
+        "inputs": [],
+        "name": "swapCount",
+        "outputs": [
+            {
+                "internalType": "uint256",
+                "name": "",
+                "type": "uint256"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
     },
     {
         "inputs": [
@@ -667,9 +819,7 @@
             }
         ],
         "stateMutability": "payable",
-        "type": "function",
-        "payable": true,
-        "signature": "0xb7a77d70"
+        "type": "function"
     },
     {
         "inputs": [
@@ -688,90 +838,116 @@
             }
         ],
         "stateMutability": "view",
-        "type": "function",
-        "constant": true,
-        "signature": "0x1bcd373c"
+        "type": "function"
     },
     {
         "inputs": [
             {
                 "internalType": "address",
+                "name": "_token",
+                "type": "address"
+            },
+            {
+                "internalType": "bytes",
+                "name": "_data",
+                "type": "bytes"
+            }
+        ],
+        "name": "tokenControlByMaster",
+        "outputs": [],
+        "stateMutability": "nonpayable",
+        "type": "function"
+    },
+    {
+        "inputs": [],
+        "name": "tokenStorage",
+        "outputs": [
+            {
+                "internalType": "address",
                 "name": "",
+                "type": "address"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "address",
+                "name": "_token",
                 "type": "address"
             }
         ],
         "name": "tokens",
         "outputs": [
             {
-                "internalType": "uint8",
-                "name": "tokentype",
-                "type": "uint8"
-            },
-            {
-                "internalType": "address",
-                "name": "target",
-                "type": "address"
-            },
-            {
-                "internalType": "uint256",
-                "name": "begin",
-                "type": "uint256"
-            },
-            {
-                "internalType": "uint256",
-                "name": "end",
-                "type": "uint256"
+                "components": [
+                    {
+                        "internalType": "uint8",
+                        "name": "tokenType",
+                        "type": "uint8"
+                    },
+                    {
+                        "internalType": "address",
+                        "name": "tToken",
+                        "type": "address"
+                    },
+                    {
+                        "internalType": "string",
+                        "name": "tChainname",
+                        "type": "string"
+                    },
+                    {
+                        "internalType": "string",
+                        "name": "tChainId",
+                        "type": "string"
+                    },
+                    {
+                        "internalType": "uint256",
+                        "name": "begin",
+                        "type": "uint256"
+                    },
+                    {
+                        "internalType": "uint256",
+                        "name": "end",
+                        "type": "uint256"
+                    },
+                    {
+                        "internalType": "address",
+                        "name": "next",
+                        "type": "address"
+                    }
+                ],
+                "internalType": "struct TokenInfo",
+                "name": "",
+                "type": "tuple"
             }
         ],
         "stateMutability": "view",
-        "type": "function",
-        "constant": true,
-        "signature": "0xe4860339"
+        "type": "function"
     },
     {
         "inputs": [
             {
                 "internalType": "bytes32",
                 "name": "_root",
-                "type": "bytes32"
-            }
-        ],
-        "name": "unlock",
-        "outputs": [],
-        "stateMutability": "nonpayable",
-        "type": "function",
-        "signature": "0xec9b5b3a"
-    },
-    {
-        "inputs": [],
-        "name": "unlockByGov",
-        "outputs": [],
-        "stateMutability": "nonpayable",
-        "type": "function",
-        "signature": "0x13b3d331"
-    },
-    {
-        "inputs": [
-            {
-                "internalType": "bytes32",
-                "name": "_parentRoot",
                 "type": "bytes32"
             },
             {
-                "internalType": "bytes32",
-                "name": "_root",
-                "type": "bytes32"
+                "internalType": "bytes[]",
+                "name": "_args",
+                "type": "bytes[]"
             }
         ],
         "name": "updateMerkleRoot",
         "outputs": [],
         "stateMutability": "nonpayable",
-        "type": "function",
-        "signature": "0xaf887905"
+        "type": "function"
     },
     {
         "inputs": [],
-        "name": "verifier",
+        "name": "validator",
         "outputs": [
             {
                 "internalType": "address",
@@ -780,13 +956,11 @@
             }
         ],
         "stateMutability": "view",
-        "type": "function",
-        "constant": true,
-        "signature": "0x2b7ac3f3"
+        "type": "function"
     },
     {
         "inputs": [],
-        "name": "wrappedNativeCoin",
+        "name": "wrappedNativeToken",
         "outputs": [
             {
                 "internalType": "address",
@@ -795,13 +969,6 @@
             }
         ],
         "stateMutability": "view",
-        "type": "function",
-        "constant": true,
-        "signature": "0x11cc1ad6"
-    },
-    {
-        "stateMutability": "payable",
-        "type": "receive",
-        "payable": true
+        "type": "function"
     }
 ]

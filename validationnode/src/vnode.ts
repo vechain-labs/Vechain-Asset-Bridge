@@ -1,7 +1,7 @@
 import { Framework } from "@vechain/connex-framework";
 import schedule = require("node-schedule");
-import { BridgePackTask } from "./bridgePackTask";
-import { BridgeSyncTask } from "./bridgeSyncTask";
+// import { BridgePackTask } from "./bridgePackTask";
+import { BridgeSyncTask } from "./bridgeSyncTaskV2";
 
 export default class BridgeValidationNode {
     constructor(env:any){
@@ -19,14 +19,14 @@ export default class BridgeValidationNode {
                 if(syncResult.error){
                     console.error(`Sync bridge data error: ${syncResult.error}`);
                 }
-                const needToPacking = await this.packRule();
-                if(needToPacking){
-                    const packTask = new BridgePackTask(this.env);
-                    const packResult = await packTask.taskJob();
-                    if(packResult.error){
-                        console.error(`Pack bridge data error: ${packResult.error}`);
-                    }
-                }
+                // const needToPacking = await this.packRule();
+                // if(needToPacking){
+                //     const packTask = new BridgePackTask(this.env);
+                //     const packResult = await packTask.taskJob();
+                //     if(packResult.error){
+                //         console.error(`Pack bridge data error: ${packResult.error}`);
+                //     }
+                // }
                 taskIsBusy = false;
             }
         });

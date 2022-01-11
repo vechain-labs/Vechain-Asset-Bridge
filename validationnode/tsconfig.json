@@ -1,6 +1,6 @@
 {
   "compilerOptions": {
-    "declaration": true,
+    "declaration": false,
     "importHelpers": true,
     "module": "commonjs",
     "outDir": "lib",
@@ -13,7 +13,7 @@
     "sourceMap": true, 
     "esModuleInterop": true,
     "forceConsistentCasingInFileNames": true,
-    "skipLibCheck": true
+    "skipLibCheck": true,
   },
   "include": [
     "src/**/*"

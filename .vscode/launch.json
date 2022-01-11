@@ -41,71 +41,8 @@
                 "--config",
                 "/Users/moglu/Developer/VeChainDevelop/Vechain-Asset-Bridge/validationnode/config/config_node.json",
                 "--datadir",
-                "/Users/moglu/Developer/dataCenter/vechainassetbridgenode/node_01"
+                "/Users/moglu/Developer/dataCenter/vechainassetbridgenode/node_01_v2"
             ]
-        },
-        {
-            "type": "node",
-            "request": "launch",
-            "name": "Mocha Smart Contract",
-            "program": "${workspaceFolder}/test/node_modules/mocha/bin/mocha",
-            "args": [
-                "-r",
-                "ts-node/register",
-                "--timeout",
-                "999999",
-                "--debug-brk",
-                "--colors",
-                "${workspaceFolder}/test/SmartContracts/index.test.ts",
-                "--recursive"
-            ],
-            "console": "integratedTerminal",
-            "internalConsoleOptions": "neverOpen",
-            "protocol": "inspector",
-            "sourceMaps": true,
-            "trace": true
-        },
-        {
-            "type": "node",
-            "request": "launch",
-            "name": "Mocha Validation Node",
-            "program": "${workspaceFolder}/node_modules/mocha/bin/mocha",
-            "args": [
-                "-r",
-                "ts-node/register",
-                "--timeout",
-                "999999",
-                "--debug-brk",
-                "--colors",
-                "${workspaceFolder}/test/ValidationNode/index.test.ts",
-                "--recursive"
-            ],
-            "console": "integratedTerminal",
-            "internalConsoleOptions": "neverOpen",
-            "protocol": "inspector",
-            "sourceMaps": true,
-            "trace": true
-        },
-        {
-            "type": "node",
-            "request": "launch",
-            "name": "Mocha Bridge API Backend",
-            "program": "${workspaceFolder}/node_modules/mocha/bin/mocha",
-            "args": [
-                "-r",
-                "ts-node/register",
-                "--timeout",
-                "999999",
-                "--debug-brk",
-                "--colors",
-                "${workspaceFolder}/test/ApiBackend/index.test.ts",
-                "--recursive"
-            ],
-            "console": "integratedTerminal",
-            "internalConsoleOptions": "neverOpen",
-            "protocol": "inspector",
-            "sourceMaps": true,
-            "trace": true
         },
         {
             "type": "node",
@@ -121,6 +58,27 @@
                 "/Users/moglu/Developer/VeChainDevelop/Vechain-Asset-Bridge/bridgeTools/config/keystore.json"
             ],
             "console": "integratedTerminal"
-        }
+        },
+        {
+            "type": "node",
+            "request": "launch",
+            "name": "Mocha Smart Contract",
+            "program": "${workspaceFolder}/test/node_modules/mocha/bin/mocha",
+            "args": [
+                "-r",
+                "ts-node/register",
+                "--timeout",
+                "999999",
+                "--debug-brk",
+                "--colors",
+                "${workspaceFolder}/test/*/fungibleTokenBridge.test.ts",
+                "--recursive"
+            ],
+            "console": "integratedTerminal",
+            "internalConsoleOptions": "neverOpen",
+            "protocol": "inspector",
+            "sourceMaps": true,
+            "trace": true
+        },
     ]
 }

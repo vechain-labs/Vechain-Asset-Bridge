@@ -10,7 +10,13 @@
             {
                 "indexed": true,
                 "internalType": "address",
-                "name": "_addr",
+                "name": "_prev",
+                "type": "address"
+            },
+            {
+                "indexed": true,
+                "internalType": "address",
+                "name": "_new",
                 "type": "address"
             }
         ],
@@ -25,12 +31,6 @@
                 "internalType": "bytes32",
                 "name": "_hash",
                 "type": "bytes32"
-            },
-            {
-                "indexed": false,
-                "internalType": "bytes[]",
-                "name": "_sig",
-                "type": "bytes[]"
             }
         ],
         "name": "ExecOpertion",
@@ -42,7 +42,13 @@
             {
                 "indexed": true,
                 "internalType": "address",
-                "name": "_addr",
+                "name": "_prev",
+                "type": "address"
+            },
+            {
+                "indexed": true,
+                "internalType": "address",
+                "name": "_new",
                 "type": "address"
             }
         ],
@@ -54,24 +60,18 @@
         "inputs": [
             {
                 "indexed": true,
-                "internalType": "bytes32",
-                "name": "_value",
-                "type": "bytes32"
+                "internalType": "address",
+                "name": "_prev",
+                "type": "address"
             },
             {
                 "indexed": true,
                 "internalType": "address",
-                "name": "_verifier",
+                "name": "_new",
                 "type": "address"
-            },
-            {
-                "indexed": false,
-                "internalType": "bytes",
-                "name": "_sig",
-                "type": "bytes"
             }
         ],
-        "name": "SubmitLockBridge",
+        "name": "MasterChanged",
         "type": "event"
     },
     {
@@ -79,24 +79,37 @@
         "inputs": [
             {
                 "indexed": true,
-                "internalType": "bytes32",
-                "name": "_value",
-                "type": "bytes32"
+                "internalType": "uint8",
+                "name": "_prev",
+                "type": "uint8"
             },
             {
                 "indexed": true,
-                "internalType": "address",
-                "name": "_verifier",
-                "type": "address"
-            },
-            {
-                "indexed": false,
-                "internalType": "bytes",
-                "name": "_sig",
-                "type": "bytes"
+                "internalType": "uint8",
+                "name": "_value",
+                "type": "uint8"
             }
         ],
-        "name": "SubmitUnLockBridge",
+        "name": "ProposalExpChanged",
+        "type": "event"
+    },
+    {
+        "anonymous": false,
+        "inputs": [
+            {
+                "indexed": true,
+                "internalType": "uint8",
+                "name": "_prev",
+                "type": "uint8"
+            },
+            {
+                "indexed": true,
+                "internalType": "uint8",
+                "name": "_value",
+                "type": "uint8"
+            }
+        ],
+        "name": "ProposalSubmitExpChanged",
         "type": "event"
     },
     {
@@ -130,7 +143,7 @@
             {
                 "indexed": true,
                 "internalType": "address",
-                "name": "_verifier",
+                "name": "_validator",
                 "type": "address"
             },
             {
@@ -140,18 +153,18 @@
                 "type": "bool"
             }
         ],
-        "name": "VerifierChanged",
+        "name": "ValidatorChanged",
         "type": "event"
     },
     {
         "inputs": [
             {
                 "internalType": "address",
-                "name": "_verifier",
+                "name": "_new",
                 "type": "address"
             }
         ],
-        "name": "addVerifier",
+        "name": "addValidator",
         "outputs": [],
         "stateMutability": "nonpayable",
         "type": "function"
@@ -173,48 +186,7 @@
         "inputs": [
             {
                 "internalType": "bytes32",
-                "name": "_hash",
-                "type": "bytes32"
-            }
-        ],
-        "name": "getLockBridgeProposals",
-        "outputs": [
-            {
-                "components": [
-                    {
-                        "internalType": "uint8",
-                        "name": "quorum",
-                        "type": "uint8"
-                    },
-                    {
-                        "internalType": "bool",
-                        "name": "executed",
-                        "type": "bool"
-                    },
-                    {
-                        "internalType": "bytes32",
-                        "name": "value",
-                        "type": "bytes32"
-                    },
-                    {
-                        "internalType": "bytes[]",
-                        "name": "signatures",
-                        "type": "bytes[]"
-                    }
-                ],
-                "internalType": "struct V2EBridgeVerifier.Proposal",
-                "name": "",
-                "type": "tuple"
-            }
-        ],
-        "stateMutability": "view",
-        "type": "function"
-    },
-    {
-        "inputs": [
-            {
-                "internalType": "bytes32",
-                "name": "_hash",
+                "name": "_root",
                 "type": "bytes32"
             }
         ],
@@ -223,19 +195,29 @@
             {
                 "components": [
                     {
-                        "internalType": "uint8",
-                        "name": "quorum",
-                        "type": "uint8"
-                    },
-                    {
                         "internalType": "bool",
                         "name": "executed",
                         "type": "bool"
                     },
                     {
+                        "internalType": "uint256",
+                        "name": "createBlock",
+                        "type": "uint256"
+                    },
+                    {
+                        "internalType": "uint256",
+                        "name": "executblock",
+                        "type": "uint256"
+                    },
+                    {
                         "internalType": "bytes32",
-                        "name": "value",
+                        "name": "root",
                         "type": "bytes32"
+                    },
+                    {
+                        "internalType": "bytes[]",
+                        "name": "args",
+                        "type": "bytes[]"
                     },
                     {
                         "internalType": "bytes[]",
@@ -243,48 +225,7 @@
                         "type": "bytes[]"
                     }
                 ],
-                "internalType": "struct V2EBridgeVerifier.Proposal",
-                "name": "",
-                "type": "tuple"
-            }
-        ],
-        "stateMutability": "view",
-        "type": "function"
-    },
-    {
-        "inputs": [
-            {
-                "internalType": "bytes32",
-                "name": "_hash",
-                "type": "bytes32"
-            }
-        ],
-        "name": "getUnLockBridgeProposals",
-        "outputs": [
-            {
-                "components": [
-                    {
-                        "internalType": "uint8",
-                        "name": "quorum",
-                        "type": "uint8"
-                    },
-                    {
-                        "internalType": "bool",
-                        "name": "executed",
-                        "type": "bool"
-                    },
-                    {
-                        "internalType": "bytes32",
-                        "name": "value",
-                        "type": "bytes32"
-                    },
-                    {
-                        "internalType": "bytes[]",
-                        "name": "signatures",
-                        "type": "bytes[]"
-                    }
-                ],
-                "internalType": "struct V2EBridgeVerifier.Proposal",
+                "internalType": "struct VeChainBridgeValidator.Proposal",
                 "name": "",
                 "type": "tuple"
             }
@@ -306,53 +247,13 @@
         "type": "function"
     },
     {
-        "inputs": [
-            {
-                "internalType": "bytes32",
-                "name": "_lastRoot",
-                "type": "bytes32"
-            },
-            {
-                "internalType": "bytes",
-                "name": "_sig",
-                "type": "bytes"
-            }
-        ],
-        "name": "lockBridge",
+        "inputs": [],
+        "name": "master",
         "outputs": [
             {
-                "internalType": "bool",
+                "internalType": "address",
                 "name": "",
-                "type": "bool"
-            }
-        ],
-        "stateMutability": "nonpayable",
-        "type": "function"
-    },
-    {
-        "inputs": [
-            {
-                "internalType": "bytes32",
-                "name": "",
-                "type": "bytes32"
-            }
-        ],
-        "name": "lockBridgeProposals",
-        "outputs": [
-            {
-                "internalType": "uint8",
-                "name": "quorum",
-                "type": "uint8"
-            },
-            {
-                "internalType": "bool",
-                "name": "executed",
-                "type": "bool"
-            },
-            {
-                "internalType": "bytes32",
-                "name": "value",
-                "type": "bytes32"
+                "type": "address"
             }
         ],
         "stateMutability": "view",
@@ -369,19 +270,50 @@
         "name": "merkleRootProposals",
         "outputs": [
             {
-                "internalType": "uint8",
-                "name": "quorum",
-                "type": "uint8"
-            },
-            {
                 "internalType": "bool",
                 "name": "executed",
                 "type": "bool"
             },
             {
+                "internalType": "uint256",
+                "name": "createBlock",
+                "type": "uint256"
+            },
+            {
+                "internalType": "uint256",
+                "name": "executblock",
+                "type": "uint256"
+            },
+            {
                 "internalType": "bytes32",
-                "name": "value",
+                "name": "root",
                 "type": "bytes32"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [],
+        "name": "proposalExp",
+        "outputs": [
+            {
+                "internalType": "uint8",
+                "name": "",
+                "type": "uint8"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [],
+        "name": "proposalSubmitExp",
+        "outputs": [
+            {
+                "internalType": "uint8",
+                "name": "",
+                "type": "uint8"
             }
         ],
         "stateMutability": "view",
@@ -391,11 +323,11 @@
         "inputs": [
             {
                 "internalType": "address",
-                "name": "_verifier",
+                "name": "_old",
                 "type": "address"
             }
         ],
-        "name": "removeVerifier",
+        "name": "removeValidator",
         "outputs": [],
         "stateMutability": "nonpayable",
         "type": "function"
@@ -404,7 +336,7 @@
         "inputs": [
             {
                 "internalType": "address",
-                "name": "_addr",
+                "name": "_new",
                 "type": "address"
             }
         ],
@@ -417,7 +349,7 @@
         "inputs": [
             {
                 "internalType": "address",
-                "name": "_addr",
+                "name": "_new",
                 "type": "address"
             }
         ],
@@ -429,24 +361,39 @@
     {
         "inputs": [
             {
-                "internalType": "bytes32",
-                "name": "_lastRoot",
-                "type": "bytes32"
-            },
-            {
-                "internalType": "bytes",
-                "name": "_sig",
-                "type": "bytes"
+                "internalType": "address",
+                "name": "_new",
+                "type": "address"
             }
         ],
-        "name": "unlockBridge",
-        "outputs": [
+        "name": "setMaster",
+        "outputs": [],
+        "stateMutability": "nonpayable",
+        "type": "function"
+    },
+    {
+        "inputs": [
             {
-                "internalType": "bool",
-                "name": "",
-                "type": "bool"
+                "internalType": "uint8",
+                "name": "_new",
+                "type": "uint8"
             }
         ],
+        "name": "setProposalExp",
+        "outputs": [],
+        "stateMutability": "nonpayable",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "uint8",
+                "name": "_new",
+                "type": "uint8"
+            }
+        ],
+        "name": "setProposalSubmitExp",
+        "outputs": [],
         "stateMutability": "nonpayable",
         "type": "function"
     },
@@ -454,42 +401,13 @@
         "inputs": [
             {
                 "internalType": "bytes32",
-                "name": "",
-                "type": "bytes32"
-            }
-        ],
-        "name": "unlockBridgeProposals",
-        "outputs": [
-            {
-                "internalType": "uint8",
-                "name": "quorum",
-                "type": "uint8"
-            },
-            {
-                "internalType": "bool",
-                "name": "executed",
-                "type": "bool"
-            },
-            {
-                "internalType": "bytes32",
-                "name": "value",
-                "type": "bytes32"
-            }
-        ],
-        "stateMutability": "view",
-        "type": "function"
-    },
-    {
-        "inputs": [
-            {
-                "internalType": "bytes32",
-                "name": "_lastRoot",
-                "type": "bytes32"
-            },
-            {
-                "internalType": "bytes32",
                 "name": "_root",
                 "type": "bytes32"
+            },
+            {
+                "internalType": "bytes[]",
+                "name": "_args",
+                "type": "bytes[]"
             },
             {
                 "internalType": "bytes",
@@ -497,7 +415,7 @@
                 "type": "bytes"
             }
         ],
-        "name": "updateBridgeMerkleRoot",
+        "name": "updateMerkleRoot",
         "outputs": [
             {
                 "internalType": "bool",
@@ -510,7 +428,7 @@
     },
     {
         "inputs": [],
-        "name": "verifierCount",
+        "name": "validatorCount",
         "outputs": [
             {
                 "internalType": "uint8",
@@ -529,7 +447,7 @@
                 "type": "address"
             }
         ],
-        "name": "verifiers",
+        "name": "validators",
         "outputs": [
             {
                 "internalType": "bool",

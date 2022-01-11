@@ -35,7 +35,7 @@ export default class Deploy extends Command {
         console.info(`| Node Key Address        | ${this.environment.master}`);
 
         while(true){
-            const operations = ["Deploy VeChain Bridge & Verifier Contract","Deploy Ethereum Bridge & Verifier Contract","Deploy and register token to bridge","Add Verifier"];
+            const operations = ["Deploy VeChain Bridge & Validator Contract","Deploy Ethereum Bridge & Validator Contract","Deploy and register token to bridge","Add Validator"];
             const index = ReadlineSync.keyInSelect(operations,"Which Operation?");
             switch(index){
                 case -1:
@@ -51,7 +51,7 @@ export default class Deploy extends Command {
                     await this.deployToken();
                 break;
                 case 3:
-                    await this.addVerifier();
+                    await this.addValidator();
                 break;
                 default:
                     console.error(`Invalid operation.`);
@@ -154,10 +154,10 @@ export default class Deploy extends Command {
         this.environment.web3 = web3;
         const chainId = await this.environment.web3.eth.getChainId();
         this.environment.config.ethereum.nodeHost = ethereumHost;
-        this.environment.config.chainName = "ethereum";
-        this.environment.config.chainId = chainId;
-        this.environment.config.confirmHeight = this.environment.config.confirmHeight ? this.environment.config.confirmHeight : 3;
-        this.environment.config.expiration = this.environment.config.expiration ? this.environment.config.expiration : 24;
+        this.environment.config.ethereum.chainName = "ethereum";
+        this.environment.config.ethereum.chainId = chainId.toString();
+        this.environment.config.ethereum.confirmHeight = this.environment.config.confirmHeight ? this.environment.config.confirmHeight : 3;
+        this.environment.config.ethereum.expiration = this.environment.config.expiration ? this.environment.config.expiration : 24;
     } catch (error) {
         console.error(`Connect Ethereum Node Faild. error:${error}`);
         process.exit();
@@ -167,22 +167,30 @@ export default class Deploy extends Command {
     private async initContracts():Promise<any>{
         this.environment.contracts = {vechain:{},ethereum:{}};
 
-        const bridgeFilePath = path.join(this.environment.contractdir, "/common/Contract_BridgeHead.sol");
-        const bridgeAbi = JSON.parse(compileContract(bridgeFilePath, 'BridgeHead', 'abi'));
-        const bridgeBin = compileContract(bridgeFilePath, 'BridgeHead', 'bytecode');
+        const bridgeFilePath = path.join(this.environment.contractdir, "/common/Contract_FTokenBridge.sol");
+        const bridgeAbi = JSON.parse(compileContract(bridgeFilePath, 'FTokenBridge', 'abi'));
+        const bridgeBin = compileContract(bridgeFilePath, 'FTokenBridge', 'bytecode');
 
-        const vBridgeVerifierPath = path.join(this.environment.contractdir, "/vechainthor/Contract_V2EBridgeVerifier.sol");
-        const vBridgeVerifierAbi = JSON.parse(compileContract(vBridgeVerifierPath, 'V2EBridgeVerifier', 'abi',[this.environment.contractdir]));
-        const vBridgeVerifierBin = compileContract(vBridgeVerifierPath, 'V2EBridgeVerifier', 'bytecode',[this.environment.contractdir]);
+        const ftokenStoragePath = path.join(this.environment.contractdir,"/common/Contract_FTokenStorage.sol");
+        const ftokenStorageAbi = JSON.parse(compileContract(ftokenStoragePath, 'FTokenStorage', 'abi'));
+        const bridgeStorageBin = compileContract(ftokenStoragePath, 'FTokenStorage', 'bytecode');
 
-        const eBridgeVerifierPath = path.join(this.environment.contractdir, "/ethereum/Contract_E2VBridgeVerifier.sol");
-        const eBridgeVerifierAbi = JSON.parse(compileContract(eBridgeVerifierPath,"E2VBridgeVerifier","abi",[this.environment.contractdir]));
-        const eBridgeVerifierBin = compileContract(eBridgeVerifierPath, 'E2VBridgeVerifier', 'bytecode',[this.environment.contractdir]);
+        const vBridgeValidatorPath = path.join(this.environment.contractdir, "/vechain/Contract_VeChainBridgeValidator.sol");
+        const vBridgeValidatorAbi = JSON.parse(compileContract(vBridgeValidatorPath, 'VeChainBridgeValidator', 'abi',[this.environment.contractdir]));
+        const vBridgeValidatorBin = compileContract(vBridgeValidatorPath, 'VeChainBridgeValidator', 'bytecode',[this.environment.contractdir]);
+
+        const eBridgeValidatorPath = path.join(this.environment.contractdir, "/ethereum/Contract_EthereumBridgeValidator.sol");
+        const eBridgeValidatorAbi = JSON.parse(compileContract(eBridgeValidatorPath,"EthereumBridgeValidator","abi",[this.environment.contractdir]));
+        const eBridgeValidatorBin = compileContract(eBridgeValidatorPath, 'EthereumBridgeValidator', 'bytecode',[this.environment.contractdir]);
 
         this.environment.contracts.vechain.bridgeContract = new VContract({ abi: bridgeAbi, connex: this.environment.connex,bytecode:bridgeBin});
         this.environment.contracts.ethereum.bridgeContract = new (this.environment.web3 as Web3).eth.Contract(bridgeAbi,undefined,{data:bridgeBin});
-        this.environment.contracts.vechain.verifierContract = new VContract({ abi: vBridgeVerifierAbi, connex: this.environment.connex,bytecode:vBridgeVerifierBin});
-        this.environment.contracts.ethereum.verifierContract = new (this.environment.web3 as Web3).eth.Contract(eBridgeVerifierAbi,undefined,{data:eBridgeVerifierBin});
+
+        this.environment.contracts.vechain.validatorContract = new VContract({ abi: vBridgeValidatorAbi, connex: this.environment.connex,bytecode:vBridgeValidatorBin});
+        this.environment.contracts.ethereum.validatorContract = new (this.environment.web3 as Web3).eth.Contract(eBridgeValidatorAbi,undefined,{data:eBridgeValidatorBin});
+
+        this.environment.contracts.vechain.ftokenStorageContract = new VContract({ abi: ftokenStorageAbi, connex: this.environment.connex,bytecode:bridgeStorageBin});
+        this.environment.contracts.ethereum.ftokenStorageContract =  new (this.environment.web3 as Web3).eth.Contract(ftokenStorageAbi,undefined,{data:bridgeStorageBin});
 
         if(this.environment.config.vechain?.contracts?.v2eBridge != undefined && this.environment.config.vechain?.contracts?.v2eBridge.length == 42){
             (this.environment.contracts.vechain.bridgeContract as VContract).at(this.environment.config.vechain?.contracts?.v2eBridge);
@@ -190,19 +198,20 @@ export default class Deploy extends Command {
         if(this.environment.config.ethereum?.contracts?.e2vBridge != undefined && this.environment.config.ethereum?.contracts?.e2vBridge.length == 42){
             (this.environment.contracts.ethereum.bridgeContract as EContract).options.address = this.environment.config.ethereum?.contracts?.e2vBridge;
         }
-        if(this.environment.config.vechain?.contracts?.v2eBridgeVerifier != undefined && this.environment.config.vechain?.contracts?.v2eBridgeVerifier.length == 42){
-            (this.environment.contracts.vechain.verifierContract as VContract).at(this.environment.config.vechain?.contracts?.v2eBridgeVerifier);
+        if(this.environment.config.vechain?.contracts?.v2eBridgeValidator != undefined && this.environment.config.vechain?.contracts?.v2eBridgeValidator.length == 42){
+            (this.environment.contracts.vechain.validatorContract as VContract).at(this.environment.config.vechain?.contracts?.v2eBridgeValidator);
         }
-        if(this.environment.config.ethereum?.contracts?.e2vBridgeVerifier != undefined && this.environment.config.ethereum?.contracts?.e2vBridgeVerifier.length == 42){
-            (this.environment.contracts.ethereum.verifierContract as EContract).options.address = this.environment.config.ethereum?.contracts?.e2vBridgeVerifier;
+        if(this.environment.config.ethereum?.contracts?.e2vBridgeValidator != undefined && this.environment.config.ethereum?.contracts?.e2vBridgeValidator.length == 42){
+            (this.environment.contracts.ethereum.validatorContract as EContract).options.address = this.environment.config.ethereum?.contracts?.e2vBridgeValidator;
         }
-
     }
 
     private async deployVeChainBridge():Promise<any>{
         try {
             let bridgeContract = this.environment.contracts.vechain.bridgeContract as VContract;
-            let verifierContract = this.environment.contracts.vechain.verifierContract as VContract;
+            let validatorContract = this.environment.contracts.vechain.validatorContract as VContract;
+            let ftokenStorageContract = this.environment.contracts.vechain.ftokenStorageContract as VContract;
+
             console.info(`--> deploy vechain bridge contract.`);
             const chainName = String(this.environment.config.vechain.chainName);
             const chainId = String(this.environment.config.vechain.chainId);
@@ -219,32 +228,32 @@ export default class Deploy extends Command {
             this.environment.config.vechain.contracts.v2eBridge = bridgeContract.address;
             this.environment.config.vechain.startBlockNum = receipt1.meta.blockNumber;
 
-            console.info(`--> deploy vechain bridge verifier contract.`);
-            const clause2 = verifierContract.deploy(0);
+            console.info(`--> deploy vechain bridge validator contract.`);
+            const clause2 = validatorContract.deploy(0);
             const txrep2 = await (this.environment.connex as Framework).vendor.sign('tx',[clause2])
             .signer(this.environment.master)
             .request();
             const receipt2 = await getReceipt(this.environment.connex,6,txrep2.txid);
             if (receipt2 == null || receipt2.reverted || receipt2.outputs[0].contractAddress == undefined) {
-                console.error('Deploy vechain verifiter faild');
+                console.error('Deploy vechain validator contract faild');
                 process.exit();
             }
-            verifierContract.at(receipt2.outputs[0].contractAddress);
-            this.environment.config.vechain.contracts.v2eBridgeVerifier = verifierContract.address;
+            validatorContract.at(receipt2.outputs[0].contractAddress);
+            this.environment.config.vechain.contracts.v2eBridgeValidator = validatorContract.address;
 
-            console.info(`--> set verifier contract address.`);
-            const clause3 = bridgeContract.send("setVerifier",0,verifierContract.address);
+            console.info(`--> set validator contract address.`);
+            const clause3 = bridgeContract.send("setValidator",0,validatorContract.address);
             const txrep3 = await (this.environment.connex as Framework).vendor.sign('tx',[clause3])
                 .signer(this.environment.master)
                 .request();
             const receipt3 = await getReceipt(this.environment.connex,6,txrep3.txid);
             if (receipt3 == null || receipt3.reverted) {
-                console.error('Set verifier contract address faild');
+                console.error('Set validator contract address faild');
                 process.exit();
             }
 
             console.info(`--> set bridge address.`);
-            const clause4 = verifierContract.send("setBridge",0,bridgeContract.address);
+            const clause4 = validatorContract.send("setBridge",0,bridgeContract.address);
             const txrep4 = await (this.environment.connex as Framework).vendor.sign('tx',[clause4])
                 .signer(this.environment.master)
                 .request();
@@ -254,13 +263,34 @@ export default class Deploy extends Command {
                 process.exit();
             }
 
+            console.info(`--> deploy vechain bridge ftoken storage contract.`);
+            const clause5 = ftokenStorageContract.deploy(0,this.environment.config.vechain.contracts.v2eBridge);
+            const txrep5 = await (this.environment.connex as Framework).vendor.sign('tx',[clause5])
+                .signer(this.environment.master)
+                .request();
+            const receipt5 = await getReceipt(this.environment.connex,6,txrep5.txid);
+            if (receipt5 == null || receipt5.reverted || receipt5.outputs[0].contractAddress == undefined) {
+                console.error(`Deploy vechain bridge ftoken storage faild, txid: ${receipt5.meta.txID}`);
+                process.exit();
+            }
+
+            const clause6 =  bridgeContract.send("setTokenStorage",0,receipt5.outputs[0].contractAddress);
+            const txrep6 = await (this.environment.connex as Framework).vendor.sign('tx',[clause6])
+                .signer(this.environment.master)
+                .request();
+            const receipt6 = await getReceipt(this.environment.connex,6,txrep6.txid);
+            if (receipt6 == null || receipt6.reverted) {
+                console.error(`Deploy vechain bridge set ftoken storage faild, txid: ${receipt6.meta.txID}`);
+                process.exit();
+            }
+
             fileIO.writeFileSync(this.environment.configPath, JSON.stringify(this.environment.config));
 
             console.info(`VeChain contracts deploy finish`);
             console.info(`VeChain bridge: ${bridgeContract.address} blockNum: ${receipt1.meta.blockNumber} deployTx: ${receipt1.meta.txID}`);
-            console.info(`VeChain verifier: ${verifierContract.address} blockNum: ${receipt2.meta.blockNumber} deployTx: ${receipt2.meta.txID}`);
+            console.info(`VeChain validator: ${validatorContract.address} blockNum: ${receipt2.meta.blockNumber} deployTx: ${receipt2.meta.txID}`);
         } catch (error) {
-            console.error(`Deploy VeChain bridge & verifier contracts faild. error: ${error}`);
+            console.error(`Deploy VeChain bridge & validator contracts faild. error: ${error}`);
             process.exit();
         }
     }
@@ -271,7 +301,8 @@ export default class Deploy extends Command {
         const gasPrice = await (this.environment.web3 as Web3).eth.getGasPrice();
 
         let bridgeContract = this.environment.contracts.ethereum.bridgeContract as EContract;
-        let verifierContract = this.environment.contracts.ethereum.verifierContract as EContract;
+        let validatorContract = this.environment.contracts.ethereum.validatorContract as EContract;
+        let ftokenStorageContract = this.environment.contracts.ethereum.ftokenStorageContract as EContract;
 
         console.log(`--> deploy ethereum bridge contract.`);
         const chainName = String(this.environment.config.ethereum.chainName);
@@ -295,18 +326,18 @@ export default class Deploy extends Command {
           }
         });
 
-        console.info(`--> deploy ethereum bridge verifier contract.`);
-        let verifierMeta:any = {};
-        const deployVerifierMethod = verifierContract.deploy({data:verifierContract.options.data!});
-        const deployVerifierGas = await deployVerifierMethod.estimateGas({
+        console.info(`--> deploy ethereum bridge validator contract.`);
+        let validatorMeta:any = {};
+        const deployValidatorMethod = validatorContract.deploy({data:validatorContract.options.data!});
+        const deployValidatorGas = await deployValidatorMethod.estimateGas({
           from:this.environment.master
         });
-        verifierContract = await deployVerifierMethod.send({
+        validatorContract = await deployValidatorMethod.send({
           from:this.environment.master,
-          gas:deployVerifierGas,
+          gas:deployValidatorGas,
           gasPrice:gasPrice
         }).on("receipt",(receipt) => {
-          verifierMeta = {
+          validatorMeta = {
             deploy:{
               blockNum:receipt.blockNumber,
               deployTx:receipt.transactionHash
@@ -317,19 +348,19 @@ export default class Deploy extends Command {
         this.environment.config.ethereum.startBlockNum = bridgeMeta.deploy.blockNum;
         (this.environment.contracts.ethereum.bridgeContract as EContract).options.address = bridgeContract.options.address;
 
-        console.info(`--> set verifier address.`);
-        const setVerifierMethod = bridgeContract.methods.setVerifier(verifierContract.options.address) as ContractSendMethod;
-        const setVerifierGas = await setVerifierMethod.estimateGas({
+        console.info(`--> set validator address.`);
+        const setValidatorMethod = bridgeContract.methods.setValidator(validatorContract.options.address) as ContractSendMethod;
+        const setValidatorGas = await setValidatorMethod.estimateGas({
           from:this.environment.master
         });
-        await setVerifierMethod.send({
+        await setValidatorMethod.send({
           from:this.environment.master,
-          gas:setVerifierGas,
+          gas:setValidatorGas,
           gasPrice:gasPrice
         });
 
         console.info(`--> set bridge address`);
-        const setBridgeMethod = verifierContract.methods.setBridge(bridgeContract.options.address) as ContractSendMethod;
+        const setBridgeMethod = validatorContract.methods.setBridge(bridgeContract.options.address) as ContractSendMethod;
         const setBridgeGas = await setBridgeMethod.estimateGas({
           from:this.environment.master
         });
@@ -338,33 +369,61 @@ export default class Deploy extends Command {
           gas:setBridgeGas,
           gasPrice:gasPrice
         });
-        this.environment.config.ethereum.contracts.e2vBridgeVerifier = verifierContract.options.address;
-        (this.environment.contracts.ethereum.verifierContract as EContract).options.address = verifierContract.options.address;
+        this.environment.config.ethereum.contracts.e2vBridgeValidator = validatorContract.options.address;
+        (this.environment.contracts.ethereum.validatorContract as EContract).options.address = validatorContract.options.address;
 
+        console.info(`--> deploy ethereum bridge ftoken storage contract.`);
+        let storageMeta:any = {};
+        const deployStorageMethod = ftokenStorageContract.deploy({data:ftokenStorageContract.options.data!,arguments:[bridgeContract.options.address]});
+        const deployStorageGas = await deployStorageMethod.estimateGas({
+          from:this.environment.master
+        });
+        ftokenStorageContract = await deployStorageMethod.send({
+          from:this.environment.master,
+          gas:deployStorageGas,
+          gasPrice:gasPrice
+        }).on("receipt",(receipt) => {
+          storageMeta = {
+            deploy:{
+              blockNum:receipt.blockNumber,
+              deployTx:receipt.transactionHash
+            }
+          }
+        });
+
+        const setStorageMethod = bridgeContract.methods.setTokenStorage(ftokenStorageContract.options.address) as ContractSendMethod;
+        const setStorageGas = await setStorageMethod.estimateGas({
+          from:this.environment.master
+        });
+        await setStorageMethod.send({
+          from:this.environment.master,
+          gas:setStorageGas,
+          gasPrice:gasPrice
+        });
+        
         fileIO.writeFileSync(this.environment.configPath, JSON.stringify(this.environment.config));
 
         console.info(`Ethereum contracts deploy finish`);
         console.info(`Ethereum bridge: ${bridgeContract.options.address} blockNum: ${bridgeMeta.deploy.blockNum} deployTx: ${bridgeMeta.deploy.deployTx}`);
-        console.info(`Ethereum verifier: ${verifierContract.options.address} blockNum: ${verifierMeta.deploy.blockNum} deployTx: ${verifierMeta.deploy.blockNum}`);
+        console.info(`Ethereum validator: ${validatorContract.options.address} blockNum: ${validatorMeta.deploy.blockNum} deployTx: ${validatorMeta.deploy.deployTx}`);
       } catch (error) {
-        console.error(`Deploy Ethereum bridge & verifier faild. error: ${error}`);
+        console.error(`Deploy Ethereum bridge & validator faild. error: ${error}`);
         process.exit();
       }
     }
 
     private async deployToken():Promise<any>{
       try {
-        await this.initVeChainBridge();
-        await this.initEthereumBridge();
-
         const networks = ["vechain","ethereum"];
         const index = ReadlineSync.keyInSelect(networks,"Which Operation?");
         switch(index){
           case 0:
+            await this.initVeChainBridge();
             await this.deployTokenToVeChain();
             break;
           case 1:
-            await await this.deployTokenToEthereum();
+            await this.initEthereumBridge();
+            await this.deployTokenToEthereum();
             break;
           default:
             return;
@@ -399,26 +458,26 @@ export default class Deploy extends Command {
       }
     }
 
-    private async initVeChainVerifier():Promise<any>{
-      let verifierContract = this.environment.contracts.vechain.verifierContract as VContract;
-      if(verifierContract.address == ""){
-        if(this.environment.config.vechain?.contracts?.v2eBridgeVerifier != undefined || ""){
-          verifierContract.at(this.environment.config.vechain?.contracts?.v2eBridgeVerifier);
+    private async initVeChainValidator():Promise<any>{
+      let validatorContract = this.environment.contracts.vechain.validatorContract as VContract;
+      if(validatorContract.address == ""){
+        if(this.environment.config.vechain?.contracts?.v2eBridgeValiator != undefined || ""){
+          validatorContract.at(this.environment.config.vechain?.contracts?.v2eBridgeValiator);
         } else {
-          const addr = ReadlineSync.question(`Set VeChain bridge verifier address:`).trim();
-          verifierContract.at(addr);
+          const addr = ReadlineSync.question(`Set VeChain bridge valiator address:`).trim();
+          validatorContract.at(addr);
         }
       }
     }
 
-    private async initEthereumVerifier():Promise<any>{
-      let verifierContract = this.environment.contracts.ethereum.verifierContract as EContract;
-      if(verifierContract.options.address == ""){
-        if(this.environment.config.ethereum?.contracts?.e2vBridgeVerifier != undefined || ""){
-          verifierContract.options.address = this.environment.config.ethereum?.contracts?.e2vBridgeVerifier;
+    private async initEthereumValiator():Promise<any>{
+      let validatorContract = this.environment.contracts.ethereum.validatorContract as EContract;
+      if(validatorContract.options.address == ""){
+        if(this.environment.config.ethereum?.contracts?.e2vBridgeValidator != undefined || ""){
+          validatorContract.options.address = this.environment.config.ethereum?.contracts?.e2vBridgeValidator;
         } else {
-          const addr = ReadlineSync.question(`Set Ethereum bridge verifier address:`).trim();
-          verifierContract.options.address = addr;
+          const addr = ReadlineSync.question(`Set Ethereum bridge validator address:`).trim();
+          validatorContract.options.address = addr;
         }
       }
     }
@@ -538,9 +597,9 @@ export default class Deploy extends Command {
         const vbestBlock = (this.environment.connex as Framework).thor.status.head.number;
         let clause2;
         if(originTokenInfo.nativeCoin == true){
-          clause2 = (this.environment.contracts.vechain.bridgeContract as VContract).send("setWrappedNativeCoin",0,originTokenInfo.address,bridgeWrappedTokenInfo.address,vbestBlock,0);
+          clause2 = (this.environment.contracts.vechain.bridgeContract as VContract).send("setWrappedNativeCoin",0,originTokenInfo.address,bridgeWrappedTokenInfo.address,this.environment.config.ethereum.chainName.toString(),this.environment.config.ethereum.chainId.toString(),vbestBlock,0);
         } else {
-          clause2 = (this.environment.contracts.vechain.bridgeContract as VContract).send("setToken",0,originTokenInfo.address,1,bridgeWrappedTokenInfo.address,vbestBlock,0);
+          clause2 = (this.environment.contracts.vechain.bridgeContract as VContract).send("setToken",0,originTokenInfo.address,1,bridgeWrappedTokenInfo.address,this.environment.config.ethereum.chainName.toString(),this.environment.config.ethereum.chainId.toString(),vbestBlock,0);
         }      
         const txrep2 = await (this.environment.connex as Framework).vendor.sign('tx',[clause2])
             .signer(this.environment.master)
@@ -554,7 +613,7 @@ export default class Deploy extends Command {
         console.info(`--> register ${bridgeWrappedTokenInfo.symbol} to Ethereum`);
         const eBestBlock = (await (this.environment.web3 as Web3).eth.getBlock('latest')).number;
   
-        const setMethod = (this.environment.contracts.ethereum.bridgeContract as EContract).methods.setToken(bridgeWrappedTokenInfo.address,2,originTokenInfo.address,eBestBlock,0);
+        const setMethod = (this.environment.contracts.ethereum.bridgeContract as EContract).methods.setToken(bridgeWrappedTokenInfo.address,2,originTokenInfo.address,this.environment.config.vechain.chainName.toString(),this.environment.config.vechain.chainId.toString(),eBestBlock,0);
         const setGas = await setMethod.estimateGas({
           from:this.environment.master
         });
@@ -691,12 +750,12 @@ export default class Deploy extends Command {
         let setMethod;
         let setGas;
         if(originTokenInfo.nativeCoin == true){
-          setMethod = (this.environment.contracts.ethereum.bridgeContract as EContract).methods.setWrappedNativeCoin(originTokenInfo.address,bridgeWrappedTokenInfo.address,eBestBlock,0);
+          setMethod = (this.environment.contracts.ethereum.bridgeContract as EContract).methods.setWrappedNativeCoin(originTokenInfo.address,bridgeWrappedTokenInfo.address,this.environment.config.vechain.chainName.toString(),this.environment.config.vechain.chainId.toString(),eBestBlock,0);
           setGas = await setMethod.estimateGas({
             from:this.environment.master
           });
         } else {
-          setMethod = (this.environment.contracts.ethereum.bridgeContract as EContract).methods.setToken(originTokenInfo.address,1,bridgeWrappedTokenInfo.address,eBestBlock,0);
+          setMethod = (this.environment.contracts.ethereum.bridgeContract as EContract).methods.setToken(originTokenInfo.address,1,bridgeWrappedTokenInfo.address,this.environment.config.vechain.chainName.toString(),this.environment.config.vechain.chainId.toString(),eBestBlock,0);
           setGas = await setMethod.estimateGas({
             from:this.environment.master
           });
@@ -710,7 +769,7 @@ export default class Deploy extends Command {
   
         console.log(`--> register ${bridgeWrappedTokenInfo.symbol} to VeChain bridge`);
         const vbestBlock = (this.environment.connex as Framework).thor.status.head.number;
-        const clause2 = (this.environment.contracts.vechain.bridgeContract as VContract).send("setToken",0,bridgeWrappedTokenInfo.address,2,originTokenInfo.address,vbestBlock,0);
+        const clause2 = (this.environment.contracts.vechain.bridgeContract as VContract).send("setToken",0,bridgeWrappedTokenInfo.address,2,originTokenInfo.address,this.environment.config.ethereum.chainName.toString(),this.environment.config.ethereum.chainId.toString(),vbestBlock,0);
         const txrep2 = await (this.environment.connex as Framework).vendor.sign('tx',[clause2])
         .signer(this.environment.master)
         .request();
@@ -729,36 +788,36 @@ export default class Deploy extends Command {
       }
     }
 
-    private async addVerifier():Promise<any>{
+    private async addValidator():Promise<any>{
       try {
-        await this.initVeChainVerifier();
-        await this.initEthereumVerifier();
+        await this.initVeChainValidator();
+        await this.initEthereumValiator();
   
-        const verifier = ReadlineSync.question(`Add new verifier address to contract:`).trim();
+        const validator = ReadlineSync.question(`Add new validator address to contract:`).trim();
         
-        console.info(`--> register verifier ${verifier} to VeChain bridge`);
-        const clause = await this.environment.contracts.vechain.verifierContract.send('addVerifier',0,verifier);
+        console.info(`--> register validator ${validator} to VeChain bridge`);
+        const clause = await this.environment.contracts.vechain.validatorContract.send('addValidator',0,validator);
         const txRep = await this.environment.connex.vendor.sign('tx',[clause])
                   .signer((this.environment.wallet as SimpleWallet).list[0].address)
                   .request();
         const receipt = await getReceipt(this.environment.connex,5,txRep.txid);
         if(receipt == null || receipt.reverted){
-          console.error(`Add new verifier to contract faild. txid: ${txRep.txid}`);
+          console.error(`Add new validator to contract faild. txid: ${txRep.txid}`);
           return;
         }
   
-        console.info(`--> register verifier ${verifier} to Ethereum bridge`);
+        console.info(`--> register validator ${validator} to Ethereum bridge`);
         const gasPrice = await (this.environment.web3 as Web3).eth.getGasPrice();
-        const addVerifierMethod = this.environment.contracts.ethereum.verifierContract.methods.addVerifier(verifier) as ContractSendMethod;
-        const gas = await addVerifierMethod.estimateGas({
+        const addValidatorMethod = this.environment.contracts.ethereum.validatorContract.methods.addValidator(validator) as ContractSendMethod;
+        const gas = await addValidatorMethod.estimateGas({
           from:this.environment.master
         });
-        await addVerifierMethod.send({
+        await addValidatorMethod.send({
           from:(this.environment.wallet as SimpleWallet).list[0].address,
           gas:gas,
           gasPrice: gasPrice
         });
-        console.info(`Add verfifer finish`);
+        console.info(`Add validator finish`);
   
       } catch (error) {
         console.error(`Deploy Token faild. error:${error}`);
