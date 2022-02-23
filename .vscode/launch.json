@@ -71,7 +71,7 @@
                 "999999",
                 "--debug-brk",
                 "--colors",
-                "${workspaceFolder}/test/*/fungibleTokenBridge.test.ts",
+                "${workspaceFolder}/test/*/ftBridge.test.ts",
                 "--recursive"
             ],
             "console": "integratedTerminal",

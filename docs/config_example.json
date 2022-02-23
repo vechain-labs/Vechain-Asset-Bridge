@@ -1,0 +1,39 @@
+{
+    "env":"local",
+    "appid":"",
+    "vechain": {
+        "nodeHost": "http://47.57.94.244:8680",
+        "chainName": "vechain",
+        "chainId": "0xf6",
+        "startBlockNum": 1193595,
+        "confirmHeight": 3,
+        "expiration": 180,
+        "contracts": {
+            "vVet": "",
+            "bridgeCore":"",
+            "bridgeValidator": "",
+            "ftBridge": ""
+        }
+    },
+    "ethereum": {
+        "nodeHost": "http://47.57.94.244:28545",
+        "chainName": "ethereum",
+        "chainId": "1337",
+        "startBlockNum": 204684,
+        "confirmHeight": 3,
+        "expiration": 24,
+        "contracts": {
+            "wEth": "",
+            "bridgeCore":"",
+            "bridgeValidator": "",
+            "ftBridge": ""
+        }
+    },
+    "logconfig":{
+        "logLevel":"trace",
+        "logDirPath":""
+    },
+    "dbconfig":{
+        "enableWAL":false
+    }
+}

@@ -11,6 +11,7 @@
   "dependencies": {
     "@vechain/connex-driver": "^2.0.8",
     "@vechain/connex-framework": "^2.0.8",
+    "abi-decoder": "^2.4.0",
     "assert": "^2.0.0",
     "myvetools": "^1.5.0",
     "thor-devkit": "^2.0.4",
