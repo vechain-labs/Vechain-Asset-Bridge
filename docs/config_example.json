@@ -1,6 +1,7 @@
 {
     "env":"local",
     "appid":"",
+    "packstep":180,
     "vechain": {
         "nodeHost": "http://47.57.94.244:8680",
         "chainName": "vechain",

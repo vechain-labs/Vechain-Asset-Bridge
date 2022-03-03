@@ -11,7 +11,8 @@ import { Framework } from '@vechain/connex-framework';
 import Web3 from 'web3';
 import BridgeValidationNode from '../vnode';
 import Environment from '../environment';
-import createBlockIndex from '../common/model/entities/blockIndex.entity';
+import { ActionResult } from '../common/utils/components/actionResult';
+import { BridgeSnapshoot } from '../common/utils/types/bridgeSnapshoot';
 
 export default class Node extends Command {
   static description = ''
@@ -34,13 +35,18 @@ export default class Node extends Command {
     await this.intiEnv(flags);
     await this.initDatabase(flags);
     await this.initBlockChain(flags);
+    this.environment.genesisSnapshoot = this.genesisSnapshoot();
 
     console.info(`
     ******************** VeChain Asset Bridge Info ********************
-    | VeChain ChainId Info    | ${this.environment.config.vechain.chainName} ${this.environment.config.vechain.chainId} ${this.environment.config.vechain.nodeHost}
-    | Ethereum ChainId Info   | ${this.environment.config.ethereum.chainName}  ${this.environment.config.ethereum.chainId}  ${this.environment.config.ethereum.nodeHost}
+    | VeChain Info    | ${this.environment.config.vechain.chainName} ${this.environment.config.vechain.chainId} ${this.environment.config.vechain.nodeHost}
+    | Ethereum Info   | ${this.environment.config.ethereum.chainName}  ${this.environment.config.ethereum.chainId}  ${this.environment.config.ethereum.nodeHost}
     | Node Key Address        | ${(this.environment.wallet as SimpleWallet).list[0].address}
     | Database                | ${this.environment.database}
+    | VeChain Bridge Core     | ${this.environment.config.vechain.contracts.bridgeCore}
+    | VeChain FTBridge        | ${this.environment.config.vechain.contracts.ftBridge}
+    | Ethereunm Bridge Core   | ${this.environment.config.ethereum.contracts.bridgeCore}
+    | Ethereunm FTBridge      | ${this.environment.config.ethereum.contracts.ftBridge}
     *******************************************************************
     `);
 
@@ -135,6 +141,23 @@ export default class Node extends Command {
     }
     await this.initConnex(prikey);
     await this.initWeb3(prikey);
+  }
+
+  private genesisSnapshoot():BridgeSnapshoot {
+    return {
+      merkleRoot:"0x0000000000000000000000000000000000000000000000000000000000000001",
+      chains:[{
+        chainName:this.environment.config.vechain.chainName,
+        chainId:this.environment.config.vechain.chainId,
+        beginBlockNum:this.environment.config.vechain.startBlockNum,
+        endBlockNum:this.environment.config.vechain.startBlockNum
+      },{
+        chainName:this.environment.config.ethereum.chainName,
+        chainId:this.environment.config.ethereum.chainId,
+        beginBlockNum:this.environment.config.ethereum.startBlockNum,
+        endBlockNum:this.environment.config.ethereum.startBlockNum
+      }]
+    }
   }
 
   private async loadNodeKey(keypath:string):Promise<string> {

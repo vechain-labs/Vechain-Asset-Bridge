@@ -1,530 +1,412 @@
-// import { Framework } from "@vechain/connex-framework";
-// import Web3 from "web3";
-// import BridgeStorage from "./common/bridgeStorage";
-// import { EthereumBridgeHead } from "./common/ethereumBridgeHead";
-// import BridgeTxModel from "./common/model/bridgeTxModel";
-// import LedgerModel from "./common/model/ledgerModel";
-// import { SnapshootModel } from "./common/model/snapshootModel";
-// import TokenInfoModel from "./common/model/tokenInfoModel";
-// import VerifierModel from "./common/model/verifierModel";
-// import { ActionData, ActionResult, PromiseActionResult } from "./common/utils/components/actionResult";
-// import { BridgeLedger } from "./common/utils/types/bridgeLedger";
-// import { BridgeSnapshoot, ZeroRoot } from "./common/utils/types/bridgeSnapshoot";
-// import { BridgeTx } from "./common/utils/types/bridgeTx";
-// import { TokenInfo } from "./common/utils/types/tokenInfo";
-// import { Verifier } from "./common/utils/types/verifier";
-// import { VeChainBridgeHead } from "./common/vechainBridgeHead";
-// import { VeChainBridgeVerifiter } from "./common/vechainBridgeVerifier";
+import { Framework } from "@vechain/connex-framework";
+import Web3 from "web3";
+import { EthereumBridgeCore } from "./common/ethereum/ethereumBridgeCore";
+import { EthereumCommon } from "./common/ethereum/ethereumCommon";
+import BlockIndexModel from "./common/model/blockIndexModel";
+import ConfigModel from "./common/model/configModel";
+import { SnapshootModel } from "./common/model/snapshootModel";
+import ValidatorModel from "./common/model/validatorModel";
+import BridgeStorage from "./common/utils/bridgeStorage";
+import { ActionData, ActionResult } from "./common/utils/components/actionResult";
+import { BlockRange } from "./common/utils/types/blockRange";
+import { BridgeSnapshoot, ZeroRoot } from "./common/utils/types/bridgeSnapshoot";
+import { SwapBridgeTx } from "./common/utils/types/bridgeTx";
+import { HashEvent } from "./common/utils/types/hashEvent";
+import { TokenInfo } from "./common/utils/types/tokenInfo";
+import { Validator } from "./common/utils/types/validator";
+import { VeChainBridgeCore } from "./common/vechain/vechainBridgeCore";
+import { VeChainBridgeValidator } from "./common/vechain/vechainBridgeValidator";
+import { VeChainCommon } from "./common/vechain/vechainCommon";
 
-// export class BridgeSyncTask{
-//     constructor(env:any){
-//         this.env = env;
-//         this.config = env.config;
-//         this.connex = this.env.connex;
-//         this.web3 = this.env.web3;
-//         this.tokenInfo = new Array<TokenInfo>();
-//         this.verifiers = new Array<Verifier>();
-//         this.vechainBridge = new VeChainBridgeHead(this.env);
-//         this.ethereumBridge = new EthereumBridgeHead(this.env);
-//         this.snapshootModel = new SnapshootModel(this.env);
-//         this.ledgerModel = new LedgerModel(this.env);
-//         this.BridgeTxModel = new BridgeTxModel(this.env);
-//         this.tokenInfoModel = new TokenInfoModel();
-//         this.vechainBridgeVerifier = new VeChainBridgeVerifiter(this.env);
-//     }
+export class BridgeSyncTask {
+    constructor(env:any) {
+        this.env = env;
+        this.config = env.config;
+        this.connex = env.connex;
+        this.web3 = env.web3;
+        this.tokenInfo = new Array();
+        this.validators = new Array();
+        this.configModel = new ConfigModel();
+        this.blockIndexModel = new BlockIndexModel();
+        this.validatorModel = new ValidatorModel();
+        this.vechainBridgeValidator = new VeChainBridgeValidator(env);
+        this.vechainCommon = new VeChainCommon(env);
+        this.ethereumCommon = new EthereumCommon(env);
+        this.snapshootModel = new SnapshootModel(env);
+        this.veChainBridgeCore = new VeChainBridgeCore(env);
+        this.ethereumBridgeCore = new EthereumBridgeCore(env);
+    }
 
-//     public async taskJob():Promise<ActionResult>{
-//         let result = new ActionResult();
+    public async taskJob():Promise<ActionResult>{
+        let result = new ActionResult();
 
-//         try {
-//             console.info(`Sync TokenInfo`);
-//             const syncTokenInfoResult = await this.snycTokensInfo();
-//             if(syncTokenInfoResult.error){
-//                 result.copyBase(syncTokenInfoResult);
-//                 return result;
-//             }
+        try {
+            console.info(`Sync VeChain Block Index`);
+            const syncVeChainResult = await this.snycVeChainBlockIndex();
+            if(syncVeChainResult.error){
+                result.error = syncVeChainResult.error;
+                return result;
+            }
 
-//             console.info(`Sync Verifiers`);
-//             const syncVerifiersResult = await this.syncVerifiers();
-//             if(syncVerifiersResult.error){
-//                 result.copyBase(syncVerifiersResult);
-//                 return result;
-//             }
+            console.info(`Sync Ethereum Block Index`);
+            const syncEthereumResult = await this.snycEthereumBlockIndex();
+            if(syncEthereumResult.error){
+                result.error = syncEthereumResult.error;
+                return result;
+            }
 
-//             console.info(`Get LastSyncedSnapshoot`);
-//             const lastSyncSnRsult = await this.getLastSyncedSnapshoot();
-//             if(lastSyncSnRsult.error){
-//                 result.copyBase(lastSyncSnRsult);
-//                 return result;
-//             }
-//             console.info(`LastSyncedSnapshoot is ${lastSyncSnRsult.data!.merkleRoot}`);
+            console.info(`Sync Validator List`);
+            const syncValidatorResult = await this.snycValidatorList();
+            if(syncValidatorResult.error){
+                result.error = syncValidatorResult.error;
+                return result;
+            }
 
-//             const latestMerkleRootResult = await this.vechainBridge.getMerkleRoot();
-//             if(latestMerkleRootResult.error){
-//                 result.error = latestMerkleRootResult.error;
-//                 return result;
-//             }
+            console.info(`Sync Snapshoot`);
+            const syncSnapshootResult = await this.syncSnapshoots();
+            if(syncSnapshootResult.error){
+                result.error = syncSnapshootResult.error;
+                return result;
+            }
+        } catch (error) {
+            result.error = error;
+        }
+        return result;
+    }
 
-//             if(latestMerkleRootResult.data != undefined && latestMerkleRootResult.data == lastSyncSnRsult.data!.merkleRoot){
-//                 console.info(`Complete synchronization`);
-//                 return result;
-//             }
+    private async snycVeChainBlockIndex():Promise<ActionResult>{
+        let result = new ActionResult();
+        const chainName = this.config.vechain.chainName as string;
+        const chainId = this.config.vechain.chainId as string;
+        if(this.env.syncVeChainBlockNum == undefined){
+            const latestResult = await this.blockIndexModel.getLatestBlock(chainName,chainId);
+            if(latestResult.error){
+                result.error = latestResult.error;
+                console.error(`GetLatestBlock error: ${result.error}`);
+                return result;
+            }
+            if(latestResult.data != undefined){
+                this.env.syncVeChainBlockNum = latestResult.data.blockNum;
+            } else {
+                this.env.syncVeChainBlockNum = this.config.vechain.startBlockNum as number - 1;
+            }
+        }
 
-//             console.info(`Get NoSyncSnapshootList`);
-//             const getNoSyncListResult = await this.getNoSyncSnapshootList(lastSyncSnRsult.data!);
-//             if(getNoSyncListResult.error){
-//                 result.copyBase(getNoSyncListResult);
-//                 return result;
-//             }
+        const beginBlock = this.env.syncVeChainBlockNum + 1;
+        const endBlock = (await this.connex.thor.block().get())!.number;
 
-//             console.info(`${getNoSyncListResult.data!.length} snapshoots have not been synchronized`);
-//             for(const sn of getNoSyncListResult.data!){
-//                 console.info(`begin sync snapshoots: ${sn.merkleRoot}`);
-//                 const syncResult = await this.syncDataBySnapshoot(sn);
-//                 if(syncResult.error){
-//                     result.copyBase(syncResult);
-//                     return syncResult;
-//                 }
-//                 console.info(`end sync snapshoots: ${sn.merkleRoot}`);
-//             }
-//         } catch (error) {
-//             result.error = error;
-//         }
-//         return result;
-//     }
+        while(true){
+            let tBlockNum = endBlock - this.config.vechain.confirmHeight >= this.env.syncVeChainBlockNum ? this.env.syncVeChainBlockNum - this.config.vechain.confirmHeight : endBlock - this.config.vechain.confirmHeight;
+            const getResult = await this.blockIndexModel.getBlockByNumber(chainName,chainId,tBlockNum);
+            if(getResult.error){
+                result.error = getResult.error;
+                return result;
+            }
+            if(getResult.data != undefined){
+                const isForkResult = await this.vechainCommon.blockIsFork(getResult.data.blockId);
+                if(isForkResult.error){
+                    result.error = isForkResult.error;
+                    return result;
+                }
+                if(isForkResult.data){
+                    let delRange:BlockRange = {
+                        blockNum:{
+                            from:tBlockNum
+                        }
+                    }
+                    await this.blockIndexModel.delete(chainName,chainId,delRange);
+                    continue;
+                }
+                break;
+            } else {
+                break;
+            }
+        }
 
-//     private async getLastSyncedSnapshoot():Promise<ActionData<BridgeSnapshoot>>{
-//         let result = new ActionData<BridgeSnapshoot>();
-//         result.data = {
-//             parentMerkleRoot:ZeroRoot(),
-//             merkleRoot:ZeroRoot(),
-//             chains:[
-//                 {
-//                     chainName:this.config.vechain.chainName,
-//                     chainId:this.config.vechain.chainId,
-//                     beginBlockNum:this.config.vechain.startBlockNum,
-//                     lockedBlockNum:this.config.vechain.startBlockNum,
-//                     endBlockNum:this.config.vechain.startBlockNum},
-//                 {
-//                     chainName:this.config.ethereum.chainName,
-//                     chainId:this.config.ethereum.chainId,
-//                     beginBlockNum:this.config.ethereum.startBlockNum,
-//                     lockedBlockNum:this.config.ethereum.startBlockNum,
-//                     endBlockNum:this.config.ethereum.startBlockNum
-//                 },
-//             ]
-//         }
+        for(let block = beginBlock;block <= endBlock;){
+            let from = block;
+            let to = block + this.vechainBlockStep > endBlock ? endBlock:block + this.vechainBlockStep - 1;
+            console.debug(`Scan vechain block index: ${from} - ${to}`);
+            const getBlockIndexResutl = await this.vechainCommon.getBlockIndex(from,to);
+            if(getBlockIndexResutl.error != undefined){
+                result.error = getBlockIndexResutl.error;
+                console.error(`VeChain getBlockIndex error: ${result.error}`);
+                break;
+            }
+            const saveResult = await this.blockIndexModel.save(getBlockIndexResutl.data!);
+            if(saveResult.error != undefined){
+                console.error(`Save blockindex error: ${result.error}`);
+                result.error = saveResult.error;
+            }
+            block = to + 1;
+            this.env.syncVeChainBlockNum = to;
+        }
 
-//         try {
-//             const localPromise = this.snapshootModel.getLastSnapshoot();
-//             const onchainPromise = this.vechainBridge.getLastSnapshoot();
-//             const promiseResult = await PromiseActionResult.PromiseActionResult(Promise.all([localPromise,onchainPromise]));
-//             if(promiseResult.error){
-//                 result.copyBase(promiseResult);
-//             }
+        if(this.env.syncVeChainBlockNum - this.vechainBlockCacheLimit > 0){
+            await this.blockIndexModel.delete(chainName,chainId,{blockNum:{to:this.env.syncVeChainBlockNum - this.vechainBlockCacheLimit}});
+        }
 
-//             let localsnapshoot = (promiseResult.data!.succeed[0] as ActionData<BridgeSnapshoot>).data!;
-//             let onchainsnapshoot = (promiseResult.data!.succeed[1] as ActionData<{sn:BridgeSnapshoot,txid:string,blocknum:number}>).data!.sn;
+        return result;
+    }
 
-//             if(localsnapshoot.merkleRoot == onchainsnapshoot.merkleRoot){
-//                 result.data = localsnapshoot;
-//                 return result;
-//             }
+    private async snycEthereumBlockIndex():Promise<ActionResult>{
+        let result = new ActionResult();
+        const chainName = this.config.ethereum.chainName as string;
+        const chainId = this.config.ethereum.chainId as string;
+        if(this.env.syncEthereumBlockNum == undefined){
+            const latestResult = await this.blockIndexModel.getLatestBlock(chainName,chainId);
+            if(latestResult.error){
+                result.error = latestResult.error;
+                console.error(`GetLatestBlock error: ${result.error}`);
+                return result;
+            }
+            if(latestResult.data != undefined){
+                this.env.syncEthereumBlockNum = latestResult.data.blockNum;
+            } else {
+                this.env.syncEthereumBlockNum = this.config.ethereum.startBlockNum as number - 1;
+            }
+        }
 
-//             while(true){
-//                 if(localsnapshoot.merkleRoot == onchainsnapshoot.merkleRoot){
-//                     result.data = localsnapshoot;
-//                     return result;
-//                 } else {
-//                     let localFromNum = localsnapshoot.chains.filter( chain =>{return chain.chainName == this.config.vechain.chainName && chain.chainId == this.config.vechain.chainId})[0].beginBlockNum;
-//                     let onchainFromNum = onchainsnapshoot.chains.filter( chain =>{return chain.chainName == this.config.vechain.chainName && chain.chainId == this.config.vechain.chainId})[0].beginBlockNum;
-//                     if(localFromNum <= onchainFromNum){
-//                         const lastSnapResult = await this.vechainBridge.getSnapshootByBlock(onchainFromNum);
-//                         if(lastSnapResult.error){
-//                             result.copyBase(lastSnapResult);
-//                             return result;
-//                         }
+        const beginBlock = this.env.syncEthereumBlockNum + 1;
+        const endBlock = await this.web3.eth.getBlockNumber();
 
-//                         if(lastSnapResult.data!.merkleRoot == ZeroRoot()){
-//                             await this.snapshootModel.deleteSnapshoot(localsnapshoot.merkleRoot);
-//                             return result;
-//                         }
-//                         onchainsnapshoot = lastSnapResult.data!;
-//                         continue;
+        while(true){
+            const tBlockNum = endBlock - this.config.ethereum.confirmHeight >= this.env.syncEthereumBlockNum ? this.env.syncEthereumBlockNum : endBlock - this.config.ethereum.confirmHeight;
+            const getResult = await this.blockIndexModel.getBlockByNumber(chainName,chainId,tBlockNum);
+            if(getResult.error){
+                result.error = getResult.error;
+                return result;
+            }
+            if(getResult.data != undefined){
+                const isForkResult = await this.ethereumCommon.blockIsFork(getResult.data.blockId);
+                if(isForkResult.error){
+                    result.error = isForkResult.error;
+                    return result;
+                }
+                if(isForkResult.data){
+                    let delRange:BlockRange = {
+                        blockNum:{
+                            from:tBlockNum
+                        }
+                    }
+                    await this.blockIndexModel.delete(chainName,chainId,delRange);
+                    continue;
+                }
+                break;
+            } else {
+                break;
+            }
+        }
 
-//                     } else {
-//                         const lastSnapResult = await this.snapshootModel.getSnapshootByRoot(localsnapshoot.parentMerkleRoot);
-//                         if(lastSnapResult.error){
-//                             result.copyBase(lastSnapResult);
-//                             return result;
-//                         }
-//                         if(lastSnapResult.data!.merkleRoot == ZeroRoot()){
-//                             return result;
-//                         }
-//                         await this.snapshootModel.deleteSnapshoot(localsnapshoot.merkleRoot);
-//                         localsnapshoot = lastSnapResult.data!
-//                         continue;
-//                     }
-//                 }
-//             }
-//         } catch (error) {
-//             result.error = error;
-//         }
-//         return result;
-//     }
+        for(let block = beginBlock;block <= endBlock;){
+            let from = block;
+            let to = block + this.ethereumBlockStep > endBlock ? endBlock:block + this.ethereumBlockStep - 1;
+            console.debug(`Scan ethereum block index: ${from} - ${to}`);
+            const getBlockIndexResutl = await this.ethereumCommon.getBlockIndex(from,to);
+            if(getBlockIndexResutl.error != undefined){
+                result.error = getBlockIndexResutl.error;
+                console.error(`Ethereum getBlockIndex error: ${result.error}`);
+                break;
+            }
+            const saveResult = await this.blockIndexModel.save(getBlockIndexResutl.data!);
+            if(saveResult.error != undefined){
+                console.error(`Save blockindex error: ${result.error}`);
+                result.error = saveResult.error;
+            }
+            block = to + 1;
+            this.env.syncEthereumBlockNum = to;
+        }
 
-//     private async syncDataBySnapshoot(sn:BridgeSnapshoot):Promise<ActionResult>{
-//         let result = new ActionResult();
+        if(this.env.syncEthereumBlockNum - this.ethereumBlockCacheLimit > 0){
+            await this.blockIndexModel.delete(chainName,chainId,{blockNum:{to:this.env.syncEthereumBlockNum - this.ethereumBlockCacheLimit}});
+        }
 
-//         let localDataResult = await this.loadLocalSnapshoot(sn.parentMerkleRoot);
-//         if(localDataResult.error){
-//             result.copyBase(localDataResult);
-//             return result;
-//         }
+        return result;
+    }
 
-//         const localSN = localDataResult.data!;
+    private async snycValidatorList():Promise<ActionResult>{
+        let result = new ActionResult();
+        let needUpdate = false;
 
-//         let getTxsResult = await this.getTxsBySnapshoot(sn);
-//         if(getTxsResult.error){
-//             result.copyBase(getTxsResult);
-//             return result;
-//         }
-//         console.info(`get ${getTxsResult.data!.length} Swap/Claim transactions`);
+        if(this.env.validatorsSync == undefined){
+            const configResult = await this.configModel.get(['validatorsSync']);
+            if(configResult.error == undefined && configResult.data!.has('validatorsSync')){
+                this.env.validatorsSync = Number(configResult.data!.get('validatorsSync'));
+            } else {
+                this.env.validatorsSync = this.config.vechain.startBlockNum;
+            }
+        }
 
-//         let bridgeStorage = new BridgeStorage(localSN.sn,this.tokenInfo,localSN.ledgers);
-//         const updateResult = await bridgeStorage.updateLedgers(getTxsResult.data!);
-//         if(updateResult.error){
-//             result.copyBase(updateResult);
-//             return result;
-//         }
+        if(this.validators.length == 0){
+            const localValidatorResult = await this.validatorModel.getValidators();
+            if(localValidatorResult.error){
+                result.error = localValidatorResult.error;
+                return result;
+            }
+            this.validators = localValidatorResult.data!;
+        } else {
+            this.validators = this.env.validators;
+        }
 
-//         const treenode = bridgeStorage.buildTree(sn.chains,sn.parentMerkleRoot);
-//         if(treenode.nodeHash != sn.merkleRoot){
-//             result.error = `syncDataBySnapshoot error:hash mismatching, root: ${sn.merkleRoot}`;
-//             return result;
-//         }
+        const bestBlock = this.connex.thor.status.head.number;
+        if(this.env.validatorsSync < bestBlock){
+            const getValidatorsResult = await this.vechainBridgeValidator.getValidators(this.env.validatorsSync + 1,bestBlock);
+            if(getValidatorsResult.error){
+                result.error = getValidatorsResult.error;
+                return result;
+            }
+            if(getValidatorsResult.data!.length > 0){
+                needUpdate = true;
+                for(const item of getValidatorsResult.data!){
+                    const index = this.validators.findIndex( validator => {return validator.validator == validator.validator;});
+                    if(index == -1){
+                        this.validators.push(item);
+                    } else {
+                        this.validators[index] = item;
+                    }
+                }
+            }
+            if(needUpdate){
+                await this.validatorModel.save(this.validators);
+            }
+
+            if(bestBlock - this.env.validatorsSync > 0 ){
+                await this.configModel.save(new Map([['validatorsSync',bestBlock.toString()]]));
+            }
+            this.env.validatorsSync = bestBlock;   
+        }
+        return result;
+    }
+
+    private async syncSnapshoots():Promise<ActionResult>{
+        let result = new ActionResult();
+
+        const getRangeResult = await this.noSyncRange();
+        if(getRangeResult.error){
+            result.error = getRangeResult.error;
+            return result;
+        }
+
+        let range = getRangeResult.data!;
+        if(range.begin == range.end){
+            console.info(`Complete synchronization`);
+            return result;
+        }
+
+        for(let index = range.begin + 1;index <= range.end;index++){
+            const getRootResult = await this.veChainBridgeCore.getSnapshootByIndex(index);
+            if(getRootResult.error){
+                result.error = getRootResult.error;
+                return result;
+            } else if(getRootResult.data!.merkleRoot == ZeroRoot()){
+                console.warn(`Can't load merkleroot by index ${index}`);
+                result.error = new Error(`Can't load merkleroot by index ${index}`);
+                return result;
+            }
+            const snapshoot = getRootResult.data!;
+            const getHashEventsResult = await this.getSubmitEventsBySn(snapshoot);
+            if(getHashEventsResult.error){
+                result.error = getHashEventsResult.error;
+                return result;
+            }
+
+            if(!this.checkSnapshoot(snapshoot,getHashEventsResult.data!)){
+                result.error = new Error(`syncDataBySnapshoot error:hash mismatching, snRoot: ${snapshoot.merkleRoot}`);
+                return result;
+            }
+            
+            const saveResult = await this.snapshootModel.save([snapshoot]);
+            if(saveResult.error){
+                result.error = saveResult.error;
+                return result;
+            }
+        }
+        return result;
+    }
+
+    private async noSyncRange():Promise<ActionData<{begin:number,end:number}>>{
+        let result = new ActionData<{begin:number,end:number}>();
+        result.data = {begin:0,end:0};
+
+        const lastIndexResult = await this.veChainBridgeCore.getRootCount();
+        if(lastIndexResult.error){
+            result.error = lastIndexResult.error;
+            return result;
+        }
+
+        const localSnResult = await this.snapshootModel.getLastSnapshoot();
+        if(localSnResult.error){
+            result.error = localSnResult.error;
+            return result;
+        }
         
-//         const snsaveResult = await this.snapshootModel.save([sn]);
-//         const ledgersaveResult = await this.ledgerModel.save(sn.merkleRoot,bridgeStorage.ledgerCache);
-//         const swaptxsaveResult = await this.BridgeTxModel.saveBridgeTxs(getTxsResult.data || []);
+        const indexResult = await this.veChainBridgeCore.getSnapshootByRoot(localSnResult.data!.merkleRoot);
+        if(indexResult.error){
+            result.error = indexResult.error;
+            return result;
+        }
 
-//         if(snsaveResult.error){
-//             result.copyBase(snsaveResult);
-//             return result;
-//         }
+        result.data = {begin:indexResult.data!.index,end:lastIndexResult.data!};
+        return result;
+    }
 
-//         if(ledgersaveResult.error){
-//             result.copyBase(ledgersaveResult);
-//             return result;
-//         }
+    private async getSubmitEventsBySn(sn:BridgeSnapshoot):Promise<ActionData<HashEvent[]>>{
+        let result = new ActionData<HashEvent[]>();
+        result.data = new Array();
 
-//         if(swaptxsaveResult.error){
-//             result.copyBase(swaptxsaveResult);
-//             return result;
-//         }
+        const vechain = sn.chains.find( item => {return item.chainName == this.config.vechain.chainName && item.chainId == this.config.vechain.chainId})!;
+        const ethereum = sn.chains.find( item => {return item.chainName == this.config.ethereum.chainName && item.chainId == this.config.ethereum.chainId})!;
 
-//         return result;
-//     }
+        if(vechain.beginBlockNum != 0 && vechain.endBlockNum != 0){
+            const getEventsResult = await this.veChainBridgeCore.getSubmitEventsByRange(vechain.beginBlockNum,vechain.endBlockNum);
+            if(getEventsResult.error){
+                result.error = getEventsResult.error;
+                return result;
+            }
+            result.data.concat(getEventsResult.data!);
+        }
 
-//     public async checkBridgeStatus():Promise<ActionData<boolean>>{
-//         let result = new ActionData<boolean>();
+        if(ethereum.beginBlockNum != 0 && ethereum.endBlockNum != 0){
+            const getEventsResult = await this.ethereumBridgeCore.getSubmitEventsByRange(vechain.beginBlockNum,vechain.endBlockNum);
+            if(getEventsResult.error){
+                result.error = getEventsResult.error;
+                return result;
+            }
+            result.data.concat(getEventsResult.data!);
+        }
+        return result;
+    }
 
-//         const vechainResult = await this.vechainBridge.getLockedStatus();
-//         if(vechainResult.error){
-//             result.copyBase(vechainResult);
-//             return result;
-//         }
-//         if(vechainResult.data == true){
-//             return vechainResult;
-//         }
+    private checkSnapshoot(sn:BridgeSnapshoot,events:HashEvent[]):boolean{
+        const storage = new BridgeStorage();
+        const appid = events.length > 0 ? events[0].appid : "";
+        storage.buildTree(appid,sn,events);
+        const treeRoot = storage.getMerkleRoot();
+        const result = treeRoot.toLowerCase() == sn.merkleRoot.toLowerCase();
+        if(result == false){
+            console.warn(`syncDataBySnapshoot error:hash mismatching, snRoot: ${sn.merkleRoot},treeRoot: ${treeRoot}`);
+        }
+        return result;
+    }
 
-//         const ethereumResult = await this.ethereumBridge.getLockedStatus();
-//         if(ethereumResult.error){
-//             result.copyBase(ethereumResult);
-//             return result;
-//         }
-//         return ethereumResult;
-//     }
+    private env:any;
+    private config:any;
+    private connex:Framework;
+    private web3:Web3;
+    private tokenInfo:Array<TokenInfo>;
+    private validators:Array<Validator>;
+    private configModel:ConfigModel;
+    private blockIndexModel:BlockIndexModel;
+    private validatorModel:ValidatorModel;
+    private vechainBlockStep:number = 200;
+    private ethereumBlockStep:number = 200;
+    private vechainBlockCacheLimit:number = 100000;
+    private ethereumBlockCacheLimit:number = 50000;
+    private vechainBridgeValidator!:VeChainBridgeValidator;
+    private vechainCommon!:VeChainCommon;
+    private ethereumCommon!:EthereumCommon;
+    private snapshootModel!:SnapshootModel;
+    private veChainBridgeCore!:VeChainBridgeCore;
+    private ethereumBridgeCore!:EthereumBridgeCore;
 
-//     public async getNoSyncBlockNum():Promise<ActionData<number>>{
-//         let result = new ActionData<number>();
-//         result.data = 0;
-
-//         try {
-//             const localPromise = this.snapshootModel.getLastSnapshoot();
-//             const onchainPromise = this.vechainBridge.getLastSnapshoot();
-//             const promiseResult = await PromiseActionResult.PromiseActionResult(Promise.all([localPromise,onchainPromise]));
-//             if(promiseResult.error){
-//                 result.copyBase(promiseResult);
-//             }
-
-//             let localsnapshoot = (promiseResult.data!.succeed[0] as ActionData<BridgeSnapshoot>).data!;
-//             let onchainsnapshoot = (promiseResult.data!.succeed[1] as ActionData<BridgeSnapshoot>).data!;
-
-//             if(localsnapshoot.merkleRoot == onchainsnapshoot.merkleRoot){
-//                 return result;
-//             }
-
-//             const chainName = this.config.vechain.chainName;
-//             const chainId = this.config.vechain.chainId;
-
-//             while(true){
-//                 if(localsnapshoot.merkleRoot == onchainsnapshoot.merkleRoot){
-//                     result.data = onchainsnapshoot.chains.filter( chain =>{return chain.chainName == chainName && chain.chainId == chainId})[0].endBlockNum;
-//                     return result;
-//                 } else {
-//                     let localFromNum = localsnapshoot.chains.filter( chain =>{return chain.chainName == chainName && chain.chainId == chainId})[0].beginBlockNum;
-//                     let onchainFromeNum = onchainsnapshoot.chains.filter( chain =>{return chain.chainName == chainName && chain.chainId == chainId})[0].beginBlockNum;
-//                     if(localFromNum <= onchainFromeNum){
-//                         const lastSnapResult = await this.vechainBridge.getSnapshootByBlock(onchainFromeNum);
-//                         if(lastSnapResult.error){
-//                             result.copyBase(lastSnapResult);
-//                             return result;
-//                         }
-
-//                         if(lastSnapResult.data!.merkleRoot == ZeroRoot()){
-//                             result.data = this.config.vechain.startBlockNum;
-//                             await this.snapshootModel.deleteSnapshoot(localsnapshoot.merkleRoot);
-//                             return result;
-//                         }
-//                         onchainsnapshoot = lastSnapResult.data!;
-//                         continue;
-
-//                     } else {
-//                         const lastSnapResult = await this.snapshootModel.getSnapshootByRoot(localsnapshoot.parentMerkleRoot);
-//                         if(lastSnapResult.error){
-//                             result.copyBase(lastSnapResult);
-//                             return result;
-//                         }
-//                         if(lastSnapResult.data!.merkleRoot == ZeroRoot()){
-//                             result.data = this.config.vechain.startBlockNum;
-//                             return result;
-//                         }
-//                         await this.snapshootModel.deleteSnapshoot(localsnapshoot.merkleRoot);
-//                         localsnapshoot = lastSnapResult.data!
-//                         continue;
-//                     }
-//                 }
-//             }
-//         } catch (error) {
-//             result.error = error;
-//         }
-//         return result;
-//     } 
-
-//     private async getNoSyncSnapshootList(sn:BridgeSnapshoot):Promise<ActionData<BridgeSnapshoot[]>>{
-//         let result = new ActionData<BridgeSnapshoot[]>();
-//         result.data = new Array();
-
-//         const vechain_beginBlock = sn.chains.filter(chain =>{return chain.chainName == this.config.vechain.chainName && chain.chainId == this.config.vechain.chainId;})[0].endBlockNum + 1;
-//         const vechain_endblock = (await this.connex.thor.block().get())!.number;
-//         const ethereum_beginBlock = sn.chains.filter(chain =>{return chain.chainName == this.config.ethereum.chainName && chain.chainId == this.config.ethereum.chainId;})[0].endBlockNum + 1;
-//         const ethereum_endblock = (await this.web3.eth.getBlock('latest')).number;
-
-//         const vPromise = this.vechainBridge.getSnapshoot(vechain_beginBlock,vechain_endblock);
-//         const ePromise = this.ethereumBridge.getSnapshoot(ethereum_beginBlock,ethereum_endblock);
-
-//         const promiseResult = await PromiseActionResult.PromiseActionResult(Promise.all([vPromise,ePromise]));
-//         if(promiseResult.error){
-//             result.copyBase(promiseResult);
-//             return result;
-//         }
-
-//         const vSn = (promiseResult.data!.succeed[0] as ActionData<BridgeSnapshoot[]>).data!;
-//         const eSn = (promiseResult.data!.succeed[1] as ActionData<BridgeSnapshoot[]>).data!;
-
-//         for(let sn of vSn){
-//             const tSn = eSn.filter( esn => {return esn.merkleRoot == sn.merkleRoot})[0];
-//             if(tSn == undefined){
-//                 result.error = new Error(`ethereum can't found snapshoot:${sn.merkleRoot}`);
-//                 return result;
-//             }
-//             sn.chains.push(tSn.chains[0]);
-//         }
-//         result.data = vSn;
-//         return result;
-//     }
-
-//     private async getTxsBySnapshoot(sn:BridgeSnapshoot):Promise<ActionData<BridgeTx[]>>{
-//         let result = new ActionData<BridgeTx[]>();
-//         result.data = new Array();
-//         const vechain = sn.chains.filter( chain => {return chain.chainName == this.config.vechain.chainName && chain.chainId == this.config.vechain.chainId;})[0];
-//         const ethereum = sn.chains.filter( chain => {return chain.chainName == this.config.ethereum.chainName && chain.chainId == this.config.ethereum.chainId;})[0];
-        
-//         const scanVeChainTxsPromise = this.vechainBridge.scanTxs(vechain.beginBlockNum,vechain.lockedBlockNum - 1);
-//         const scanEthereumTxsPromise = this.ethereumBridge.scanTxs(ethereum.beginBlockNum,ethereum.lockedBlockNum -1);
-        
-//         const scanResult = await PromiseActionResult.PromiseActionResult(Promise.all([scanVeChainTxsPromise,scanEthereumTxsPromise]));
-//         if(scanResult.error){
-//             result.copyBase(scanResult);
-//             return result;
-//         }
-
-//         const vechainTxs = (scanResult.data!.succeed[0] as ActionData<BridgeTx[]>).data!;
-//         const ethereumTxs = (scanResult.data!.succeed[1] as ActionData<BridgeTx[]>).data!;
-
-//         result.data = result.data.concat(vechainTxs,ethereumTxs);
-//         return result;
-//     }
-
-//     private async loadLocalSnapshoot(root:string):Promise<ActionData<{sn:BridgeSnapshoot,ledgers:BridgeLedger[]}>>{
-//         let result = new ActionData<{sn:BridgeSnapshoot,ledgers:BridgeLedger[]}>();
-
-//         const snapshootResult = await this.snapshootModel.getSnapshootByRoot(root);
-//         const ledgersResult = await this.ledgerModel.load(root);
-
-//         if(snapshootResult.error){
-//             result.copyBase(snapshootResult);
-//         }
-
-//         if(ledgersResult.error){
-//             result.copyBase(ledgersResult);
-//         }
-
-//         result.data = {sn:snapshootResult.data!,ledgers:ledgersResult.data!};
-//         return result;
-//     }
-
-//     private async snycTokensInfo():Promise<ActionResult>{
-//         let result = new ActionResult();
-//         let needUpdate = false;
-//         if(this.env.tokenInfoScan == undefined){
-//             this.env.tokenInfoScan = {
-//                 vechainEndBlock:this.config.vechain.startBlockNum,
-//                 ethereumEndBlock:this.config.ethereum.startBlockNum
-//             };
-//         }
-
-//         if(this.tokenInfo.length == 0){
-//             const localTokenInfosResult = await this.tokenInfoModel.getTokenInfos();
-//             if(localTokenInfosResult.error){
-//                 result.error = localTokenInfosResult.error;
-//                 return result;
-//             }
-//             this.tokenInfo = localTokenInfosResult.data!;
-//         }
-
-//         const vechainTokens = (this.env.tokenInfo as Array<TokenInfo>).filter(token => {return token.chainName == this.config.vechain.chainName && token.chainId == this.config.vechain.chainId;})
-//                                 .sort((l,r) => {return r.update - l.update;});
-//         const ethereumTokens = (this.env.tokenInfo as Array<TokenInfo>).filter(token => {return token.chainName == this.config.ethereum.chainName && token.chainId == this.config.ethereum.chainId;})
-//                                 .sort((l,r) => {return r.update - l.update;});
-
-//         this.env.tokenInfoScan.vechainEndBlock = (vechainTokens.length > 0 && this.env.tokenInfoScan.vechainEndBlock < vechainTokens[0].update) ? vechainTokens[0].update : this.env.tokenInfoScan.vechainEndBlock;
-//         this.env.tokenInfoScan.ethereumEndBlock = (vechainTokens.length > 0 && this.env.tokenInfoScan.ethereumEndBlock < ethereumTokens[0].update) ? ethereumTokens[0].update : this.env.tokenInfoScan.ethereumEndBlock;
-
-//         if(this.env.tokenInfoScan.vechainEndBlock < this.connex.thor.status.head.number){
-//             const getVeChainTokensInfoResult = await this.vechainBridge.getTokenInfos(this.env.tokenInfoScan.vechainEndBlock + 1,this.connex.thor.status.head.number);
-//             if(getVeChainTokensInfoResult.error){
-//                 result.error = getVeChainTokensInfoResult.error;
-//                 return result;
-//             }
-    
-//             if(getVeChainTokensInfoResult.data!.length > 0){
-//                 needUpdate = true;
-//                 for(const tokenInfo of getVeChainTokensInfoResult.data!){
-//                     let index = this.tokenInfo.findIndex( item => {return item.tokenid == tokenInfo.tokenid});
-//                     if(index != -1){
-//                         this.tokenInfo[index] = tokenInfo;
-//                     } else {
-//                         this.tokenInfo.push(tokenInfo);
-//                     }
-//                 }
-//             }
-//             this.env.tokenInfoScan.vechainEndBlock = this.connex.thor.status.head.number;
-//         }
-
-//         const ethereumLatestBlock = await this.web3.eth.getBlockNumber();
-
-//         if(this.env.tokenInfoScan.ethereumEndBlock < ethereumLatestBlock){
-//             const getEthereumTokenInfoResult = await this.ethereumBridge.getTokenInfos(this.env.tokenInfoScan.ethereumEndBlock + 1,ethereumLatestBlock);
-//             if(getEthereumTokenInfoResult.error){
-//                 result.error = getEthereumTokenInfoResult.error;
-//             }
-
-//             if(getEthereumTokenInfoResult.data!.length > 0){
-//                 needUpdate = true;
-//                 for(const tokenInfo of getEthereumTokenInfoResult.data!){
-//                     let index = this.tokenInfo.findIndex( item => {return item.tokenid == tokenInfo.tokenid});
-//                     if(index != -1){
-//                         this.tokenInfo[index] = tokenInfo;
-//                     } else {
-//                         this.tokenInfo.push(tokenInfo);
-//                     }
-//                 }
-//             }
-
-//             this.env.tokenInfoScan.ethereumEndBlock = ethereumLatestBlock;
-//         }
-
-//         if(needUpdate){
-//             await this.tokenInfoModel.save(this.tokenInfo);
-//             this.env.tokenInfo = this.tokenInfo;
-//         }
-        
-//         return result;
-//     }
-
-//     private async syncVerifiers():Promise<ActionResult>{
-//         let result = new ActionResult();
-//         let needUpdate = false;
-
-//         if(this.env.verifiersSync == undefined){
-//             this.env.verifiersSync = {endBlock:this.config.vechain.startBlockNum};
-//         }
-
-//         if(this.env.verifiers.length == 0){
-//             const localVerifiersResult = await (new VerifierModel()).getVerifiers();
-//             if(localVerifiersResult.error){
-//                 result.error = localVerifiersResult.error;
-//                 return result;
-//             }
-//             this.verifiers = localVerifiersResult.data!;
-//         } else {
-//             this.verifiers = this.env.verifiers;
-//         }
-
-//         if(this.verifiers.length > 0){
-//             const latestUpdateBlock = this.verifiers.sort((l,r) => {return r.update - l.update;})[0].update;
-//             this.env.verifiersSync.endBlock = this.env.verifiersSync.endBlock < latestUpdateBlock ? latestUpdateBlock : this.env.verifiersSync.endBlock;
-//         }
-
-//         if(this.env.verifiersSync.endBlock < this.connex.thor.status.head.number){
-//             const getVerifiersResult = await this.vechainBridgeVerifier.getVerifiers(this.env.verifiersSync.endBlock + 1,this.connex.thor.status.head.number);
-//             if(getVerifiersResult.error){
-//                 result.error = getVerifiersResult.error;
-//                 return result;
-//             }
-//             if(getVerifiersResult.data!.length > 0){
-//                 needUpdate = true;
-//                 for(const item of getVerifiersResult.data!){
-//                     const index = this.verifiers.findIndex( verifier => {return verifier.verifier == item.verifier;});
-//                     if(index == -1){
-//                         this.verifiers.push(item);
-//                     } else{
-//                         this.verifiers[index] = item;
-//                     }
-//                 }
-//             }
-//             this.env.verifiersSync.endBlock = this.connex.thor.status.head.number;
-//         }
-//         if(needUpdate){
-//             await (new VerifierModel()).save(this.verifiers);
-//         }
-//         this.env.verifiers = this.verifiers.filter(v => {return v.status == true;});
-//         return result;
-//     }
- 
-//     private env:any;
-//     private config:any;
-//     private vechainBridge:VeChainBridgeHead;
-//     private ethereumBridge:EthereumBridgeHead;
-//     private vechainBridgeVerifier!:VeChainBridgeVerifiter;
-//     private connex!:Framework;
-//     private web3!:Web3;
-//     private tokenInfo!:Array<TokenInfo>;
-//     private snapshootModel!:SnapshootModel;
-//     private ledgerModel!:LedgerModel;
-//     private BridgeTxModel!:BridgeTxModel;
-//     private tokenInfoModel!:TokenInfoModel;
-//     private verifiers!:Array<Verifier>;
-// }
+}

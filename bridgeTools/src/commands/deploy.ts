@@ -4,7 +4,7 @@ import { Contract as EContract, ContractSendMethod } from 'web3-eth-contract';
 const path = require('path');
 import * as fileIO from 'fs';
 import * as ReadlineSync from 'readline-sync';
-import { abi, address, Keystore, secp256k1 } from 'thor-devkit';
+import { abi, address, Keystore, RLP, secp256k1 } from 'thor-devkit';
 import { Driver, SimpleNet, SimpleWallet } from '@vechain/connex-driver';
 import { Framework } from '@vechain/connex-framework';
 import Web3 from 'web3';
@@ -23,6 +23,16 @@ export default class Deploy extends Command {
   static args = []
 
   private environment: any = {};
+  private readonly argsRLP = new RLP({
+    name:'range',
+    kind:[
+        {name:'vbegin',kind:new RLP.NumericKind(32)},
+        {name:'vend',kind:new RLP.NumericKind(32)},
+        {name:'ebegin',kind:new RLP.NumericKind(32)},
+        {name:'eend',kind:new RLP.NumericKind(32)},
+    ]});
+  
+  private readonly genesisArgs = '0x' + this.argsRLP.encode({vbegin:0,vend:0,ebegin:0,eend:0}).toString('hex');
 
   async run() {
     const { args, flags } = this.parse(Deploy);
@@ -271,7 +281,7 @@ export default class Deploy extends Command {
 
       const chainName = String(this.environment.config.vechain.chainName);
       const chainId = String(this.environment.config.vechain.chainId);
-      const clause1 = bridgeCore.deploy(0, chainName, chainId);
+      const clause1 = bridgeCore.deploy(0, chainName, chainId, this.genesisArgs);
       const txrep1 = await (this.environment.connex as Framework).vendor.sign('tx', [clause1])
         .signer(this.environment.master)
         .request();
@@ -283,6 +293,7 @@ export default class Deploy extends Command {
       bridgeCore.at(receipt1.outputs[0].contractAddress);
       this.environment.config.vechain.contracts.bridgeCore = bridgeCore.address;
       this.environment.config.vechain.startBlockNum = receipt1.meta.blockNumber;
+      this.environment.contracts.vechain.bridgeCore = bridgeCore;
 
       console.info('--> deploy vechain bridge validator contract.');
       const clause2 = bridgeValidator.deploy(0);
@@ -296,6 +307,7 @@ export default class Deploy extends Command {
       }
       bridgeValidator.at(receipt2.outputs[0].contractAddress);
       this.environment.config.vechain.contracts.bridgeValidator = bridgeValidator.address;
+      this.environment.contracts.vechain.bridgeValidator = bridgeValidator;
 
       console.info('--> set validator contracts address.');
       const clause3 = bridgeCore.send('setValidator', 0, bridgeValidator.address);
@@ -344,7 +356,7 @@ export default class Deploy extends Command {
       console.info('--> deploy vechain bridgecore contract.');
       const chainName = String(this.environment.config.ethereum.chainName);
       const chainId = String(this.environment.config.ethereum.chainId);
-      const bridgeCoreDeployMethod = bridgeCore.deploy({ data: bridgeCore.options.data!, arguments: [chainName, chainId] });
+      const bridgeCoreDeployMethod = bridgeCore.deploy({ data: bridgeCore.options.data!, arguments: [chainName, chainId, this.genesisArgs] });
       const bridgeCoreDeployGas = await bridgeCoreDeployMethod.estimateGas({ from: this.environment.master });
       bridgeCore = await bridgeCoreDeployMethod.send({ from: this.environment.master, gas: bridgeCoreDeployGas, gasPrice: gasPrice })
         .on('receipt', (receipt) => {
@@ -356,6 +368,8 @@ export default class Deploy extends Command {
           }
         });
       this.environment.config.ethereum.contracts.bridgeCore = bridgeCore.options.address;
+      this.environment.config.ethereum.startBlockNum = bridgeCoreMeta.deploy.blockNum as number;
+      this.environment.contracts.ethereum.bridgeCore = bridgeCore;
 
       console.info('--> deploy ethereum bridge validator contract.');
       const bridgeValidatorDeployMethod = bridgeValidator.deploy({ data: bridgeValidator.options.data! });
@@ -370,6 +384,7 @@ export default class Deploy extends Command {
           }
         });
       this.environment.config.ethereum.contracts.bridgeValidator = bridgeValidator.options.address;
+      this.environment.contracts.ethereum.bridgeValidator = bridgeValidator;
 
       console.info('--> set validator contracts address.');
       const setValidatorMethod = bridgeCore.methods.setValidator(bridgeValidator.options.address);
@@ -446,6 +461,7 @@ export default class Deploy extends Command {
         process.exit();
       }
       ftBridgeControl.at(receipt1.outputs[0].contractAddress);
+      this.environment.contracts.vechain.ftbridgeControl = ftBridgeControl;
 
       console.info('--> deploy vechain ftBridgeTokens contract.');
       const clause2 = ftBridgeTokens.deploy(0, ftBridgeControl.address);
@@ -458,6 +474,7 @@ export default class Deploy extends Command {
         process.exit();
       }
       ftBridgeTokens.at(receipt2.outputs[0].contractAddress);
+      this.environment.contracts.vechain.ftbridgeTokens = ftBridgeTokens;
 
       console.info('--> deploy vechain ftBridge contract.');
       const clause3 = ftBridge.deploy(0, chainName, chainId, ftBridgeControl.address, ftBridgeTokens.address);
@@ -470,6 +487,7 @@ export default class Deploy extends Command {
         process.exit();
       }
       ftBridge.at(receipt3.outputs[0].contractAddress);
+      this.environment.contracts.vechain.ftBridge = ftBridge;
 
       console.info('--> register ftBridge to bridgeCore.');
       const appid = this.environment.config.appid;
@@ -512,16 +530,19 @@ export default class Deploy extends Command {
       const controlDeployMethod = ftBridgeControl.deploy({ data: ftBridgeControl.options.data! });
       const controlDeployGas = await controlDeployMethod.estimateGas({ from: this.environment.master });
       ftBridgeControl = await controlDeployMethod.send({ from: this.environment.master, gas: controlDeployGas, gasPrice: gasPrice });
+      this.environment.contracts.ethereum.ftbridgeControl = ftBridgeControl;
 
       console.info('--> deploy ethereum ftBridgeTokens contract.');
       const tokensDeployMethod = ftBridgeTokens.deploy({ data: ftBridgeTokens.options.data!, arguments: [ftBridgeControl.options.address] });
       const tokensDeployGas = await tokensDeployMethod.estimateGas({ from: this.environment.master });
       ftBridgeTokens = await tokensDeployMethod.send({ from: this.environment.master, gas: tokensDeployGas, gasPrice: gasPrice });
+      this.environment.contracts.ethereum.ftbridgeTokens = ftBridgeTokens;
 
       console.info('--> deploy ethereum ftBridge contract.');
       const ftBridgeDeployMethod = ftBridge.deploy({ data: ftBridge.options.data!, arguments: [chainName, chainId, ftBridgeControl.options.address, ftBridgeTokens.options.address] });
       const ftBridgeDeployGas = await ftBridgeDeployMethod.estimateGas({ from: this.environment.master });
       ftBridge = await ftBridgeDeployMethod.send({ from: this.environment.master, gas: ftBridgeDeployGas, gasPrice: gasPrice });
+      this.environment.contracts.ethereum.ftBridge = ftBridge;
 
       console.info('--> register ftBridge to bridgeCore.');
       const appid = this.environment.config.appid;
