@@ -273,7 +273,8 @@ export class BridgeSyncTask {
             if(bestBlock - this.env.validatorsSync > 0 ){
                 await this.configModel.save(new Map([['validatorsSync',bestBlock.toString()]]));
             }
-            this.env.validatorsSync = bestBlock;   
+            this.env.validatorsSync = bestBlock;
+            this.env.validators = this.validators;
         }
         return result;
     }
@@ -315,7 +316,7 @@ export class BridgeSyncTask {
                 return result;
             }
             
-            const saveResult = await this.snapshootModel.save([snapshoot]);
+            const saveResult = await this.snapshootModel.save([snapshoot],[]);
             if(saveResult.error){
                 result.error = saveResult.error;
                 return result;

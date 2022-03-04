@@ -391,6 +391,11 @@ export default class Deploy extends Command {
       const setValidatorMethodGas = await setValidatorMethod.estimateGas({ from: this.environment.master });
       await setValidatorMethod.send({ from: this.environment.master, gas: setValidatorMethodGas, gasPrice: gasPrice });
 
+      console.info('--> set bridge contracts address.');
+      const setBridgeMethod = bridgeValidator.methods.setBridge(bridgeCore.options.address);
+      const setBridgeMethodGas = await setBridgeMethod.estimateGas({ from: this.environment.master });
+      await setBridgeMethod.send({ from: this.environment.master, gas: setBridgeMethodGas, gasPrice:gasPrice });
+
       this.environment.config.appid = "";
       fileIO.writeFileSync(this.environment.configPath, JSON.stringify(this.environment.config));
 

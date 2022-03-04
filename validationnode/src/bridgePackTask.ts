@@ -35,6 +35,7 @@ class BridgeStatusCache {
 
 enum STATUS {
     Entry = "Entry",
+    WaittingPackStep = "WaittingPackStep",
     VeChainNeedToUpdate = "VeChainNeedToUpdate",
     VeChainUpdateTxSent = "VeChainUpdateTxSent",
     VeChainUpdateUnconfirmed = "VeChainUpdateUnconfirmed",
@@ -109,6 +110,9 @@ export class BridgePackTask {
                 case STATUS.Entry:
                     processResult = await this.entryHandle();
                     break;
+                case STATUS.WaittingPackStep:
+                    console.info(`Wait next task.`);
+                    return result;
                 case STATUS.VeChainNeedToUpdate:
                     processResult = await this.vechainNeedToUpdateHandle();
                     break;
@@ -349,7 +353,7 @@ export class BridgePackTask {
                  this.status = STATUS.EthereumUpdateTxSent;
              }
         } catch (error) {
-            result.error = new Error(`lock ethereum bridge retry exceeded`);
+            result.error = new Error(`Ethereum update merkleroot faild. ${error}`);
         }
         return result;
     }
@@ -446,6 +450,15 @@ export class BridgePackTask {
             }
             this.bridgeStatusCache.newSnapshoot = getLastSnapshootResult.data!.sn;
         }
+
+        const chainInfo = this.bridgeStatusCache.newSnapshoot.chains.find(i => {return i.chainName == this.config.vechain.chainName && i.chainId == this.config.vechain.chainId;})!;
+        const bestBlock = await this.connex.thor.status.head.number;
+
+        if(bestBlock - chainInfo.endBlockNum < this.config.packstep){
+            this.status = STATUS.WaittingPackStep;
+            return result;
+        }
+
 
         //bridge status handle
         if(this.bridgeStatusCache.merklerootMatch() && this.bridgeStatusCache.vechainMerkleroot == this.bridgeStatusCache.parentMerkleroot){
@@ -643,13 +656,13 @@ export class BridgePackTask {
 
     private async needSendEthereumTx(root:string,beginBlock:number):Promise<boolean>{
         let arr = new Array<{addr:string,hash:string}>();
-        for(const verifier of (this.env.verifiers as Array<Validator>)){
+        for(const validator of (this.env.validators as Array<Validator>)){
             let data = Buffer.concat([
                 Buffer.from(root),
-                Buffer.from(verifier.validator)
+                Buffer.from(validator.validator)
             ]);
             let hash = "0x" + keccak256(data).toString('hex');
-            arr.push({addr:verifier.validator,hash:hash});
+            arr.push({addr:validator.validator,hash:hash});
         }
         let sortArr = arr.sort((l,r) => {return (BigInt(l.hash) >= BigInt(r.hash)) ? 1 : -1;});
 

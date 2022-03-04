@@ -11,8 +11,10 @@ import { Framework } from '@vechain/connex-framework';
 import Web3 from 'web3';
 import BridgeValidationNode from '../vnode';
 import Environment from '../environment';
-import { ActionResult } from '../common/utils/components/actionResult';
 import { BridgeSnapshoot } from '../common/utils/types/bridgeSnapshoot';
+import { compileContract } from 'myvetools/dist/utils';
+import { Contract as VContract } from 'myvetools';
+import { Contract as EContract } from 'web3-eth-contract';
 
 export default class Node extends Command {
   static description = ''
@@ -35,6 +37,7 @@ export default class Node extends Command {
     await this.intiEnv(flags);
     await this.initDatabase(flags);
     await this.initBlockChain(flags);
+    await this.initContracts();
     this.environment.genesisSnapshoot = this.genesisSnapshoot();
 
     console.info(`
@@ -44,9 +47,7 @@ export default class Node extends Command {
     | Node Key Address        | ${(this.environment.wallet as SimpleWallet).list[0].address}
     | Database                | ${this.environment.database}
     | VeChain Bridge Core     | ${this.environment.config.vechain.contracts.bridgeCore}
-    | VeChain FTBridge        | ${this.environment.config.vechain.contracts.ftBridge}
     | Ethereunm Bridge Core   | ${this.environment.config.ethereum.contracts.bridgeCore}
-    | Ethereunm FTBridge      | ${this.environment.config.ethereum.contracts.ftBridge}
     *******************************************************************
     `);
 
@@ -204,5 +205,27 @@ export default class Node extends Command {
       console.error(`Init web3 faild`);
       process.exit(); 
     }
+  }
+
+  private async initContracts():Promise<any>{
+    this.environment.contracts = {vechain:{},ethereum:{}};
+    
+    const BridgeCorePath = path.join(this.environment.contractdir,'/common/Contract_BridgeCore.sol');
+    const BridgeCoreAbi = JSON.parse(compileContract(BridgeCorePath,'BridgeCore','abi'));
+
+    this.environment.contracts.vechain.bridgeCore = new VContract({abi:BridgeCoreAbi,connex:this.environment.connex,address:this.environment.config.vechain.contracts.bridgeCore});
+    this.environment.contracts.ethereum.bridgeCore = new this.environment.web3.eth.Contract(BridgeCoreAbi,this.environment.config.ethereum.contracts.bridgeCore);
+
+    const vBrigeValidatorPath = path.join(this.environment.contractdir,'/vechain/Contract_VeChainBridgeValidator.sol');
+    const vBrigeValidatorAbi = JSON.parse(compileContract(vBrigeValidatorPath,'VeChainBridgeValidator','abi',[this.environment.contractdir]));
+
+    const vBrigeValidatorAddr = (await (this.environment.contracts.vechain.bridgeCore as VContract).call('validator')).decoded[0] as string;
+    this.environment.contracts.vechain.bridgeValidator = new VContract({abi:vBrigeValidatorAbi,connex:this.environment.connex,address:vBrigeValidatorAddr});
+
+    const eBridgeValidatorPath = path.join(this.environment.contractdir,'/ethereum/Contract_EthereumBridgeValidator.sol');
+    const eBridgeValidatorAbi = JSON.parse(compileContract(eBridgeValidatorPath,'EthereumBridgeValidator','abi',[this.environment.contractdir]));
+
+    const eBrigeValidatorAddr = await (this.environment.contracts.ethereum.bridgeCore as EContract).methods.validator().call();
+    this.environment.contracts.ethereum.bridgeValidator = new this.environment.web3.eth.Contract(eBridgeValidatorAbi,eBrigeValidatorAddr);
   }
 }
