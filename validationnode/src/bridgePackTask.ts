@@ -101,7 +101,20 @@ export class BridgePackTask {
     public async taskJob():Promise<ActionResult>{
         let result = new ActionResult();
         const beginTs = (new Date()).getTime();
-        console.info(`Bridge update process begin at ${beginTs} (${(new Date()).toString()})`);
+
+        const localSNResult = await this.snapshootModel.getLastSnapshoot();
+        if(localSNResult.error){
+            result.error = localSNResult.error;
+            return result;
+        }
+
+        const chainInfo = localSNResult.data!.chains.find(i => {return i.chainName == this.config.vechain.chainName && i.chainId == this.config.vechain.chainId;})!;
+        const bestBlock = await this.connex.thor.status.head.number;
+        if(bestBlock - chainInfo.endBlockNum < this.config.packstep){
+            return result;
+        }
+
+        console.debug(`Bridge update process begin at ${beginTs} (${(new Date()).toString()})`);
 
         this._status = STATUS.Entry;
         while(beginTs + this.processTimeout >= (new Date()).getTime()){
@@ -110,9 +123,6 @@ export class BridgePackTask {
                 case STATUS.Entry:
                     processResult = await this.entryHandle();
                     break;
-                case STATUS.WaittingPackStep:
-                    console.info(`Wait next task.`);
-                    return result;
                 case STATUS.VeChainNeedToUpdate:
                     processResult = await this.vechainNeedToUpdateHandle();
                     break;
@@ -142,7 +152,7 @@ export class BridgePackTask {
                     await sleep(this.loopsleep);
                     return result;
                 case STATUS.Finished:
-                    console.info(`Bridge update merkelroot process end at ${(new Date()).getTime()} (${(new Date()).toString()})`);
+                    console.debug(`Bridge update merkelroot process end at ${(new Date()).getTime()} (${(new Date()).toString()})`);
                     return result;
                 
             }
@@ -165,6 +175,7 @@ export class BridgePackTask {
             result.error = parentMerklerootResult.error;
             return result;
         }
+
         this.bridgeStatusCache.parentMerkleroot = parentMerklerootResult.data!.sn.merkleRoot;
         const initStatusResult = await this.refreshStatus();
         if(initStatusResult.error){
@@ -450,15 +461,6 @@ export class BridgePackTask {
             }
             this.bridgeStatusCache.newSnapshoot = getLastSnapshootResult.data!.sn;
         }
-
-        const chainInfo = this.bridgeStatusCache.newSnapshoot.chains.find(i => {return i.chainName == this.config.vechain.chainName && i.chainId == this.config.vechain.chainId;})!;
-        const bestBlock = await this.connex.thor.status.head.number;
-
-        if(bestBlock - chainInfo.endBlockNum < this.config.packstep){
-            this.status = STATUS.WaittingPackStep;
-            return result;
-        }
-
 
         //bridge status handle
         if(this.bridgeStatusCache.merklerootMatch() && this.bridgeStatusCache.vechainMerkleroot == this.bridgeStatusCache.parentMerkleroot){

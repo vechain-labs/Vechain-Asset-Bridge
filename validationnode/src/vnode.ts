@@ -19,24 +19,15 @@ export default class BridgeValidationNode {
                 if(syncResult.error){
                     console.error(`Sync bridge data error: ${syncResult.error}`);
                 }
-                //const needToPacking = await this.packRule();
-                const needToPacking = true;
-                if(needToPacking){
-                    const packTask = new BridgePackTask(this.env);
-                    const packResult = await packTask.taskJob();
-                    if(packResult.error){
-                        console.error(`Pack bridge data error: ${packResult.error}`);
-                    }
+                const packTask = new BridgePackTask(this.env);
+                const packResult = await packTask.taskJob();
+                if(packResult.error){
+                    console.error(`Pack bridge data error: ${packResult.error}`);
                 }
                 taskIsBusy = false;
             }
         });
         taskJob.invoke();
-    }
-
-    private async packRule():Promise<boolean>{
-        const bestBlock = await (this.env.connex as Framework).thor.block().get();
-        return bestBlock && bestBlock.number % this.config.packStep <= this.config.vechain.confirmHeight * 2 ? true : false;
     }
 
     private env:any;
