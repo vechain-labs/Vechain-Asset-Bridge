@@ -550,14 +550,14 @@ export class BridgePackTask {
             result.error = scanVeEventsResult.error;
             return result;
         }
-        hashEvents.concat(scanVeEventsResult.data!);
+        hashEvents = hashEvents.concat(scanVeEventsResult.data!);
         if(range.ethereum.beginBlockNum <= range.ethereum.endBlockNum && range.ethereum.endBlockNum != 0){
             const scanEthEventsResult = await this.ethereumBridgeCore.getSubmitEventsByRange(range.ethereum.beginBlockNum,range.ethereum.endBlockNum);
             if(scanEthEventsResult.error){
                 result.error = scanEthEventsResult.error;
                 return result;
             }
-            hashEvents.concat(scanEthEventsResult.data!);
+            hashEvents = hashEvents.concat(scanEthEventsResult.data!);
         }
 
         let newSnapshoot:BridgeSnapshoot = {

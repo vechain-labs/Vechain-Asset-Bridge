@@ -364,7 +364,7 @@ export class BridgeSyncTask {
                 result.error = getEventsResult.error;
                 return result;
             }
-            result.data.concat(getEventsResult.data!);
+            result.data = result.data.concat(getEventsResult.data!);
         }
 
         if(ethereum.beginBlockNum != 0 && ethereum.endBlockNum != 0){
@@ -373,7 +373,7 @@ export class BridgeSyncTask {
                 result.error = getEventsResult.error;
                 return result;
             }
-            result.data.concat(getEventsResult.data!);
+            result.data = result.data.concat(getEventsResult.data!);
         }
         return result;
     }

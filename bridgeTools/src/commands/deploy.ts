@@ -506,6 +506,18 @@ export default class Deploy extends Command {
         process.exit();
       }
 
+      console.log('--> set BridgeCore address & appid');
+      const clause5 = ftBridge.send('setBridgeCore',0,bridgeCore.address,appid);
+      const txrep5 = await (this.environment.connex as Framework).vendor.sign('tx', [clause5])
+        .signer(this.environment.master)
+        .request();
+      const receipt5 = await getReceipt(this.environment.connex, 6, txrep5.txid);
+      if(receipt5 == null || receipt5.reverted){
+        console.error(`Set bridgeCore address and appid faild, txid: ${receipt4.meta.txID}`);
+        process.exit();
+      }
+
+
       this.environment.config.vechain.contracts.ftBridge = ftBridge.address;
       fileIO.writeFileSync(this.environment.configPath, JSON.stringify(this.environment.config));
 
@@ -554,6 +566,11 @@ export default class Deploy extends Command {
       const addContractMethod = bridgeCore.methods.addContract(appid, ftBridge.options.address);
       const addContractGas = await addContractMethod.estimateGas({ from: this.environment.master });
       await addContractMethod.send({ from: this.environment.master, gas: addContractGas, gasPrice: gasPrice });
+
+      console.log('--> set BridgeCore address');
+      const setBridgeCoreMethod = ftBridge.methods.setBridgeCore(bridgeCore.options.address,appid);
+      const setBridgeCoreGas = await setBridgeCoreMethod.estimateGas({ from:this.environment.master });
+      await setBridgeCoreMethod.send({ from:this.environment.master,gas:setBridgeCoreGas,gasPrice:gasPrice});
 
       this.environment.config.ethereum.contracts.ftBridge = ftBridge.options.address;
       fileIO.writeFileSync(this.environment.configPath, JSON.stringify(this.environment.config));
