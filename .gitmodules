@@ -10,3 +10,11 @@
 	path = test/common
 	url = git@github.com:mongelly/Vechain-Asset-Bridge-Common.git
 	branch = 2.0
+[submodule "apibackend/common"]
+	path = apibackend/common
+	url = git@github.com:mongelly/Vechain-Asset-Bridge-Common.git
+	branch = 2.0
+[submodule "apibackend/src/common"]
+	path = apibackend/src/common
+	url = git@github.com:mongelly/Vechain-Asset-Bridge-Common.git
+	branch = 2.0
