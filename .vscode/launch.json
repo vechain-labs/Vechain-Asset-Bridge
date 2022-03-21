@@ -74,7 +74,7 @@
                 "999999",
                 "--debug-brk",
                 "--colors",
-                "${workspaceFolder}/test/*/ftBridge.test.ts",
+                "${workspaceFolder}/test/*/bridgeCore.test.ts",
                 "--recursive"
             ],
             "console": "integratedTerminal",

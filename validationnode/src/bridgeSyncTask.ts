@@ -24,7 +24,6 @@ export class BridgeSyncTask {
         this.config = env.config;
         this.connex = env.connex;
         this.web3 = env.web3;
-        this.tokenInfo = new Array();
         this.validators = new Array();
         this.configModel = new ConfigModel();
         this.blockIndexModel = new BlockIndexModel();
@@ -114,7 +113,7 @@ export class BridgeSyncTask {
                             from:tBlockNum
                         }
                     }
-                    await this.blockIndexModel.delete(chainName,chainId,delRange);
+                    await this.blockIndexModel.removeByBlockRange(chainName,chainId,delRange);
                     continue;
                 }
                 break;
@@ -141,11 +140,6 @@ export class BridgeSyncTask {
             block = to + 1;
             this.env.syncVeChainBlockNum = to;
         }
-
-        if(this.env.syncVeChainBlockNum - this.vechainBlockCacheLimit > 0){
-            await this.blockIndexModel.delete(chainName,chainId,{blockNum:{to:this.env.syncVeChainBlockNum - this.vechainBlockCacheLimit}});
-        }
-
         return result;
     }
 
@@ -189,7 +183,7 @@ export class BridgeSyncTask {
                             from:tBlockNum
                         }
                     }
-                    await this.blockIndexModel.delete(chainName,chainId,delRange);
+                    await this.blockIndexModel.removeByBlockRange(chainName,chainId,delRange);
                     continue;
                 }
                 break;
@@ -216,11 +210,6 @@ export class BridgeSyncTask {
             block = to + 1;
             this.env.syncEthereumBlockNum = to;
         }
-
-        if(this.env.syncEthereumBlockNum - this.ethereumBlockCacheLimit > 0){
-            await this.blockIndexModel.delete(chainName,chainId,{blockNum:{to:this.env.syncEthereumBlockNum - this.ethereumBlockCacheLimit}});
-        }
-
         return result;
     }
 
@@ -242,7 +231,7 @@ export class BridgeSyncTask {
             if(localValidatorResult.error){
                 result.error = localValidatorResult.error;
                 return result;
-            }
+            }   
             this.validators = localValidatorResult.data!;
         } else {
             this.validators = this.env.validators;
@@ -316,11 +305,27 @@ export class BridgeSyncTask {
                 return result;
             }
             
-            const saveResult = await this.snapshootModel.save([snapshoot],[]);
+            const saveResult = await this.snapshootModel.save([snapshoot],getHashEventsResult.data!);
             if(saveResult.error){
                 result.error = saveResult.error;
                 return result;
             }
+
+            const vechainInfo = snapshoot.chains.find( i => {return i.chainName == this.config.vechain.chainName && i.chainId == this.config.vechain.chainId;})!;
+            const ethereumInfo = snapshoot.chains.find( i => {return i.chainName == this.config.ethereum.chainName && i.chainId == this.config.ethereum.chainId;})!;
+            const delVeChainCacheRange:BlockRange = {
+                blockNum:{
+                    to:vechainInfo.endBlockNum > this.blockCacheLimit ? vechainInfo.endBlockNum - this.blockCacheLimit : this.blockCacheLimit
+                }
+            }
+            const delEthereumCacheRange:BlockRange = {
+                blockNum:{
+                    to:ethereumInfo.endBlockNum > this.blockCacheLimit ? ethereumInfo.endBlockNum - this.blockCacheLimit : this.blockCacheLimit
+                }
+            }
+
+            await this.blockIndexModel.removeByBlockRange(this.config.vechain.chainName,this.config.vechain.chainId,delVeChainCacheRange);
+            await this.blockIndexModel.removeByBlockRange(this.config.ethereum.chainName,this.config.ethereum.chainId,delEthereumCacheRange);
         }
         return result;
     }
@@ -394,15 +399,13 @@ export class BridgeSyncTask {
     private config:any;
     private connex:Framework;
     private web3:Web3;
-    private tokenInfo:Array<TokenInfo>;
     private validators:Array<Validator>;
     private configModel:ConfigModel;
     private blockIndexModel:BlockIndexModel;
     private validatorModel:ValidatorModel;
-    private vechainBlockStep:number = 200;
-    private ethereumBlockStep:number = 200;
-    private vechainBlockCacheLimit:number = 100000;
-    private ethereumBlockCacheLimit:number = 50000;
+    private readonly vechainBlockStep:number = 200;
+    private readonly ethereumBlockStep:number = 200;
+    private readonly blockCacheLimit:number = 2000;
     private vechainBridgeValidator!:VeChainBridgeValidator;
     private vechainCommon!:VeChainCommon;
     private ethereumCommon!:EthereumCommon;

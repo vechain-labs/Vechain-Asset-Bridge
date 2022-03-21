@@ -2,17 +2,17 @@ import path from "path";
 import ActiveSupportServices from "./activeSupportService";
 import Environment from "./environment";
 import schedule = require("node-schedule");
-import { SnapshootScanner } from "./snapshootScanner";
-import { VeChainSwapTxsScanner } from "./vechainSwapTxsScanner";
-import { EthereumSwapTxsScanner } from "./ethereumSwapTxsScanner";
+import { VeChainBridgeTxScanner } from "./vechainBridgeTxScanner";
+import { EthereumBridgeTxScanner } from "./ethereumBridgeTxScanner";
+import { FTSnapshootScanner } from "./ftSnapshootScanner";
 
 class BridgeApiBackend{
     constructor(env:Environment){
         let taskIsBusy = false;
 
-        const snapshootScanner = new SnapshootScanner(env);
-        const scanVeChainScanner = new VeChainSwapTxsScanner(env);
-        const scanEthereumScanner = new EthereumSwapTxsScanner(env);
+        const scanVeChainScanner = new VeChainBridgeTxScanner(env);
+        const scanEthereumScanner = new EthereumBridgeTxScanner(env);
+        const snapshootScanner = new FTSnapshootScanner(env);
 
         const rule = new schedule.RecurrenceRule();
         rule.second = [0,10,20,30,40,50];
@@ -59,7 +59,7 @@ export let environment = env;
 
 (new ActiveSupportServices()).activieSupportServices().then(action =>{
     if(action.error != undefined){
-        console.error("Support Active Faild: " + JSON.stringify(action.error));
+        console.error("Support Active Faild: " + action.error);
         process.exit();
     }
     const backend = new BridgeApiBackend(environment);
