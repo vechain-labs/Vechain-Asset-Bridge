@@ -20,7 +20,6 @@ class BridgeApiBackend{
         const taskJob = schedule.scheduleJob(rule, async() =>{
             if(taskIsBusy == false){
                 taskIsBusy = true;
-
                 const scanvechainResult = await scanVeChainScanner.run();
                 if(scanvechainResult.error){
                     console.error(`ScanVeChain Error: ${scanvechainResult.error}`);
@@ -41,7 +40,6 @@ class BridgeApiBackend{
                     taskIsBusy = false;
                     return;
                 }
-                
                 taskIsBusy = false;
             }
         });

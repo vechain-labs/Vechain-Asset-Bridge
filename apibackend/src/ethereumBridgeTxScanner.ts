@@ -55,6 +55,9 @@ export class EthereumBridgeTxScanner {
                 }
                 await this.configModel.save(new Map([['ethereumSyncBlock',String(to)]]));
                 this.env.ethereumSyncBlock = to;
+
+                await this.handleFork();
+                block = to + 1;
             }
 
         } catch (error) {

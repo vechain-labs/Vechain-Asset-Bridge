@@ -70,8 +70,7 @@ export default class ActiveSupportServices implements IActiveSupportServices{
 
         this.env.contracts.vechain.ftBridge = new VContract({abi:ftBridgeAbi,connex:this.env.connex,address:this.config.vechain.contracts.ftBridge});
         this.env.contracts.ethereum.ftBridge = new this.env.web3.eth.Contract(ftBridgeAbi,this.config.ethereum.contracts.ftBridge);
-
-        const call = await (this.env.contracts.vechain.ftBridge as VContract).call('bridgeTokens');
+        
         const vechainBridgeTokensAddr = (await (this.env.contracts.vechain.ftBridge as VContract).call('bridgeTokens')).decoded[0] as string;
         const ethereumBridgeTokensAddr = await (this.env.contracts.ethereum.ftBridge as EContract).methods.bridgeTokens().call();
 
@@ -80,6 +79,8 @@ export default class ActiveSupportServices implements IActiveSupportServices{
 
         this.env.contracts.vechain.ftBridgeTokens = new VContract({abi:ftBridgeTokensAbi,connex:this.env.connex,address:vechainBridgeTokensAddr});
         this.env.contracts.ethereum.ftBridgeTokens = new this.env.web3.eth.Contract(ftBridgeTokensAbi,ethereumBridgeTokensAddr);
+
+        
     }
 
     private genesisSnapshoot():BridgeSnapshoot {

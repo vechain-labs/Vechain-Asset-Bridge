@@ -56,6 +56,7 @@ export class VeChainBridgeTxScanner {
                 this.env.vechainSyncBlock = to;
 
                 await this.handleFork();
+                block = to + 1;
             }
         } catch (error) {
             result.error = error;
