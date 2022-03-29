@@ -16,7 +16,7 @@ import { claimID, ClaimMeta } from "../../utils/types/claimMeta";
 
 
 export default class BridgeController extends BaseMiddleware{
-    public claimList:Router.IMiddleware;
+    public history:Router.IMiddleware;
     public merkleproof:Router.IMiddleware;
     public packstep:Router.IMiddleware;
     public tokens:Router.IMiddleware;
@@ -24,7 +24,7 @@ export default class BridgeController extends BaseMiddleware{
     constructor(env:any){
         super(env);
 
-        this.claimList = async (ctx:Router.IRouterContext,next: () => Promise<any>) => {
+        this.history = async (ctx:Router.IRouterContext,next: () => Promise<any>) => {
             let chainName = String(ctx.query.chainname).toLowerCase();
             let chainId = String(ctx.query.chainid).toLowerCase();
             let address = String(ctx.query.address).toLowerCase();
@@ -52,7 +52,7 @@ export default class BridgeController extends BaseMiddleware{
         }
 
         this.packstep = async (ctx:Router.IRouterContext,next:() => Promise<any>) => {
-            ConvertJSONResponeMiddleware.bodyToJSONResponce(ctx,{step:150});
+            ConvertJSONResponeMiddleware.bodyToJSONResponce(ctx,{step:env.config.packstep});
         }
 
         this.tokens = async (ctx:Router.IRouterContext,next:() => Promise<any>) => {

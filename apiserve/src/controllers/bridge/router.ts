@@ -9,10 +9,10 @@ export default class BridgeRouter extends BaseRouter{
         const paramtsMiddleware = new QueryParamtsMiddleware(env);
         const controller = new BridgeController(env);
 
-        this.get("/claimlist",
+        this.get("/history",
             (ctx,next) => paramtsMiddleware.chainInfoVerification(ctx,next),
             (ctx,next) => paramtsMiddleware.addressValidation(ctx,next),
-            (ctx,next) => controller.claimList(ctx,next)
+            (ctx,next) => controller.history(ctx,next)
         );
 
         this.get("/merkleproof",

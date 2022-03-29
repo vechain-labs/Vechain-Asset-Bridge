@@ -124,7 +124,7 @@ export default class Deploy extends Command {
           const prikey = await Keystore.decrypt((ks as any), pwd);
           const pubKey = secp256k1.derivePublicKey(prikey)
           const addr = address.fromPublicKey(pubKey);
-          this.environment.prieky = prikey.toString('hex');
+          this.environment.prikey = prikey.toString('hex');
           this.environment.master = addr;
         } catch (error) {
           console.error(`Keystore or password invalid. ${error}`);
@@ -154,7 +154,7 @@ export default class Deploy extends Command {
         host = ReadlineSync.question('VeChain Node Host:');
       }
       const wallet = new SimpleWallet();
-      wallet.import(this.environment.prieky);
+      wallet.import(this.environment.prikey);
       this.environment.wallet = wallet;
       const driver = await Driver.connect(new SimpleNet(host), this.environment.wallet);
       this.environment.connex = new Framework(driver);
@@ -179,7 +179,7 @@ export default class Deploy extends Command {
         ethereumHost = ReadlineSync.question('Ethereum Node Host:');
       }
       const web3 = new Web3(new Web3.providers.HttpProvider(ethereumHost));
-      web3.eth.accounts.wallet.add(this.environment.prieky);
+      web3.eth.accounts.wallet.add(this.environment.prikey);
       this.environment.web3 = web3;
       const chainId = await this.environment.web3.eth.getChainId();
       this.environment.config.ethereum.nodeHost = ethereumHost;

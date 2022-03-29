@@ -108,7 +108,7 @@ export class FTSnapshootScanner {
         }
 
         if(ethereum.beginBlockNum != 0 && ethereum.endBlockNum != 0){
-            const getEventsResult = await this.ethereumBridgeCore.getSubmitEventsByRange(vechain.beginBlockNum,vechain.endBlockNum);
+            const getEventsResult = await this.ethereumBridgeCore.getSubmitEventsByRange(ethereum.beginBlockNum,ethereum.endBlockNum);
             if(getEventsResult.error){
                 result.error = getEventsResult.error;
                 return result;
