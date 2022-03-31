@@ -12,8 +12,6 @@ export class FTSnapshootScanner {
     constructor(env:any){
         this.env = env;
         this.config = env.config;
-        this.connex = this.env.connex;
-        this.web3 = this.env.web3;
         this.vechainBridgeCore = new VeChainBridgeCore(env);
         this.ethereumBridgeCore = new EthereumBridgeCore(env);
         this.snapshootModel = new SnapshootModel(env);
@@ -132,8 +130,6 @@ export class FTSnapshootScanner {
 
     private env:any;
     private config:any;
-    private connex!:Framework;
-    private web3!:Web3;
     private vechainBridgeCore!:VeChainBridgeCore;
     private ethereumBridgeCore!:EthereumBridgeCore;
     private snapshootModel!:SnapshootModel;

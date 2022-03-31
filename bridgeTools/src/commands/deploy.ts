@@ -724,7 +724,7 @@ export default class Deploy extends Command {
       const nativecoin = ReadlineSync.question('Is VeChain native coin?(y/n)').trim().toLowerCase();
       originTokenInfo.nativeCoin = nativecoin == 'y' ? true : false;
 
-      const reward = ReadlineSync.question('Set token reward (1 - 1000):').trim();
+      const reward = ReadlineSync.question('Set token reward (0 - 1000):').trim();
       originTokenInfo.reward = Number(reward);
 
       let wname = ReadlineSync.question(`Ethereum bridge wrapped token name (default ${'Bridge Wrapped ' + originTokenInfo.name}):`).trim();
@@ -903,7 +903,7 @@ export default class Deploy extends Command {
       const nativecoin = ReadlineSync.question('Is Ethereum Native Coin?(y/n)').trim().toLowerCase();
       originTokenInfo.nativeCoin = nativecoin == 'y' ? true : false;
 
-      const reward = ReadlineSync.question('Set token reward (1 - 1000):').trim();
+      const reward = ReadlineSync.question('Set token reward (0 - 1000):').trim();
       originTokenInfo.reward = Number(reward);
 
       let wname = ReadlineSync.question(`Ethereum bridge wrapped token name (default ${'Bridge Wrapped ' + originTokenInfo.name}):`).trim();

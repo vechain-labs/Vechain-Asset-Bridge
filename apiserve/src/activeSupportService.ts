@@ -2,7 +2,6 @@ import { environment } from ".";
 import { createConnection } from "typeorm";
 import path from "path";
 import IActiveSupportServices from "./utils/iActiveSupportService";
-import * as Devkit from 'thor-devkit';
 import Web3 from "web3";
 import { Driver, SimpleNet, SimpleWallet } from "@vechain/connex-driver";
 import { Framework } from "@vechain/connex-framework";

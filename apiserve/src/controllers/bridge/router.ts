@@ -16,9 +16,6 @@ export default class BridgeRouter extends BaseRouter{
         );
 
         this.get("/merkleproof",
-            (ctx,next) => paramtsMiddleware.chainInfoVerification(ctx,next),
-            (ctx,next) => paramtsMiddleware.addressValidation(ctx,next),
-            (ctx,next) => paramtsMiddleware.tokenAddrValidation(ctx,next),
             (ctx,next) => controller.merkleproof(ctx,next)
         );
 

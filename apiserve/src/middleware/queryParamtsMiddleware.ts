@@ -39,20 +39,10 @@ export class QueryParamtsMiddleware extends BaseMiddleware{
             ConvertJSONResponeMiddleware.errorJSONResponce(ctx,ParamtsError.ADDRESSINVALID);
         }
     }
-
-    public async balanceValidation(ctx:Router.IRouterContext,next:()=>Promise<any>){
-        let balance = String(ctx.query.balance || "").toLowerCase();
-        if(/^(-0x|0x)?[0-9a-f]*$/i.test(balance)){
-            await next();
-        } else {
-            ConvertJSONResponeMiddleware.errorJSONResponce(ctx,ParamtsError.ADDRESSINVALID);
-        }
-    }
 }
 
 export class ParamtsError{
-    public static CHAININFOINVALID = new Error(`ChainInfo Invalid`);
-    public static ADDRESSINVALID = new Error(`Address Invalid`);
-    public static MERKLEROOTINVALID = new Error(`Merkleroot Invalid`);
-    public static BALANCEINVALID = new Error(`Balance Invalid`);
+    public static CHAININFOINVALID = new Error('ChainInfo Invalid');
+    public static ADDRESSINVALID = new Error('Address Invalid');
+    public static MERKLEROOTINVALID = new Error('Merkleroot Invalid');
 }

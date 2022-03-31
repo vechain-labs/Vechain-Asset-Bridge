@@ -18,3 +18,7 @@
 	path = apibackend/src/common
 	url = git@github.com:mongelly/Vechain-Asset-Bridge-Common.git
 	branch = 2.0
+[submodule "apiserve/src/common"]
+	path = apiserve/src/common
+	url = git@github.com:mongelly/Vechain-Asset-Bridge-Common.git
+	branch = 2.0

@@ -1,18 +1,19 @@
 import Router from "koa-router";
-import BridgeStorage from "../../common/bridgeStorage";
+import { type } from "os";
 import BridgeTxModel from "../../common/model/bridgeTxModel";
-import LedgerModel from "../../common/model/ledgerModel";
 import { SnapshootModel } from "../../common/model/snapshootModel";
 import TokenInfoModel from "../../common/model/tokenInfoModel";
+import BridgeStorage from "../../common/utils/bridgeStorage";
 import { ActionData } from "../../common/utils/components/actionResult";
-import { BridgeLedger } from "../../common/utils/types/bridgeLedger";
-import { BridgeSnapshoot, ZeroRoot } from "../../common/utils/types/bridgeSnapshoot";
-import { BridgeTx } from "../../common/utils/types/bridgeTx";
+import { BridgeSnapshoot } from "../../common/utils/types/bridgeSnapshoot";
+import { SwapBridgeTx } from "../../common/utils/types/bridgeTx";
+import { HashEvent } from "../../common/utils/types/hashEvent";
 import { TokenInfo } from "../../common/utils/types/tokenInfo";
 import ConvertJSONResponeMiddleware from "../../middleware/convertJSONResponeMiddleware";
 import { BaseMiddleware } from "../../utils/baseMiddleware";
 import { SystemDefaultError } from "../../utils/error";
-import { claimID, ClaimMeta } from "../../utils/types/claimMeta";
+import { HistoryMeta } from "../../utils/types/historyMeta";
+import HistoryModel from "./historyModel";
 
 
 export default class BridgeController extends BaseMiddleware{
@@ -23,31 +24,44 @@ export default class BridgeController extends BaseMiddleware{
 
     constructor(env:any){
         super(env);
+        this.config = env.config;
+        this.historyModel = new HistoryModel(env);
+        this.bridgeTxModel = new BridgeTxModel(env);
+        this.snapshootModel = new SnapshootModel(env);
+        this.tokenInfoModel = new TokenInfoModel();
 
         this.history = async (ctx:Router.IRouterContext,next: () => Promise<any>) => {
             let chainName = String(ctx.query.chainname).toLowerCase();
             let chainId = String(ctx.query.chainid).toLowerCase();
             let address = String(ctx.query.address).toLowerCase();
+            let filter = String(ctx.query.filter).toLowerCase();
+            let limit = ctx.query.limit != undefined ? Number(ctx.query.limit) : 20;
+            let offset = ctx.query.offset != undefined ? Number(ctx.query.offset) : 0;
 
-            const buildClaimListResult = await this.buildClaimList(chainName,chainId,address);
-            if(buildClaimListResult.error){
-                ConvertJSONResponeMiddleware.errorJSONResponce(ctx,SystemDefaultError.INTERNALSERVERERROR);
-            }else{
-                this.convertToClaimListToJson(ctx,buildClaimListResult.data!);
+            if(filter == 'ongoing'){
+                const ongoingListResult = await this.historyModel.getOnGoingHistory(chainName,chainId,address,limit,offset);
+                if(ongoingListResult.error){
+                    ConvertJSONResponeMiddleware.errorJSONResponce(ctx,SystemDefaultError.INTERNALSERVERERROR);
+                }
+                this.convertToHistoryToJson(ctx,ongoingListResult.data!);
+            } else if(filter == 'completed'){
+                const completedListResult = await this.historyModel.getCompletedHistory(chainName,chainId,address,limit,offset);
+                if(completedListResult.error){
+                    ConvertJSONResponeMiddleware.errorJSONResponce(ctx,SystemDefaultError.INTERNALSERVERERROR);
+                }
+                this.convertToHistoryToJson(ctx,completedListResult.data!);
+            } else {
+                ConvertJSONResponeMiddleware.errorJSONResponce(ctx,new Error('Filter Invalid'));
             }
         }
 
         this.merkleproof = async (ctx:Router.IRouterContext,next: () => Promise<any>) => {
-            let chainName = String(ctx.query.chainname).toLowerCase();
-            let chainId = String(ctx.query.chainid).toLowerCase();
-            let token = String(ctx.query.token || "").toLowerCase();
-            let account = String(ctx.query.address).toLowerCase();
-
-            const getMerkleProofResult = await this.getMerkleProof(chainName,chainId,account,token);
-            if(getMerkleProofResult.error){
-                ConvertJSONResponeMiddleware.errorJSONResponce(ctx,SystemDefaultError.INTERNALSERVERERROR);
-            }else{
-                this.convertToMerkleProofToJson(ctx,getMerkleProofResult.data!);
+            let bridgeTxid = String(ctx.query.bridgetxid).toLowerCase();
+            const getClaimMetaResult = await this.getClaimMeta(bridgeTxid);
+            if(getClaimMetaResult.error){
+                ConvertJSONResponeMiddleware.errorJSONResponce(ctx,getClaimMetaResult.error);
+            } else {
+                this.convertClaimMetaToJson(ctx,getClaimMetaResult.data!);
             }
         }
 
@@ -59,489 +73,159 @@ export default class BridgeController extends BaseMiddleware{
         }
     }
 
-    private convertToClaimListToJson(ctx:Router.IRouterContext,list:Array<ClaimMeta>){
-        let body = {
-            claimList:new Array()
-        }
-
-        for(const meta of list){
-            const data = {
-                claimId:meta.claimId,
-                merkleRoot:meta.merkleRoot,
+    private convertToHistoryToJson(ctx:Router.IRouterContext,history:Array<HistoryMeta>){
+        let body = { history: new Array()};
+        for(const item of history){
+            let his = {
+                bridgeTxId:item.bridgeTxId,
+                merkleRoot:item.merkleRoot,
                 from:{
-                    chainName:meta.from.chainName,
-                    chainId:meta.from.chainId,
-                    name:meta.from.name,
-                    symbol:meta.from.symbol,
-                    decimals:meta.from.decimals,
-                    address:meta.from.address,
-                    nativeCoin:meta.from.nativeCoin,
-                    tokenType:meta.from.tokenType
+                    chainName:item.from.chainName,
+                    chainId:item.from.chainId,
+                    name:item.from.name,
+                    symbol:item.from.symbol,
+                    decimals:item.from.decimals,
+                    contract:item.from.contract,
+                    nativeCoin:item.from.nativeCoin,
+                    tokenType:item.from.tokenType,
+                    reward:Number(item.reward)
                 },
                 to:{
-                    chainName:meta.to.chainName,
-                    chainId:meta.to.chainId,
-                    name:meta.to.name,
-                    symbol:meta.to.symbol,
-                    decimals:meta.to.decimals,
-                    address:meta.to.address,
-                    nativeCoin:meta.to.nativeCoin,
-                    tokenType:meta.to.tokenType
+                    chainName:item.to.chainName,
+                    chainId:item.to.chainId,
+                    name:item.to.name,
+                    symbol:item.to.symbol,
+                    decimals:item.to.decimals,
+                    contract:item.to.contract,
+                    nativeCoin:item.to.nativeCoin,
+                    tokenType:item.to.tokenType,
                 },
-                sendingTxs:new Array(),
-                receivingTx:{},
-                totalAmount:"0x"+meta.totalAmount.toString(16),
-                status:meta.status
+                sender:item.sender,
+                receiver:item.receiver,
+                swapTx:item.swapTx,
+                claimTx:item.claimTx,
+                swapAmount:'0x' + item.swapAmount.toString(16),
+                rewardFee:'0x' + item.rewardFee.toString(16),
+                claimAmount:'0x' + item.claimAmount.toString(16),
+                swapCount:'0x' + item.swapCount.toString(16),
+                status:item.status
             }
-
-            for(const sendingTx of meta.sendingTxs){
-                data.sendingTxs.push({
-                    txId:sendingTx.txid,
-                    amount:"0x" + sendingTx.amount.toString(16),
-                    timestamp:sendingTx.timestamp
-                });
-            }
-
-            if(meta.receivingTx != undefined){
-                data.receivingTx = {
-                    txId:meta.receivingTx.txid,
-                    timestamp:meta.receivingTx.timestamp
-                }
-            }
-
-            if(data.from.symbol == "VVET"){
-                data.from.symbol = "VET";
-                data.from.name = "VET";
-                data.from.address = "";
-            } else if(data.from.symbol == "WETH"){
-                data.from.symbol = "ETH";
-                data.from.name = "ETH";
-                data.from.address = "";
-            }
-
-            if(data.to.symbol == "VVET"){
-                data.to.symbol = "VET";
-                data.to.name = "VET";
-                data.to.address = "";
-            } else if(data.to.symbol == "WETH"){
-                data.to.symbol = "ETH";
-                data.to.name = "ETH";
-                data.to.address = "";
-            }
-
-            body.claimList.push(data);
+            body.history.push(his);
         }
-
         ConvertJSONResponeMiddleware.bodyToJSONResponce(ctx,body);
     }
 
-    private async buildClaimList(chainName:string,chainId:string,account:string):Promise<ActionData<ClaimMeta[]>>{
-        let result = new ActionData<ClaimMeta[]>();
-        result.data = new Array<ClaimMeta>();
-
-        const baseInfoResult = await this.getBaseInfo(chainName,chainId,account);
-        if(baseInfoResult.error){
-            result.error = baseInfoResult.error;
-            return result;
-        }
-        const sn = baseInfoResult.data!.sn;
-
-        const tokenInfosResult = await (new TokenInfoModel()).getTokenInfos();
-        if(tokenInfosResult.error){
-            result.error = tokenInfosResult.error;
-            return result;
-        }
-
-        const tokenInfos = tokenInfosResult.data!;
-
-        const getInProcessListResult = await this.getInProcessClaimList(chainName,chainId,account,sn,tokenInfos);
-        if(getInProcessListResult.error){
-            result.error = getInProcessListResult.error;
-            return result;
-        }
-
-        const getWaittingClaimListResult = await this.getWaittingClaimList(chainName,chainId,account,sn,tokenInfos,10,0);
-        if(getWaittingClaimListResult.error){
-            result.error = getWaittingClaimListResult.error;
-            return result;
-        }
-
-        const getClaimedListResult = await this.getClaimedList(chainName,chainId,account,sn,tokenInfos,5,0);
-        if(getClaimedListResult.error){
-            result.error = getClaimedListResult.error;
-            return result;
-        }
-
-        result.data = result.data.concat(getInProcessListResult.data!,getWaittingClaimListResult.data!,getClaimedListResult.data!);
-        return result;
-    }
-
-    private async getBaseInfo(chainName:string,chainId:string,account:string):Promise<ActionData<{sn:BridgeSnapshoot,ledgers:BridgeLedger[]}>>{
-        let result = new ActionData<{sn:BridgeSnapshoot,ledgers:BridgeLedger[]}>();
-        result.data = {sn:{merkleRoot:ZeroRoot(),parentMerkleRoot:ZeroRoot(),chains:[]},ledgers:[]};
-        
-        const getLastSnapshootResult = await (new SnapshootModel(this.environment)).getLastSnapshoot();
-        if(getLastSnapshootResult.error){
-            result.error = getLastSnapshootResult.error;
-            return result;
-        }
-        result.data.sn = getLastSnapshootResult.data!;
-
-        const getLedgersResult = await (new LedgerModel(this.environment)).loadSnByAccount(result.data.sn.merkleRoot,chainName,chainId,account);
-        if(getLedgersResult.error){
-            result.error = getLedgersResult.error;
-            return result;
-        }
-        result.data.ledgers = getLedgersResult.data!;
-        return result;
-    }
-
-    private async getMerkleProof(chainName:string,chainId:string,account:string,token:string):Promise<ActionData<{ledger?:BridgeLedger,proof?:string[]}>>{
-        let result = new ActionData<{ledger?:BridgeLedger,proof?:string[]}>();
-
-        const tokenInfosResult = await (new TokenInfoModel()).getTokenInfos();
-        if(tokenInfosResult.error){
-            result.error = tokenInfosResult.error;
-            return result;
-        }
-
-        const tokenInfos = tokenInfosResult.data!;
-        const wethIndex = (tokenInfos as Array<TokenInfo>).findIndex(token => {return token.chainId == chainId && token.chainName == chainName && token.symbol.toLowerCase() == "weth"});
-        const vvetIndex = (tokenInfos as Array<TokenInfo>).findIndex(token => {return token.chainId == chainId && token.chainName == chainName && token.symbol.toLowerCase() == "vvet"});
-        if(wethIndex != -1){
-            tokenInfos[wethIndex].nativeCoin = true;
-        }
-        if(vvetIndex != -1){
-            tokenInfos[vvetIndex].nativeCoin = true;
-        }
-
-        const getLastSnapshootResult = await (new SnapshootModel(this.environment)).getLastSnapshoot();
-        if(getLastSnapshootResult.error){
-            result.error = getLastSnapshootResult.error;
-            return result;
-        }
-
-        const sn = getLastSnapshootResult.data!;
-        const getParentSnResult = await (new SnapshootModel(this.environment)).getSnapshootByRoot(sn.parentMerkleRoot);
-        if(getParentSnResult.error){
-            result.error = getParentSnResult.error;
-            return result;
-        }
-        const parentSn = getParentSnResult.data!;
-
-        const getLedgersResult = await (new LedgerModel(this.environment)).load(parentSn.merkleRoot);
-        if(getLedgersResult.error){
-            result.error = getLedgersResult.error;
-            return result;
-        }
-        const ledgers = getLedgersResult.data!;
-
-        const getSwapTxsResult = await (new BridgeTxModel(this.environment)).getSwapTxsBySnapshoot(sn);
-        if(getSwapTxsResult.error){
-            result.error = getSwapTxsResult.error;
-            return result;
-        }
-        const swaptxs = getSwapTxsResult.data!;
-
-        let storage = new BridgeStorage(parentSn,tokenInfos,ledgers);
-        let updateResult = await storage.updateLedgers(swaptxs);
-        if(updateResult.error){
-            result.error = updateResult.error;
-            return result;
-        }
-        const treenode = storage.buildTree(sn.chains,sn.parentMerkleRoot);
-        
-        if(treenode.nodeHash != sn.merkleRoot){
-            result.error = `syncDataBySnapshoot error:hash mismatching, root: ${sn.merkleRoot} treeNode: ${treenode.nodeHash}`;
-            return result;
-        }
-
-        let tokenAdd = token;
-        if(tokenAdd == ""){
-            let nativeCoinToken = tokenInfos.find(token => {return token.chainId == chainId && token.chainName == chainName && token.nativeCoin == true;});
-            if(nativeCoinToken == undefined){
-                result.error = `Can't found nativecoin on ChainName:${chainName} ChainId:${chainId}`;
-                return result;
-            }
-            tokenAdd = nativeCoinToken.address;
-        }
-
-        const targetLedger = storage.ledgerCache.find(ledger => {return ledger.chainName == chainName 
-            && ledger.chainId == chainId && ledger.account.toLowerCase() == account.toLowerCase() && ledger.token.toLowerCase() == tokenAdd.toLowerCase()});
-        if(targetLedger != undefined){
-            targetLedger.root = sn.merkleRoot;
-            const proof = storage.getMerkleProof(targetLedger);
-            const verify = BridgeStorage.verificationMerkleProof(targetLedger,sn.merkleRoot,proof);
-            if(verify == false){
-                result.error = `Merkleproof invalid`;
-                return result;
-            }
-            if(token == ""){
-                targetLedger.token = "";
-            }
-            result.data = {ledger:targetLedger,proof:proof};
-        } else {
-            result.data = {};
-        }
-        return result;
-    }
-
-    private async convertToMerkleProofToJson(ctx:Router.IRouterContext,data:{ledger?:BridgeLedger,proof?:string[]}){
-        let body = {};
-        if(data.ledger != undefined && data.proof != undefined){
-            body = {
-                merkleRoot:data.ledger.root || "",
-                chainName:data.ledger.chainName,
-                chainId:data.ledger.chainId,
-                account:data.ledger.account,
-                token:data.ledger.token,
-                balance:"0x" + data.ledger.balance.toString(16),
-                merkleProof:data.proof
+    private convertClaimMetaToJson(ctx:Router.IRouterContext,claim:ClaimMeta){
+        let body = {
+            meta:{
+                root:claim.root,
+                token:claim.token,
+                receipt:claim.receipt,
+                amount:'0x' + claim.amount.toString(16),
+                swapCount:'0x' + claim.swapCount.toString(16),
+                merkleProof:claim.merkleProof
             }
         }
         ConvertJSONResponeMiddleware.bodyToJSONResponce(ctx,body);
     }
 
-    private async getInProcessClaimList(chainName:string,chainId:string,account:string,sn:BridgeSnapshoot,tokenInfos:Array<TokenInfo>,limit?:number,offset:number = 0):Promise<ActionData<ClaimMeta[]>>{
-        let result = new ActionData<ClaimMeta[]>();
-        result.data = new Array<ClaimMeta>();
-
-        const swapChainInfo = sn.chains.find(chain => {return chain.chainName != chainName && chain.chainId != chainId})!;
-        const getSwapTxsResult = await (new BridgeTxModel(this.environment)).getSwapTxs(swapChainInfo.chainName,swapChainInfo.chainId,account,undefined,swapChainInfo.endBlockNum,undefined,limit,offset);
-        if(getSwapTxsResult.error){
-            result.error = getSwapTxsResult.error;
-            return result;
-        }
-
-        let claimList = new Array<ClaimMeta>();
-        for(const swapTx of getSwapTxsResult.data!){
-            let targetMeta = claimList.find(target =>{ return target.to.chainName == chainName && target.to.chainId == chainId && target.from.address.toLowerCase() == swapTx.token.toLowerCase();});
-            if(targetMeta == undefined){
-                let fromToken = tokenInfos.find(token => {return token.chainName == swapChainInfo.chainName && token.chainId == swapChainInfo.chainId && token.address.toLowerCase() == swapTx.token.toLowerCase()})!;
-                let toToken = tokenInfos.find(token => {return token.tokenid == fromToken.targetTokenId;})!;
-                let newMeta:ClaimMeta = {
-                    claimId:"",
-                    merkleRoot:ZeroRoot(),
-                    account:account,
-                    from:fromToken,
-                    to:toToken,
-                    sendingTxs:[swapTx],
-                    receivingTx:undefined,
-                    totalAmount:swapTx.amount,
-                    status:0,
-                    extension:{
-                        latestTs:swapTx.timestamp
-                    }
-                }
-                newMeta.claimId = claimID(sn.merkleRoot,newMeta);
-                claimList.push(newMeta);
-            } else {
-                targetMeta.sendingTxs.push(swapTx);
-                targetMeta.totalAmount = targetMeta.totalAmount + swapTx.amount;
-                targetMeta.extension!.latestTs = swapTx.timestamp >= targetMeta.extension!.latestTs ? swapTx.timestamp : targetMeta.extension!.latestTs;
-            }
-        }
-        result.data = claimList;
-        result.data = result.data!.sort((a,b) => {return b.extension!.latestTs - a.extension!.latestTs});
-        return result;
-    }
-
-    private async getWaittingClaimList(chainName:string,chainId:string,account:string,sn:BridgeSnapshoot,tokenInfos:Array<TokenInfo>,limit?:number,offset:number = 0):Promise<ActionData<ClaimMeta[]>>{
-        let result = new ActionData<ClaimMeta[]>();
-        result.data = new Array<ClaimMeta>();
-
-        const targetTokenList = tokenInfos.filter(token => {return token.chainName == chainName && token.chainId == chainId});
-        for(const token of targetTokenList){
-            const getWattingClaimByTokenResult = await this.getWaittingClaimByToken(token,account,sn,tokenInfos,limit,offset);
-            if(getWattingClaimByTokenResult.error){
-                result.error = getWattingClaimByTokenResult.error;
-                return result;
-            }
-            if(getWattingClaimByTokenResult.data != undefined){
-                result.data.push(getWattingClaimByTokenResult.data);
-            }
-        }
-        result.data = result.data!.sort((a,b) => {return b.extension!.latestTs - a.extension!.latestTs});
-
-        return result;
-    }
-
-    private async getWaittingClaimByToken(token:TokenInfo,account:string,sn:BridgeSnapshoot,tokenInfos:Array<TokenInfo>,limit?:number,offset:number = 0):Promise<ActionData<ClaimMeta>>{
+    private async getClaimMeta(bridgeTxId:string):Promise<ActionData<ClaimMeta>>{
         let result = new ActionData<ClaimMeta>();
-        const bridgeTxModel = new BridgeTxModel(this.environment);
-        const snapshootModel = new SnapshootModel(this.environment);
+
+        const getBridgeTxResult = await this.bridgeTxModel.getBridgeTxById(bridgeTxId);
         
-        const swapChainInfo = sn.chains.find(chain => {return chain.chainName != token.chainName && chain.chainId != token.chainId})!;
-        const claimChainInfo = sn.chains.find(chain => {return chain.chainName == token.chainName && chain.chainId == token.chainId})!;
-
-        const getLastClaimTxResult = await bridgeTxModel.getClaimTxs(claimChainInfo.chainName,claimChainInfo.chainId,account,token.address,undefined,undefined,1,0);
-        if(getLastClaimTxResult.error){
-            result.error = getLastClaimTxResult.error;
+        if(getBridgeTxResult.error){
+            result.error = getBridgeTxResult.error;
+            return result;
+        } else if(getBridgeTxResult.data == undefined || getBridgeTxResult.data.type == 2){
+            result.error = new Error("Can't found the bridge transaction");
             return result;
         }
-        let beginBlock = undefined;
-        if(getLastClaimTxResult.data!.length == 1){
-            const lastClaimTx = getLastClaimTxResult.data![0];
-            const getLastClaimedSNResult = await snapshootModel.getSnapshootByClaimTx(lastClaimTx,1,0);
+        const bridgeTx = getBridgeTxResult.data as SwapBridgeTx;
 
-            if(getLastClaimedSNResult.error){
-                result.error = getLastClaimedSNResult.error;
+        const getSNResult = await this.historyModel.getSnapshootByBlockNum(bridgeTx.chainName,bridgeTx.chainId,bridgeTx.blockNumber);
+        if(getSNResult.error){
+            result.error = getSNResult.error;
+            return result;
+        } else if(getSNResult.data == undefined){
+            result.error = new Error("The bridgetx is in process");
+            return result;
+        }
+        const sn = getSNResult.data;
+
+        const getHashEventsResult = await this.getSubmitEventsBySn(sn);
+        if(getHashEventsResult.error){
+            result.error = getHashEventsResult.error;
+            return result;
+        }
+        const events = getHashEventsResult.data!;
+
+        const storage = new BridgeStorage();
+        const appid = events.length > 0 ? events[0].appid : "";
+        storage.buildTree(appid,sn,events);
+        const treeRoot = storage.getMerkleRoot();
+        if(treeRoot.toLowerCase() != sn.merkleRoot.toLowerCase()){
+            result.error = new Error('Merkleroot hash mismatching');
+        }
+        
+        const merkleProof = storage.getMerkleProof(appid,bridgeTx.swapTxHash);
+
+        const tokenInfoResult = await this.tokenInfoModel.getTokenInfos();
+            if(tokenInfoResult.error){
+                result.error = tokenInfoResult.error;
                 return result;
             }
-
-            const lastClaimedSN = getLastClaimedSNResult.data![0];
-
-            if(lastClaimedSN.merkleRoot == sn.merkleRoot){
-                return result;
-            }
-
-            beginBlock = (lastClaimedSN.chains.find(chain => {return chain.chainName == swapChainInfo.chainName && chain.chainId == swapChainInfo.chainId})!.endBlockNum) - 1;
-        }
-        const originToken = tokenInfos.find(t => {return t.targetTokenId == token.tokenid})!;
-        const getSwapTxsResult = await bridgeTxModel.getSwapTxs(swapChainInfo.chainName,swapChainInfo.chainId,account,originToken.address,beginBlock,swapChainInfo.endBlockNum -1,limit,offset);
-        if(getSwapTxsResult.data!.length == 0){
-            return result;
-        }
-
-        let newClaimMeta:ClaimMeta = {
-            claimId:"",
-            account:account,
-            merkleRoot:ZeroRoot(),
-            from:originToken,
-            to:token,
-            sendingTxs:[],
-            receivingTx:undefined,
-            totalAmount:BigInt(0),
-            status:1,
-            extension:{
-                latestTs:0
-            }
-        }
-        newClaimMeta.claimId = claimID(sn.parentMerkleRoot,newClaimMeta);
-
-        for(const swaptx of getSwapTxsResult.data!){
-            newClaimMeta.sendingTxs.push(swaptx);
-            newClaimMeta.totalAmount = newClaimMeta.totalAmount + swaptx.amount;
-            newClaimMeta.extension.latestTs = newClaimMeta.extension.latestTs <= swaptx.timestamp ? swaptx.timestamp : newClaimMeta.extension.latestTs;
-        }
-        result.data = newClaimMeta;
-        return result;
-    }
-
-    private async getClaimedList(chainName:string,chainId:string,account:string,sn:BridgeSnapshoot,tokenInfos:Array<TokenInfo>,limit?:number,offset:number = 0):Promise<ActionData<ClaimMeta[]>>{
-        let result = new ActionData<ClaimMeta[]>();
-        result.data = new Array<ClaimMeta>();
-
-        const targetTokenList = tokenInfos.filter(token => {return token.chainName == chainName && token.chainId == chainId});
-        for(const token of targetTokenList){
-            const getWattingClaimByTokenResult = await this.getClaimedListByToken(token,account,sn,tokenInfos,limit,offset);
-            if(getWattingClaimByTokenResult.error){
-                result.error = getWattingClaimByTokenResult.error;
-                return result;
-            }
-            if(getWattingClaimByTokenResult.data != undefined && getWattingClaimByTokenResult.data.length > 0){
-                result.data = result.data.concat(getWattingClaimByTokenResult.data);
-            }
-        }
-        result.data = result.data!.sort((a,b) => {return b.extension!.latestTs - a.extension!.latestTs});
-        return result;
-    }
-
-    private async getClaimedListByToken(token:TokenInfo,account:string,sn:BridgeSnapshoot,tokenInfos:Array<TokenInfo>,limit?:number,offset:number = 0):Promise<ActionData<ClaimMeta[]>>{
-        let result = new ActionData<ClaimMeta[]>();
-        result.data = new Array<ClaimMeta>();
-
-        const bridgeTxModel = new BridgeTxModel(this.environment);
-        const swapChainInfo = sn.chains.find(chain => {return chain.chainName != token.chainName && chain.chainId != token.chainId})!;
-        const claimChainInfo = sn.chains.find(chain => {return chain.chainName == token.chainName && chain.chainId == token.chainId})!;
-
-        const getClaimTxsResult = await bridgeTxModel.getClaimTxs(claimChainInfo.chainName,claimChainInfo.chainId,account,token.address,undefined,undefined,limit,offset);
-        if(getClaimTxsResult.error){
-            result.error = getClaimTxsResult.error;
-            return result;
-        }
-
-        if(getClaimTxsResult.data != undefined && getClaimTxsResult.data.length > 0){
-            for(let index = 0; index < getClaimTxsResult.data.length; index++){
-                let endClaimTx = getClaimTxsResult.data[index];
-                let beginClaimTx = index < getClaimTxsResult.data.length ? getClaimTxsResult.data[index + 1] : undefined;
-                const getClaimedListResult = await this.getClaimedListByTokenAndClaim(token,account,tokenInfos,beginClaimTx,endClaimTx,10,0);
-                if(getClaimedListResult.error){
-                    result.error = getClaimedListResult.error;
-                    return result;
-                }
-                if(getClaimedListResult.data != undefined){
-                    result.data.push(getClaimedListResult.data);
-                }
-            }
-        }
-
-
-        return result;
-    }
-
-    private async getClaimedListByTokenAndClaim(token:TokenInfo,account:string,tokenInfos:Array<TokenInfo>,beginClaimTx:BridgeTx|undefined,endClaimTx:BridgeTx,limit?:number,offset:number = 0):Promise<ActionData<ClaimMeta>>{
-        let result = new ActionData<ClaimMeta>();
-        const bridgeTxModel = new BridgeTxModel(this.environment);
-        const snapshootModel = new SnapshootModel(this.environment);
-
-        let beginBlock = undefined;
-        let endBlock = undefined;
-
-        if(beginClaimTx != undefined){
-            const getBeginSNResult = await snapshootModel.getSnapshootByClaimTx(beginClaimTx,1,0);
-            if(getBeginSNResult.error){
-                result.error = getBeginSNResult.error;
-                return result;
-            }
-            beginBlock = getBeginSNResult.data![0].chains.find(chain => {return chain.chainName != token.chainName && chain.chainId != token.chainId})!.endBlockNum;
-        }
-        const getEndSNResult = await snapshootModel.getSnapshootByClaimTx(endClaimTx,1,0);
-        if(getEndSNResult.error){
-            result.error = getEndSNResult.error;
-            return result;
-        }
-        endBlock = getEndSNResult.data![0].chains.find(chain => {return chain.chainName != token.chainName && chain.chainId != token.chainId})!.endBlockNum;
-
-        const swapChainInfo = getEndSNResult.data![0].chains.find(chain => {return chain.chainName != token.chainName && chain.chainId != token.chainId})!;
-        const originToken = tokenInfos.find(t => {return t.targetTokenId == token.tokenid})!;
-
-        const getSwapTxsResult = await bridgeTxModel.getSwapTxs(swapChainInfo.chainName,swapChainInfo.chainId,account,originToken.address,beginBlock,endBlock,limit,offset);
-        if(getSwapTxsResult.error){
-            result.error = getSwapTxsResult.error;
-            return result;
-        }
-
-        if(getSwapTxsResult.data != undefined && getSwapTxsResult.data.length == 0){
-            return result;
-        }
-
-        const getSnapshootByParentrootResult = await snapshootModel.getSnapshootByRoot(getEndSNResult.data![0].parentMerkleRoot);
-        if(getSnapshootByParentrootResult.error){
-            result.error = getSnapshootByParentrootResult.error;
-            return result;
-        }
+        const targetToken = tokenInfoResult.data!.find(t => {return t.chainName == bridgeTx.chainName && t.chainId == bridgeTx.chainId && t.tokenAddr.toLowerCase() == bridgeTx.token.toLowerCase()})!;
 
         result.data = {
-            claimId:"",
-            merkleRoot:getSnapshootByParentrootResult.data!.merkleRoot,
-            account:account,
-            from:originToken,
-            to:token,
-            sendingTxs:[],
-            receivingTx:endClaimTx,
-            totalAmount:BigInt(0),
-            status:2,
-            extension:{
-                latestTs:endClaimTx.timestamp
-            }
+            root:sn.merkleRoot,
+            token:targetToken.targetTokenAddr,
+            receipt:bridgeTx.recipient,
+            amount:bridgeTx.amountOut,
+            swapCount:bridgeTx.swapCount,
+            merkleProof:merkleProof
         }
-        result.data.claimId = claimID(getSnapshootByParentrootResult.data!.merkleRoot,result.data);
-        for(const swaptx of getSwapTxsResult.data!){
-            result.data.sendingTxs.push(swaptx);
-            result.data.totalAmount = result.data.totalAmount + swaptx.amount;
+        return result;
+    }
+
+    private async getSubmitEventsBySn(sn:BridgeSnapshoot):Promise<ActionData<HashEvent[]>>{
+        let result = new ActionData<HashEvent[]>();
+        result.data = new Array();
+
+        const vechain = sn.chains.find( item => {return item.chainName == this.config.vechain.chainName && item.chainId == this.config.vechain.chainId})!;
+        const ethereum = sn.chains.find( item => {return item.chainName == this.config.ethereum.chainName && item.chainId == this.config.ethereum.chainId})!;
+
+        const getVHashEventsResult = await this.snapshootModel.getHashEventsByRange(vechain.chainName,vechain.chainId,{blockNum:{from:vechain.beginBlockNum,to:vechain.endBlockNum}});
+        const getEHashEventsResult = await this.snapshootModel.getHashEventsByRange(ethereum.chainName,ethereum.chainId,{blockNum:{from:ethereum.beginBlockNum,to:ethereum.endBlockNum}});
+
+        if(getVHashEventsResult.error){
+            result.error = getVHashEventsResult.error;
+            return result;
         }
+
+        if(getEHashEventsResult.error){
+            result.error.getEHashEventsResult.error;
+            return result;
+        }
+
+        result.data = result.data.concat(getVHashEventsResult.data!); 
+        result.data = result.data.concat(getEHashEventsResult.data!); 
 
         return result;
     }
+
+    private historyModel:HistoryModel;
+    private bridgeTxModel:BridgeTxModel;
+    private snapshootModel:SnapshootModel;
+    private tokenInfoModel:TokenInfoModel;
+    private config:any;
+}
+
+type ClaimMeta = {
+    root:string,
+    token:string,
+    receipt:string,
+    amount:BigInt,
+    swapCount:BigInt,
+    merkleProof:string[]
 }
