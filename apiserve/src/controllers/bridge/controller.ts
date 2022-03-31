@@ -179,7 +179,7 @@ export default class BridgeController extends BaseMiddleware{
 
         result.data = {
             root:sn.merkleRoot,
-            token:targetToken.targetTokenAddr,
+            token:targetToken.nativeCoin ? "" : targetToken.targetTokenAddr,
             receipt:bridgeTx.recipient,
             amount:bridgeTx.amountOut,
             swapCount:bridgeTx.swapCount,
