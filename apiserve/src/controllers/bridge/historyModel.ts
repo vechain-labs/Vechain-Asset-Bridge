@@ -39,18 +39,19 @@ export default class HistoryModel {
             const sChainInfo = lastSNResult.data!.chains.find(item => {return item.chainName == chainname && item.chainId == chainid;})!;
             const tChainInfo = lastSNResult.data!.chains.find(item => {return item.chainName != chainname && item.chainId != chainid;})!;
 
-            const datas = await getManager().query(`
-                select * from bridgeTx 
-                where bridgeTx.type = 1 
-                and not exists (select 1 from bridgeTx as t where t.swaptxhash == bridgeTx.swaptxhash and t.type = 2)
-                and (
-                    (bridgeTx.chainname == '${sChainInfo.chainName}' and bridgeTx.chainid == '${sChainInfo.chainId}' and bridgeTx."from" == '${account}') 
-                    or (bridgeTx.chainname != '${tChainInfo.chainName}' and bridgeTx.chainid == '${tChainInfo.chainId}' and bridgeTx.recipient == '${account}')
-                )
-                order by bridgeTx.timestamp desc
-                limit ${limit}
-                offset ${offset};
-            `);
+            const sql = `
+            select * from bridgeTx 
+            where bridgeTx.type = 1 
+            and not exists (select 1 from bridgeTx as t where t.swaptxhash == bridgeTx.swaptxhash and t.type = 2)
+            and (
+                (bridgeTx.chainname == '${sChainInfo.chainName}' and bridgeTx.chainid == '${sChainInfo.chainId}' and bridgeTx."from" == '${account}') 
+                or (bridgeTx.chainname != '${tChainInfo.chainName}' and bridgeTx.chainid == '${tChainInfo.chainId}' and bridgeTx.recipient == '${account}')
+            )
+            order by bridgeTx.timestamp desc
+            limit ${limit}
+            offset ${offset};`
+
+            const datas = await getManager().query(sql);
             if(datas != undefined && datas.length > 0){
                 for(const data of datas){
                     let history:HistoryMeta = {
