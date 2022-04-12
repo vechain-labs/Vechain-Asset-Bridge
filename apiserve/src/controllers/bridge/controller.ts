@@ -175,11 +175,12 @@ export default class BridgeController extends BaseMiddleware{
                 result.error = tokenInfoResult.error;
                 return result;
             }
-        const targetToken = tokenInfoResult.data!.find(t => {return t.chainName == bridgeTx.chainName && t.chainId == bridgeTx.chainId && t.tokenAddr.toLowerCase() == bridgeTx.token.toLowerCase()})!;
+
+        const targetToken = tokenInfoResult.data!.find(t => {return t.targetChainName == bridgeTx.chainName && t.targetChainId == bridgeTx.chainId && t.targetTokenAddr.toLowerCase() == bridgeTx.token.toLowerCase();})!;
 
         result.data = {
             root:sn.merkleRoot,
-            token:targetToken.nativeCoin ? "" : targetToken.targetTokenAddr,
+            token:targetToken.nativeCoin ? "" : targetToken.tokenAddr,
             receipt:bridgeTx.recipient,
             amount:bridgeTx.amountOut,
             swapCount:bridgeTx.swapCount,
