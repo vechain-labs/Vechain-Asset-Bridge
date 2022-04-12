@@ -737,7 +737,7 @@ export default class Deploy extends Command {
         decimals: originTokenInfo.decimals,
         taddress:'',
         tchainname:String(this.environment.config.vechain.chainName),
-        tchainid:String(this.environment.config.vechain.chainid),
+        tchainid:String(this.environment.config.vechain.chainId),
         beginNum: 0,
         reward:Number(reward)
       }
