@@ -85,7 +85,7 @@ export default class BridgeController extends BaseMiddleware{
                     name:item.from.name,
                     symbol:item.from.symbol,
                     decimals:item.from.decimals,
-                    contract:item.from.contract,
+                    contract:item.from.nativeCoin ? "" : item.from.contract,
                     nativeCoin:item.from.nativeCoin,
                     tokenType:item.from.tokenType,
                     reward:Number(item.reward)
@@ -96,7 +96,7 @@ export default class BridgeController extends BaseMiddleware{
                     name:item.to.name,
                     symbol:item.to.symbol,
                     decimals:item.to.decimals,
-                    contract:item.to.contract,
+                    contract:item.to.nativeCoin ? "" : item.to.contract,
                     nativeCoin:item.to.nativeCoin,
                     tokenType:item.to.tokenType,
                 },

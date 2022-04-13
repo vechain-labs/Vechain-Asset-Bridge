@@ -40,18 +40,22 @@ export default class HistoryModel {
             const tChainInfo = lastSNResult.data!.chains.find(item => {return item.chainName != chainname && item.chainId != chainid;})!;
 
             const sql = `
-            select * from bridgeTx 
-            where bridgeTx.type = 1 
-            and not exists (select 1 from bridgeTx as t where t.swaptxhash == bridgeTx.swaptxhash and t.type = 2)
+            select *,
+            ( select exists ( select 1 from hashevent as e where e.chainname = bridgeTx.chainname and e.chainid = bridgeTx.chainid and bridgeTx.swaptxhash = e.hash)) as "status"
+            from bridgeTx
+            where bridgeTx.type = 1
+            and not exists ( select 1 from bridgeTx as t where t.swaptxhash = bridgeTx.swaptxhash and t.type = 2 )
             and (
-                (bridgeTx.chainname == '${sChainInfo.chainName}' and bridgeTx.chainid == '${sChainInfo.chainId}' and bridgeTx."from" == '${account}') 
-                or (bridgeTx.chainname != '${tChainInfo.chainName}' and bridgeTx.chainid == '${tChainInfo.chainId}' and bridgeTx.recipient == '${account}')
+            ( bridgeTx.chainname = $0 and bridgeTx.chainid = $1 and lower(bridgeTx."from" = lower($2) 
+            and not exists (select 1 from hashevent as e where e.chainname = bridgeTx.chainname and e.chainid = bridgeTx.chainid and lower(bridgeTx.swaptxhash) = lower(e.hash))))
+            or ( bridgeTx.chainname = $3 and bridgeTx.chainid = $4 and lower(bridgeTx.recipient) = lower($2))
             )
-            order by bridgeTx.timestamp desc
-            limit ${limit}
-            offset ${offset};`
+            order by bridgeTx."timestamp"
+            limit $5
+            offset $6;`;
+            const parameters:any[] = [sChainInfo.chainName,sChainInfo.chainId,account.toLowerCase(),tChainInfo.chainName,tChainInfo.chainId,limit,offset];
 
-            const datas = await getManager().query(sql);
+            const datas = await getManager().query(sql,parameters);
             if(datas != undefined && datas.length > 0){
                 for(const data of datas){
                     let history:HistoryMeta = {
@@ -86,7 +90,7 @@ export default class HistoryModel {
                         claimAmount:BigInt(data.amountout),
                         rewardFee:BigInt(data.amount) - BigInt(data.amountout),
                         swapCount:BigInt(data.swapcount),
-                        status:0
+                        status:Number(data.status)
                     }
 
                     const getSnResult = await this.getSnapshootByBlockNum(data.chainname,data.chainid,data.blocknum,snapshootCache);
@@ -154,21 +158,23 @@ export default class HistoryModel {
             }
             tokenInfos = tokenInfoResult.data!;
 
-            const sChainInfo = lastSNResult.data!.chains.find(item => {return item.chainName == chainname && item.chainId == chainid;})!;
-            const tChainInfo = lastSNResult.data!.chains.find(item => {return item.chainName != chainname && item.chainId != chainid;})!;
+            const sql = `
+            select *,
+            (select exists (select 1 from bridgeTx as t where t.type = 2 and t.swaptxhash = bridgeTx.swaptxhash)) as "isclaim"
+            from bridgeTx
+            where (
+            bridgeTx.type = 1 and bridgeTx.chainname = $0 and bridgeTx.chainid = $1 and lower(bridgeTx."from") = lower($2)
+            and exists (select 1 from hashevent as e where e.chainname = bridgeTx.chainname and e.chainid = bridgeTx.chainid and e.hash = bridgeTx.swaptxhash) 
+            ) 
+            or (
+            bridgeTx.type = 2 and bridgeTx.chainname = $0 and bridgeTx.chainid = $1 and lower(bridgeTx.recipient) = lower($2)
+            )
+            order by bridgeTx."timestamp" desc
+            limit $3
+            offset $4;`
 
-            const datas = await getManager().query(`
-                select * from bridgeTx 
-                where bridgeTx.type = 2
-                and exists (select 1 from bridgeTx as t where t.swaptxhash == bridgeTx.swaptxhash and t.type = 2)
-                and (
-                    (bridgeTx.chainname == '${sChainInfo.chainName}' and bridgeTx.chainid == '${sChainInfo.chainId}' and bridgeTx.recipient == '${account}') 
-                    or (bridgeTx.chainname != '${tChainInfo.chainName}' and bridgeTx.chainid == '${tChainInfo.chainId}' and bridgeTx."from" == '${account}')
-                )
-                order by bridgeTx.timestamp desc
-                limit ${limit}
-                offset ${offset};
-            `);
+            const parameters:any[] = [chainname,chainid,account,limit,offset];
+            const datas = await getManager().query(sql,parameters);
             if(datas != undefined && datas.length > 0){
                 for(const data of datas){
                     let history:HistoryMeta = {
@@ -194,51 +200,125 @@ export default class HistoryModel {
                             nativeCoin:false,
                             tokenType:0
                         },
-                        sender:String(data.from),
-                        swapTx:String(data.txid),
-                        receiver:String(data.recipient),
+                        sender:"",
+                        swapTx:"",
+                        receiver:"",
                         claimTx:"",
-                        swapAmount:BigInt(data.amount),
-                        reward:BigInt(data.reward),
-                        claimAmount:BigInt(data.amountout),
-                        rewardFee:BigInt(data.amount) - BigInt(data.amountout),
-                        swapCount:BigInt(data.swapcount),
-                        status:0
+                        swapAmount:BigInt(0),
+                        reward:BigInt(0),
+                        rewardFee:BigInt(0),
+                        claimAmount:BigInt(0),
+                        swapCount:BigInt(0),
+                        status:1
                     }
+                    const originToken = tokenInfos.find(t => {return t.chainName == data.chainname && t.chainId == data.chainid && t.tokenAddr.toLowerCase() == data.token.toLowerCase();})!;
+                    const targetToken = tokenInfos.find(t => {return t.chainName == originToken.targetChainName && t.chainId == originToken.targetChainId && t.targetTokenAddr.toLowerCase() == originToken.tokenAddr.toLowerCase()})!;
+                    if(Number(data.type == 1)){
+                        history.sender = String(data.from);
+                        history.swapTx = String(data.txid);
+                        history.receiver = String(data.recipient);
+                        history.swapAmount = BigInt(data.amount);
+                        history.reward = BigInt(data.reward);
+                        history.rewardFee = BigInt(data.amount) - BigInt(data.amountout);
+                        history.claimAmount = BigInt(data.amountout);
+                        history.swapCount = BigInt(data.swapcount);
+                        history.status = 1;
 
-                    const getSnResult = await this.getSnapshootByBlockNum(data.chainname,data.chainid,data.blocknum,snapshootCache);
-                    if(getSnResult.error){
-                        result.error = getSnResult.error;
-                        return result;
+                        history.from = {
+                            chainName:originToken.chainName,
+                            chainId:originToken.chainId,
+                            name:originToken.name,
+                            symbol:originToken.symbol,
+                            decimals:originToken.decimals,
+                            contract:originToken.tokenAddr,
+                            nativeCoin:originToken.nativeCoin,
+                            tokenType:originToken.tokenType
+                        }
+                        history.to = {
+                            chainName:targetToken.chainName,
+                            chainId:targetToken.chainId,
+                            name:targetToken.name,
+                            symbol:targetToken.symbol,
+                            decimals:targetToken.decimals,
+                            contract:targetToken.tokenAddr,
+                            nativeCoin:targetToken.nativeCoin,
+                            tokenType:targetToken.tokenType
+                        }
+
+                        const getSnResult = await this.getSnapshootByBlockNum(data.chainname,data.chainid,data.blocknum,snapshootCache);
+                        if(getSnResult.error){
+                            result.error = getSnResult.error;
+                            return result;
+                        }
+                        if(getSnResult.data != null){
+                            history.merkleRoot = getSnResult.data.merkleRoot;
+                        }
+
+                        if(Number(data.isclaim) == 1){
+                            const sql1 = `
+                            select *
+                            from bridgeTx
+                            where bridgeTx.type = 2 and bridgeTx.chainname = $0 and bridgeTx.chainid = $1 and lower(bridgeTx.swaptxhash) = lower($3)
+                            `;
+                            const parameters1:any[] = [targetToken.chainName,targetToken.chainId,data.swaptxhash];
+                            const datas1 = await getManager().query(sql1,parameters1);
+                            if(datas1 != undefined && datas1.length > 0){
+                                history.claimTx = String(datas1[0].txid);
+                                history.status = 2;
+                            }
+                        }
+                    } else {
+                        history.from = {
+                            chainName:targetToken.chainName,
+                            chainId:targetToken.chainId,
+                            name:targetToken.name,
+                            symbol:targetToken.symbol,
+                            decimals:targetToken.decimals,
+                            contract:targetToken.tokenAddr,
+                            nativeCoin:targetToken.nativeCoin,
+                            tokenType:targetToken.tokenType
+                        }
+                        history.to = {
+                            chainName:originToken.chainName,
+                            chainId:originToken.chainId,
+                            name:originToken.name,
+                            symbol:originToken.symbol,
+                            decimals:originToken.decimals,
+                            contract:originToken.tokenAddr,
+                            nativeCoin:originToken.nativeCoin,
+                            tokenType:originToken.tokenType
+                        }
+
+                        history.claimTx = String(data.txid);
+                        history.receiver = String(data.recipient);
+                        history.reward = BigInt(data.reward);
+
+                        const sql1 = `
+                        select *
+                        from bridgeTx
+                        where bridgeTx.type = 1 and bridgeTx.chainname = $0 and bridgeTx.chainid = $1 and lower(bridgeTx.swaptxhash) = lower($3)
+                        `;
+                        const parameters1:any[] = [targetToken.chainName,targetToken.chainId,data.swaptxhash];
+                        const datas1 = await getManager().query(sql1,parameters1);
+                        if(datas1 != undefined && datas1.length > 0){
+                            history.swapTx = String(datas1[0].txid);
+                            history.sender = String(datas1[0].from);
+                            history.swapAmount = BigInt(datas1[0].amount);
+                            history.rewardFee = BigInt(datas1[0].amount) - BigInt(datas1[0].amountout);
+                            history.claimAmount = BigInt(datas1[0].amountout);
+                            history.swapCount = BigInt(datas1[0].swapcount);
+                            history.status = 2;
+
+                            const getSnResult = await this.getSnapshootByBlockNum(datas1[0].chainname,datas1[0].chainid,datas1[0].blocknum,snapshootCache);
+                            if(getSnResult.error){
+                                result.error = getSnResult.error;
+                                return result;
+                            }
+                            if(getSnResult.data != null){
+                                history.merkleRoot = getSnResult.data.merkleRoot;
+                            }
+                        }
                     }
-                    if(getSnResult.data != null){
-                        history.merkleRoot = getSnResult.data.merkleRoot;
-                        history.status = 2;
-                    }
-
-                    const fromToken = tokenInfos.find(t => {return t.chainName == data.chainname && t.chainId == data.chainid && t.tokenAddr.toLowerCase() == data.token.toLowerCase();})!;
-                    const toToken = tokenInfos.find(t => {return t.chainName == fromToken.targetChainName && t.chainId == fromToken.targetChainId && t.targetTokenAddr.toLowerCase() == fromToken.tokenAddr.toLowerCase()})!;
-
-                    history.from = {
-                        chainName:fromToken.chainName,
-                        chainId:fromToken.chainId,
-                        name:fromToken.name,
-                        symbol:fromToken.symbol,
-                        decimals:fromToken.decimals,
-                        contract:fromToken.tokenAddr,
-                        nativeCoin:fromToken.nativeCoin,
-                        tokenType:fromToken.tokenType
-                    };
-                    history.to = {
-                        chainName:toToken.chainName,
-                        chainId:toToken.chainId,
-                        name:toToken.name,
-                        symbol:toToken.symbol,
-                        decimals:toToken.decimals,
-                        contract:toToken.tokenAddr,
-                        nativeCoin:toToken.nativeCoin,
-                        tokenType:toToken.tokenType
-                    };
                     result.data.push(history);
                 }
             }
