@@ -40,16 +40,17 @@ export default class HistoryModel {
             const tChainInfo = lastSNResult.data!.chains.find(item => {return item.chainName != chainname && item.chainId != chainid;})!;
 
             const sql = `
-            select *,
-            ( select exists ( select 1 from hashevent as e where e.chainname = bridgeTx.chainname and e.chainid = bridgeTx.chainid and bridgeTx.swaptxhash = e.hash)) as "status"
+            select *,( select exists ( select 1 from hashevent as e where e.chainname = bridgeTx.chainname and e.chainid = bridgeTx.chainid and bridgeTx.swaptxhash = e.hash)) as "status"
             from bridgeTx
             where bridgeTx.type = 1
-            and not exists ( select 1 from bridgeTx as t where t.swaptxhash = bridgeTx.swaptxhash and t.type = 2 )
-            and (
-            ( bridgeTx.chainname = $0 and bridgeTx.chainid = $1 and lower(bridgeTx."from" = lower($2) 
-            and not exists (select 1 from hashevent as e where e.chainname = bridgeTx.chainname and e.chainid = bridgeTx.chainid and lower(bridgeTx.swaptxhash) = lower(e.hash))))
-            or ( bridgeTx.chainname = $3 and bridgeTx.chainid = $4 and lower(bridgeTx.recipient) = lower($2))
-            )
+                    and not exists ( select 1 from bridgeTx as t where t.swaptxhash = bridgeTx.swaptxhash and t.type = 2 )
+                    and (
+                    ( bridgeTx.chainname = $0 and bridgeTx.chainid = $1 and lower(bridgeTx."from") = lower($2) )
+                    and 
+                        not exists (select 1 from hashevent as e where e.chainname = bridgeTx.chainname and e.chainid = bridgeTx.chainid and lower(bridgeTx.swaptxhash) = lower(e.hash))
+                    )
+                    or ( bridgeTx.chainname = $3 and bridgeTx.chainid = '1337' and lower(bridgeTx.recipient) = lower($4)
+                    )
             order by bridgeTx."timestamp"
             limit $5
             offset $6;`;
@@ -327,6 +328,10 @@ export default class HistoryModel {
         }
 
         return result;
+    }
+
+    public async getTokenList():Promise<ActionData<Array<TokenInfo>>>{
+        return await this.tokenInfoModel.getTokenInfos();
     }
 
     public async getSnapshootByBlockNum(chainname:string,chainid:string,blockNum:number,cache?:BridgeSnapshoot[]):Promise<ActionData<BridgeSnapshoot|undefined>> {

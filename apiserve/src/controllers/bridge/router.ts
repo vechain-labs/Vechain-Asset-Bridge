@@ -22,5 +22,9 @@ export default class BridgeRouter extends BaseRouter{
         this.get("/pack/step",
             (ctx,next) => controller.packstep(ctx,next)
         );
+
+        this.get("/tokenlist",
+            (ctx,next) => controller.tokens(ctx,next)
+        );
     }
 }

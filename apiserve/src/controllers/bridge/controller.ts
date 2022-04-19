@@ -70,6 +70,11 @@ export default class BridgeController extends BaseMiddleware{
         }
 
         this.tokens = async (ctx:Router.IRouterContext,next:() => Promise<any>) => {
+            const tokensResult = await this.historyModel.getTokenList();
+            if(tokensResult.error){
+                ConvertJSONResponeMiddleware.errorJSONResponce(ctx,SystemDefaultError.INTERNALSERVERERROR);
+            }
+            this.convertTokensToJson(ctx,tokensResult.data!);
         }
     }
 
@@ -96,7 +101,7 @@ export default class BridgeController extends BaseMiddleware{
                     name:item.to.name,
                     symbol:item.to.symbol,
                     decimals:item.to.decimals,
-                    contract:item.to.nativeCoin ? "" : item.to.contract,
+                    contract:item.to.contract,
                     nativeCoin:item.to.nativeCoin,
                     tokenType:item.to.tokenType,
                 },
@@ -110,6 +115,31 @@ export default class BridgeController extends BaseMiddleware{
                 swapCount:'0x' + item.swapCount.toString(16),
                 status:item.status
             }
+
+            if(his.from.chainName == 'vechain' && his.from.nativeCoin){
+                his.from.name = 'VET',
+                his.from.symbol = 'VET'
+                his.from.contract = "";
+            }
+
+            if(his.to.chainName == 'ethereum' && his.to.nativeCoin){
+                his.to.name = 'VET',
+                his.to.symbol = 'VET'
+                his.to.contract = "";
+            }
+
+            if(his.from.chainName == 'ethereum' && his.from.nativeCoin){
+                his.from.name = 'ETH',
+                his.from.symbol = 'ETH'
+                his.from.contract = "";
+            }
+
+            if(his.to.chainName == 'ethereum' && his.to.nativeCoin){
+                his.to.name = 'ETH',
+                his.to.symbol = 'ETH'
+                his.to.contract = "";
+            }
+
             body.history.push(his);
         }
         ConvertJSONResponeMiddleware.bodyToJSONResponce(ctx,body);
@@ -125,6 +155,39 @@ export default class BridgeController extends BaseMiddleware{
                 swapCount:'0x' + claim.swapCount.toString(16),
                 merkleProof:claim.merkleProof
             }
+        }
+        ConvertJSONResponeMiddleware.bodyToJSONResponce(ctx,body);
+    }
+
+    private convertTokensToJson(ctx:Router.IRouterContext,tokens:Array<TokenInfo>){
+        let body = {
+            tokens:Array()
+        }
+
+        for(const token of tokens){
+            let t = {
+                chainName:token.chainName,
+                chainId:token.chainId,
+                name:token.name,
+                symbol:token.symbol,
+                decimals:token.decimals,
+                contract:token.tokenAddr,
+                nativeCoin:token.nativeCoin,
+                tokenType:token.tokenType,
+            }
+
+            if(t.chainName == 'vechain' && t.nativeCoin){
+                t.name = 'VET',
+                t.symbol = 'VET'
+                t.contract = "";
+            }
+
+            if(t.chainName == 'ethereum' && t.nativeCoin){
+                t.name = 'ETH',
+                t.symbol = 'ETH'
+                t.contract = "";
+            }
+            body.tokens.push(t);
         }
         ConvertJSONResponeMiddleware.bodyToJSONResponce(ctx,body);
     }
