@@ -49,7 +49,7 @@ export default class HistoryModel {
                     and 
                         not exists (select 1 from hashevent as e where e.chainname = bridgeTx.chainname and e.chainid = bridgeTx.chainid and lower(bridgeTx.swaptxhash) = lower(e.hash))
                     )
-                    or ( bridgeTx.chainname = $3 and bridgeTx.chainid = '1337' and lower(bridgeTx.recipient) = lower($4)
+                    or ( bridgeTx.chainname = $3 and bridgeTx.chainid = $4 and lower(bridgeTx.recipient) = lower($2)
                     )
             order by bridgeTx."timestamp"
             limit $5
