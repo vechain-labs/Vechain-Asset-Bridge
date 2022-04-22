@@ -51,7 +51,7 @@ export default class HistoryModel {
                     )
                     or ( bridgeTx.chainname = $3 and bridgeTx.chainid = $4 and lower(bridgeTx.recipient) = lower($2)
                     )
-            order by bridgeTx."timestamp"
+            order by bridgeTx."timestamp" desc
             limit $5
             offset $6;`;
             const parameters:any[] = [sChainInfo.chainName,sChainInfo.chainId,account.toLowerCase(),tChainInfo.chainName,tChainInfo.chainId,limit,offset];
