@@ -915,8 +915,8 @@ export default class Deploy extends Command {
         symbol: wsymbol.length > 0 ? wsymbol : 'V' + originTokenInfo.symbol.substring(1),
         decimals: originTokenInfo.decimals,
         taddress:'',
-        tchainname:String(this.environment.config.vechain.chainName),
-        tchainid:String(this.environment.config.vechain.chainName),
+        tchainname:String(this.environment.config.ethereum.chainName),
+        tchainid:String(this.environment.config.ethereum.chainId),
         beginNum: 0,
         reward:Number(reward)
       }
