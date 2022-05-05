@@ -25,9 +25,9 @@ export class BridgeSyncTask {
         this.connex = env.connex;
         this.web3 = env.web3;
         this.validators = new Array();
-        this.configModel = new ConfigModel();
-        this.blockIndexModel = new BlockIndexModel();
-        this.validatorModel = new ValidatorModel();
+        this.configModel = new ConfigModel(env);
+        this.blockIndexModel = new BlockIndexModel(env);
+        this.validatorModel = new ValidatorModel(env);
         this.vechainBridgeValidator = new VeChainBridgeValidator(env);
         this.vechainCommon = new VeChainCommon(env);
         this.ethereumCommon = new EthereumCommon(env);

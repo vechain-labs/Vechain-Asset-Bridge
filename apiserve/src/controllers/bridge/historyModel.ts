@@ -1,10 +1,9 @@
-import { getManager, getRepository } from "typeorm";
+import { DataSource, getManager, getRepository } from "typeorm";
 import { SnapshootEntity } from "../../common/model/entities/snapshoot.entity";
 import { SnapshootModel } from "../../common/model/snapshootModel";
 import TokenInfoModel from "../../common/model/tokenInfoModel";
 import { ActionData } from "../../common/utils/components/actionResult";
 import { BridgeSnapshoot } from "../../common/utils/types/bridgeSnapshoot";
-import { BaseBridgeTx } from "../../common/utils/types/bridgeTx";
 import { TokenInfo } from "../../common/utils/types/tokenInfo";
 import { HistoryMeta } from "../../utils/types/historyMeta";
 
@@ -13,7 +12,8 @@ export default class HistoryModel {
         this.env = env;
         this.config = env.config;
         this.snapsshootModel = new SnapshootModel(env);
-        this.tokenInfoModel = new TokenInfoModel();
+        this.tokenInfoModel = new TokenInfoModel(env);
+        this.dataSource = env.dataSource;
     }
 
     public async getOnGoingHistory(chainname:string,chainid:string,account:string,limit:number = 20,offset:number = 0):Promise<ActionData<Array<HistoryMeta>>>{
@@ -56,7 +56,7 @@ export default class HistoryModel {
             offset $6; `;
             const parameters:any[] = [sChainInfo.chainName,sChainInfo.chainId,account.toLowerCase(),tChainInfo.chainName,tChainInfo.chainId,limit,offset];
 
-            const datas = await getManager().query(sql,parameters);
+            const datas = await this.dataSource.query(sql,parameters);
             if(datas != undefined && datas.length > 0){
                 for(const data of datas){
                     let history:HistoryMeta = {
@@ -175,7 +175,7 @@ export default class HistoryModel {
             offset $4;`
 
             const parameters:any[] = [chainname,chainid,account,limit,offset];
-            const datas = await getManager().query(sql,parameters);
+            const datas = await this.dataSource.query(sql,parameters);
             if(datas != undefined && datas.length > 0){
                 for(const data of datas){
                     let history:HistoryMeta = {
@@ -262,7 +262,7 @@ export default class HistoryModel {
                             where bridgeTx.type = 2 and bridgeTx.chainname = $0 and bridgeTx.chainid = $1 and lower(bridgeTx.swaptxhash) = lower($3)
                             `;
                             const parameters1:any[] = [targetToken.chainName,targetToken.chainId,data.swaptxhash];
-                            const datas1 = await getManager().query(sql1,parameters1);
+                            const datas1 = await this.dataSource.query(sql1,parameters1);
                             if(datas1 != undefined && datas1.length > 0){
                                 history.claimTx = String(datas1[0].txid);
                                 history.status = 2;
@@ -300,7 +300,7 @@ export default class HistoryModel {
                         where bridgeTx.type = 1 and bridgeTx.chainname = $0 and bridgeTx.chainid = $1 and lower(bridgeTx.swaptxhash) = lower($3)
                         `;
                         const parameters1:any[] = [targetToken.chainName,targetToken.chainId,data.swaptxhash];
-                        const datas1 = await getManager().query(sql1,parameters1);
+                        const datas1 = await this.dataSource.query(sql1,parameters1);
                         if(datas1 != undefined && datas1.length > 0){
                             history.swapTx = String(datas1[0].txid);
                             history.sender = String(datas1[0].from);
@@ -348,7 +348,7 @@ export default class HistoryModel {
         }
 
         if(chainname == this.config.vechain.chainName && chainid == this.config.vechain.chainId){
-            const data = await getRepository(SnapshootEntity)
+            const data = await this.dataSource.getRepository(SnapshootEntity)
                 .createQueryBuilder()
                 .where('begin_blocknum_0 <= :num',{num:blockNum})
                 .andWhere('end_blocknum_0 >= :num',{num:blockNum})
@@ -367,7 +367,7 @@ export default class HistoryModel {
                 result.data = sn;
             }
         } else {
-            const data = await getRepository(SnapshootEntity)
+            const data = await this.dataSource.getRepository(SnapshootEntity)
                 .createQueryBuilder()
                 .where('begin_blocknum_1 <= :num',{num:blockNum})
                 .andWhere('end_blocknum_1 >= :num',{num:blockNum})
@@ -393,4 +393,5 @@ export default class HistoryModel {
     private config:any;
     private snapsshootModel:SnapshootModel;
     private tokenInfoModel:TokenInfoModel;
+    private dataSource:DataSource;
 }

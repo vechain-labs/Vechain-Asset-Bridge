@@ -1,5 +1,5 @@
 import { environment } from ".";
-import { createConnection } from "typeorm";
+import { DataSource } from "typeorm";
 import path from "path";
 import IActiveSupportServices from "./utils/iActiveSupportService";
 import Web3 from "web3";
@@ -14,17 +14,15 @@ export default class ActiveSupportServices implements IActiveSupportServices{
         try {
             const dbConfig = environment.config.dbConfig;
             const entitiesDir = path.join(__dirname,"./common/model/entities/**.entity{.ts,.js}");
-            const connectionOptions:any = dbConfig;
-            connectionOptions.entities = [entitiesDir];
-            const connection = await createConnection(connectionOptions);
-            if(connection.isConnected){
-                await connection.synchronize();
-            } else {
-                let errorMsg = `DataBase [db:${JSON.stringify(environment.config.dbConfig)}] initialize faild`;
-                console.error(errorMsg)
-                result.error = errorMsg;
-                return result;
-            }
+            let dataSource = new DataSource({
+                type:dbConfig.type,
+                database:dbConfig.database,
+                enableWAL:Boolean(dbConfig.enableWAL ||  false),
+                entities:[entitiesDir],
+                synchronize:true
+            });
+            dataSource = await dataSource.initialize();
+            environment.dataSource = dataSource;
         } catch (error) {
             let errorMsg = `DataBase [db:${JSON.stringify(environment.config.dbConfig)}] initialize faild`;
             console.error(errorMsg)

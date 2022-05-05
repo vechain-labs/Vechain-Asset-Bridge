@@ -6,7 +6,7 @@ import { Keystore } from 'thor-devkit';
 import { Driver, SimpleNet, SimpleWallet } from '@vechain/connex-driver';
 import { TokenInfo } from '../common/utils/types/tokenInfo';
 import { Validator } from '../common/utils/types/validator';
-import { createConnection } from 'typeorm';
+import { createConnection, DataSource } from 'typeorm';
 import { Framework } from '@vechain/connex-framework';
 import Web3 from 'web3';
 import BridgeValidationNode from '../vnode';
@@ -92,19 +92,14 @@ export default class Node extends Command {
         fileIO.mkdirSync(fdir,{recursive:true});
         this.environment.datadir = fdir;
         this.environment.database = path.join(fdir,databaseName);
-        const connectionOptions:any = {
+        let dataSource = new DataSource({
           type:"sqlite",
           database:this.environment.database,
           enableWAL:this.environment.config.dbconfig && this.environment.config.dbconfig.enableWAL != undefined ? this.environment.config.dbconfig.enableWAL : true,
           entities:[path.join(__dirname,"../common/model/entities/**.entity{.ts,.js}")]
-        }
-        const connection = await createConnection(connectionOptions);
-        if(connection.isConnected){
-          await connection.synchronize();
-        } else {
-          console.error(`DataBase [db:${this.environment.database}] initialize faild`);
-          process.exit();
-        }
+        });
+        dataSource = await dataSource.initialize();
+        this.environment.dataSource = dataSource;
       } catch (error) {
         console.error(`Init database faild.`);
         console.debug(`Init database faild, error: ${error}`);

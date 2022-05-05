@@ -13,8 +13,8 @@ export class VeChainBridgeTxScanner {
         this.env = env;
         this.config = env.config;
         this.connex = env.connex;
-        this.configModel = new ConfigModel();
-        this.tokenModel = new TokenInfoModel();
+        this.configModel = new ConfigModel(env);
+        this.tokenModel = new TokenInfoModel(env);
         this.vechainFTBridge = new VeChainFTBridge(env);
         this.bridgeTxModel = new BridgeTxModel(env);
         this.vechainCommon = new VeChainCommon(env);

@@ -14,8 +14,8 @@ export class EthereumBridgeTxScanner {
         this.env = env;
         this.config = env.config;
         this.web3 = env.web3;
-        this.configModel = new ConfigModel();
-        this.tokenModel = new TokenInfoModel();
+        this.configModel = new ConfigModel(env);
+        this.tokenModel = new TokenInfoModel(env);
         this.ethereumFTBridge = new EthereumFTBridge(env);
         this.bridgeTxModel = new BridgeTxModel(env);
         this.ethereumCommon = new EthereumCommon(env);

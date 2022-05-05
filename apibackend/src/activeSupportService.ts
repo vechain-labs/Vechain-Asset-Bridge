@@ -1,5 +1,4 @@
 
-import { createConnection } from "typeorm";
 import { Driver, SimpleNet } from "@vechain/connex-driver";
 import { Framework } from "@vechain/connex-framework";
 import Web3 from "web3";
@@ -12,6 +11,7 @@ import { BridgeSnapshoot } from "./common/utils/types/bridgeSnapshoot";
 import { compileContract } from "myvetools/dist/utils";
 import { Contract as VContract } from 'myvetools';
 import { Contract as EContract } from 'web3-eth-contract';
+import { DataSource } from "typeorm";
 
 export default class ActiveSupportServices implements IActiveSupportServices{
     public async activieSupportServices():Promise<ActionResult> {
@@ -34,16 +34,17 @@ export default class ActiveSupportServices implements IActiveSupportServices{
     }
 
     private async initDB(){
-        const dbConfig = this.config.dbConfig;
+        const dbConfig = environment.config.dbConfig;
         const entitiesDir = path.join(__dirname,"./common/model/entities/**.entity{.ts,.js}");
-        const connectionOptions:any = dbConfig;
-        connectionOptions.entities = [entitiesDir];
-        const connection = await createConnection(connectionOptions);
-        if(connection.isConnected){
-            await connection.synchronize();
-        } else {
-            throw new Error(`DataBase [db:${JSON.stringify(this.config.dbConfig)}] initialize faild`);
-        }
+        let dataSource = new DataSource({
+            type:dbConfig.type,
+            database:dbConfig.database,
+            enableWAL:Boolean(dbConfig.enableWAL ||  false),
+            entities:[entitiesDir],
+            synchronize:true
+        });
+        dataSource = await dataSource.initialize();
+        environment.dataSource = dataSource;
     }
 
     private async initConnex(){

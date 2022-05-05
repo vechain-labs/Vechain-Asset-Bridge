@@ -28,7 +28,7 @@ export default class BridgeController extends BaseMiddleware{
         this.historyModel = new HistoryModel(env);
         this.bridgeTxModel = new BridgeTxModel(env);
         this.snapshootModel = new SnapshootModel(env);
-        this.tokenInfoModel = new TokenInfoModel();
+        this.tokenInfoModel = new TokenInfoModel(env);
 
         this.history = async (ctx:Router.IRouterContext,next: () => Promise<any>) => {
             let chainName = String(ctx.query.chainname).toLowerCase();
