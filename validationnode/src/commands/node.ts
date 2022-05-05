@@ -96,7 +96,8 @@ export default class Node extends Command {
           type:"sqlite",
           database:this.environment.database,
           enableWAL:this.environment.config.dbconfig && this.environment.config.dbconfig.enableWAL != undefined ? this.environment.config.dbconfig.enableWAL : true,
-          entities:[path.join(__dirname,"../common/model/entities/**.entity{.ts,.js}")]
+          entities:[path.join(__dirname,"../common/model/entities/**.entity{.ts,.js}")],
+          synchronize:true
         });
         dataSource = await dataSource.initialize();
         this.environment.dataSource = dataSource;

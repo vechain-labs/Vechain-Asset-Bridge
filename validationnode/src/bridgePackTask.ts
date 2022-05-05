@@ -60,7 +60,7 @@ export class BridgePackTask {
         this.ethereumCommon = new EthereumCommon(env);
         this.vechainBridgeCore = new VeChainBridgeCore(env);
         this.ethereumBridgeCore = new EthereumBridgeCore(env);
-        this.blockIndexModel = new BlockIndexModel();
+        this.blockIndexModel = new BlockIndexModel(env);
         this.snapshootModel = new SnapshootModel(env);
         this.vechainBridgeValidator = new VeChainBridgeValidator(env);
         this.ethereumBridgeValidator = new EthereumBridgeValidator(env);
