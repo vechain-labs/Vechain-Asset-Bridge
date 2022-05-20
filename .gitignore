@@ -1,0 +1,8 @@
+.DS_Store
+node_modules/
+dist/
+*.patch
+.nyc_output/
+memo.txt
+logs/
+config/

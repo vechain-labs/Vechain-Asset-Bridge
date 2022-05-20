@@ -1,0 +1,27 @@
+{
+  "name": "vechain_asset_bridge_api_backend",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "build": "rm -rf ./dist && tsc -p ./ && cp -R ./src/common/contracts ./dist/common/contracts",
+    "serve": "rm -rf ./dist && tsc -p ./ && cp -R ./src/common/contracts ./dist/common/contracts && node ./dist/index.js"
+  },
+  "author": "mog.lu@vechain.org",
+  "license": "GPL-3.0-or-later",
+  "dependencies": {
+    "@vechain/connex-driver": "^2.0.10",
+    "@vechain/connex-framework": "^2.0.10",
+    "log4js": "^6.4.6",
+    "myvetools": "^1.4.1",
+    "node-schedule": "^2.1.0",
+    "object-copy": "^1.0.0",
+    "sqlite3": "^5.0.6",
+    "thor-devkit": "^2.0.5",
+    "typeorm": "^0.3.6",
+    "web3": "^1.7.3"
+  },
+  "devDependencies": {
+    "@types/node-schedule": "^2.1.0"
+  }
+}
