@@ -122,7 +122,7 @@ export default class BridgeController extends BaseMiddleware{
                 his.from.contract = "";
             }
 
-            if(his.to.chainName == 'ethereum' && his.to.nativeCoin){
+            if(his.to.chainName == 'vechain' && his.to.nativeCoin){
                 his.to.name = 'VET',
                 his.to.symbol = 'VET'
                 his.to.contract = "";
