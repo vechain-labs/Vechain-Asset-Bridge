@@ -162,7 +162,7 @@ export default class Node extends Command {
       try {
         const ks = JSON.parse(fileIO.readFileSync(keypath,"utf8"));
         const pwd = ReadlineSync.question(`keystore password:`, { hideEchoBack: true });
-        const prikey = await Keystore.decrypt((ks as any), pwd); 
+        const prikey = await Keystore.decrypt((ks as any), pwd);
 
         if(!fileIO.existsSync(this.environment.configPath)){
           fileIO.mkdirSync(this.environment.configPath);
@@ -188,7 +188,7 @@ export default class Node extends Command {
       this.environment.connex = new Framework(driver);
     } catch (error) {
       console.error(`Init connex faild`);
-      process.exit(); 
+      process.exit();
     }
   }
 
@@ -199,13 +199,13 @@ export default class Node extends Command {
       this.environment.web3 = web3;
     } catch (error) {
       console.error(`Init web3 faild`);
-      process.exit(); 
+      process.exit();
     }
   }
 
   private async initContracts():Promise<any>{
     this.environment.contracts = {vechain:{},ethereum:{}};
-    
+
     const BridgeCorePath = path.join(this.environment.contractdir,'/common/Contract_BridgeCore.sol');
     const BridgeCoreAbi = JSON.parse(compileContract(BridgeCorePath,'BridgeCore','abi'));
 

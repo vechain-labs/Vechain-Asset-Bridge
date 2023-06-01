@@ -31,7 +31,7 @@ export default class Deploy extends Command {
         {name:'ebegin',kind:new RLP.NumericKind(32)},
         {name:'eend',kind:new RLP.NumericKind(32)},
     ]});
-  
+
   private readonly genesisArgs = '0x' + this.argsRLP.encode({vbegin:0,vend:0,ebegin:0,eend:0}).toString('hex');
 
   async run() {
@@ -593,10 +593,12 @@ export default class Deploy extends Command {
       switch (index) {
         case 0:
           await this.initVeChainFTBridge();
+          await this.initEthereumFTBridge();
           await this.deployTokenToVeChain();
           break;
         case 1:
           await this.initEthereumFTBridge();
+          await this.initVeChainFTBridge();
           await this.deployTokenToEthereum();
           break;
         default:
@@ -634,8 +636,14 @@ export default class Deploy extends Command {
       ftBridge.at(this.environment.config.vechain.contracts.ftBridge);
     } else {
       const addr = ReadlineSync.question('Set VeChain ftBridge address:').trim();
+      this.environment.config.vechain.contracts.ftBridge = addr;
       ftBridge.at(addr);
     }
+
+    const controlAddr= String((await ftBridge.call('bridgeControl')).decoded[0]);
+    const tokensAddr = String((await ftBridge.call('bridgeTokens')).decoded[0]);
+    (this.environment.contracts.vechain.ftbridgeControl as VContract).at(controlAddr);
+    (this.environment.contracts.vechain.ftbridgeTokens as VContract).at(tokensAddr);
   }
 
   private async initEthereumFTBridge(): Promise<any> {
@@ -644,8 +652,14 @@ export default class Deploy extends Command {
       ftBridge.options.address = this.environment.config.ethereum.contracts.ftBridge;
     } else {
       const addr = ReadlineSync.question('Set Ethereum ftBridge address:').trim();
+      this.environment.config.ethereum.contracts.ftBridge = addr;
       ftBridge.options.address = addr;
     }
+
+    const controlAddr = String(await ftBridge.methods.bridgeControl().call());
+    const tokensAddr = String(await ftBridge.methods.bridgeTokens().call());
+    (this.environment.contracts.ethereum.ftbridgeControl as EContract).options.address = controlAddr;
+    (this.environment.contracts.ethereum.ftbridgeTokens as EContract).options.address = tokensAddr;
   }
 
   private async deployTokenToVeChain(): Promise<any> {
@@ -787,7 +801,7 @@ export default class Deploy extends Command {
 
       console.info(`--> register ${originTokenInfo.symbol} to VeChain bridge`);
       const vbestBlock = (this.environment.connex as Framework).thor.status.head.number;
-      let clause2;  
+      let clause2;
       if (originTokenInfo.nativeCoin == true) {
         clause2 = (this.environment.contracts.vechain.ftbridgeTokens as VContract).send('setWrappedNativeCoin', 0,
         originTokenInfo.address,originTokenInfo.taddress,originTokenInfo.tchainname,originTokenInfo.tchainid,vbestBlock,0,originTokenInfo.reward);
@@ -952,7 +966,7 @@ export default class Deploy extends Command {
       }
 
       console.log(`--> deploy ${bridgeWrappedTokenInfo.symbol} token to VeChain`);
-      const clause1 = wTokenContract.deploy(0, 
+      const clause1 = wTokenContract.deploy(0,
         bridgeWrappedTokenInfo.name, bridgeWrappedTokenInfo.symbol, bridgeWrappedTokenInfo.decimals, this.environment.config.vechain.contracts.ftBridge);
       const txrep1 = await (this.environment.connex as Framework).vendor.sign('tx', [clause1])
         .signer(this.environment.master)
@@ -992,7 +1006,7 @@ export default class Deploy extends Command {
 
       console.log(`--> register ${bridgeWrappedTokenInfo.symbol} to VeChain bridge`);
       const vbestBlock = (this.environment.connex as Framework).thor.status.head.number;
-      const clause2 = (this.environment.contracts.vechain.ftbridgeTokens as VContract).send('setToken', 0, 
+      const clause2 = (this.environment.contracts.vechain.ftbridgeTokens as VContract).send('setToken', 0,
       bridgeWrappedTokenInfo.address, 2, bridgeWrappedTokenInfo.taddress, bridgeWrappedTokenInfo.tchainname, bridgeWrappedTokenInfo.tchainid, vbestBlock, 0,bridgeWrappedTokenInfo.reward);
       const txrep2 = await (this.environment.connex as Framework).vendor.sign('tx', [clause2])
         .signer(this.environment.master)

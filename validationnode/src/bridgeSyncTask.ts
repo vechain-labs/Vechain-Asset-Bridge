@@ -231,7 +231,7 @@ export class BridgeSyncTask {
             if(localValidatorResult.error){
                 result.error = localValidatorResult.error;
                 return result;
-            }   
+            }
             this.validators = localValidatorResult.data!;
         } else {
             this.validators = this.env.validators;
@@ -293,6 +293,7 @@ export class BridgeSyncTask {
                 result.error = new Error(`Can't load merkleroot by index ${index}`);
                 return result;
             }
+
             const snapshoot = getRootResult.data!;
             const getHashEventsResult = await this.getSubmitEventsBySn(snapshoot);
             if(getHashEventsResult.error){
@@ -304,7 +305,7 @@ export class BridgeSyncTask {
                 result.error = new Error(`syncDataBySnapshoot error:hash mismatching, snRoot: ${snapshoot.merkleRoot}`);
                 return result;
             }
-            
+
             const saveResult = await this.snapshootModel.save([snapshoot],getHashEventsResult.data!);
             if(saveResult.error){
                 result.error = saveResult.error;
@@ -345,7 +346,7 @@ export class BridgeSyncTask {
             result.error = localSnResult.error;
             return result;
         }
-        
+
         const indexResult = await this.veChainBridgeCore.getSnapshootByRoot(localSnResult.data!.merkleRoot);
         if(indexResult.error){
             result.error = indexResult.error;

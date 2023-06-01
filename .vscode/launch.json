@@ -58,7 +58,9 @@
             "args": [
                 "deploy",
                 "--keystore",
-                "/Users/moglu/Developer/VeChainDevelop/Vechain-Asset-Bridge/bridgeTools/config/keystore.json"
+                "/Users/moglu/Developer/VeChainDevelop/Vechain-Asset-Bridge/bridgeTools/config/keystore.json",
+                "--config",
+                "/Users/moglu/Developer/VeChainDevelop/Vechain-Asset-Bridge/bridgeTools/config/config_tools_solo.json"
             ],
             "console": "integratedTerminal"
         },
