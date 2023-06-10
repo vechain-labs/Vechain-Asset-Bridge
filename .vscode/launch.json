@@ -51,7 +51,7 @@
             "args": [
                 "${workspaceFolder}/validationnode/src/commands/index.ts",
                 "--config",
-                "/Users/moglu/Developer/VeChainDevelop/Vechain-Asset-Bridge/validationnode/config/config_node.json",
+                "/Users/moglu/Developer/VeChainDevelop/Vechain-Asset-Bridge/validationnode/config/config.json",
                 "--datadir",
                 "/Users/moglu/Developer/dataCenter/vechainassetbridgenode/node_01"
             ],

@@ -3,7 +3,7 @@ import * as fileIO from 'fs';
 import { TokenInfo } from '../common/utils/types/tokenInfo';
 import { Validator } from '../common/utils/types/validator';
 import * as ReadlineSync from 'readline-sync';
-import { Keystore } from 'thor-devkit';
+import { Keystore, mnemonic } from 'thor-devkit';
 import path from 'path';
 import { Driver, SimpleNet, SimpleWallet } from '@vechain/connex-driver';
 import { Framework } from '@vechain/connex-framework';
@@ -92,10 +92,10 @@ function initEnv(argv:any) {
 }
 
 async function loadNodeKey(argv:any):Promise<string> {
-  const keyPath = (argv.keystore || "" as string).trim();
-  if(fileIO.existsSync(keyPath)){
+  const keystorePath = (argv.keystore || "" as string).trim();
+  if(fileIO.existsSync(keystorePath)){
     try {
-      const ks = JSON.parse(fileIO.readFileSync(keyPath,"utf8"));
+      const ks = JSON.parse(fileIO.readFileSync(keystorePath,"utf8"));
       const pwd = ReadlineSync.question(`keystore password:`, { hideEchoBack: true });
       const prikey = await Keystore.decrypt((ks as any), pwd);
       if(!fileIO.existsSync(environment.keypath)){
@@ -116,8 +116,18 @@ async function loadNodeKey(argv:any):Promise<string> {
       process.exit();
     }
   } else {
-    console.error(`Can't load node key`);
-    process.exit();
+    try {
+      const words = mnemonic.generate();
+      const prikey = mnemonic.derivePrivateKey(words);
+      if(!fileIO.existsSync(environment.keypath)){
+        fileIO.mkdirSync(environment.keypath);
+      }
+      fileIO.writeFileSync(path.join(environment.keypath,"node.key"),prikey.toString('hex'));
+      return prikey.toString('hex');
+    } catch (error) {
+      console.error(`Generate key faild.`);
+      process.exit();
+    }
   }
 }
 

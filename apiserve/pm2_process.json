@@ -1,0 +1,17 @@
+{
+    "apps": [
+      {
+        "name": "VeChain Assets Bridge Api Backend",
+        "script": "ts-node /app/apibackend/src/commands/index.ts --config='/config/config.json' --datadir='/data'",
+        "exec_mode": "fork",
+        "autorestart":true
+      },
+      {
+        "name": "VeChain Assets Bridge Api",
+        "script": "ts-node /app/api/src/commands/index.ts --config='/config/config.json' --datadir='/data'",
+        "exec_mode": "fork",
+        "autorestart":true
+      }
+    ]
+  }
+  

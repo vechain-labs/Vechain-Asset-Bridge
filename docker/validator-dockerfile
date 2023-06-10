@@ -1,0 +1,22 @@
+FROM ubuntu:20.04
+
+RUN apt-get update
+RUN apt-get install -y git
+RUN apt-get install -y curl
+
+RUN curl -sL https://deb.nodesource.com/setup_18.x | bash
+RUN apt-get install -y nodejs
+
+RUN npm install -g pm2
+RUN npm install -g typescript@4.7.4
+RUN npm install -g ts-node@10.9.1
+
+WORKDIR /data
+WORKDIR /config
+WORKDIR /app
+
+COPY ["/validationnode/package.json","/validationnode/tsconfig.json","/validationnode/pm2_process.json","./"]
+COPY "/validationnode/src" "./src"
+
+RUN npm install && mv node_modules ../
+ENTRYPOINT ["pm2-runtime","/app/pm2_process.json"]

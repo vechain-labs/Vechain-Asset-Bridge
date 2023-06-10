@@ -1,0 +1,10 @@
+{
+  "apps": [
+    {
+      "name": "VeChain Assets Bridge Node",
+      "script": "ts-node /app/src/commands/index.ts --config='/config/config.json' --datadir='/data'",
+      "exec_mode": "fork",
+      "autorestart":true
+    }
+  ]
+}

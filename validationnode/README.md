@@ -1,70 +1,68 @@
-validationnode
+VeChain Asset Bridge Validator Node
 ==============
 
+### Getting the source
 
+- Clone the repo
 
-[![oclif](https://img.shields.io/badge/cli-oclif-brightgreen.svg)](https://oclif.io)
-[![Version](https://img.shields.io/npm/v/validationnode.svg)](https://npmjs.org/package/validationnode)
-[![Downloads/week](https://img.shields.io/npm/dw/validationnode.svg)](https://npmjs.org/package/validationnode)
-[![License](https://img.shields.io/npm/l/validationnode.svg)](https://github.com/mongelly/validationnode/blob/master/package.json)
-
-<!-- toc -->
-* [Usage](#usage)
-* [Commands](#commands)
-<!-- tocstop -->
-# Usage
-<!-- usage -->
-```sh-session
-$ npm install -g validationnode
-$ validationnode COMMAND
-running command...
-$ validationnode (-v|--version|version)
-validationnode/1.0.0 darwin-x64 node-v12.22.1
-$ validationnode --help [COMMAND]
-USAGE
-  $ validationnode COMMAND
-...
-```
-<!-- usagestop -->
-# Commands
-<!-- commands -->
-* [`validationnode hello [FILE]`](#validationnode-hello-file)
-* [`validationnode help [COMMAND]`](#validationnode-help-command)
-
-## `validationnode hello [FILE]`
-
-describe the command here
-
-```
-USAGE
-  $ validationnode hello [FILE]
-
-OPTIONS
-  -f, --force
-  -h, --help       show CLI help
-  -n, --name=name  name to print
-
-EXAMPLE
-  $ validationnode hello
-  hello world from ./src/hello.ts!
+``` shell
+    git clone https://github.com/mongelly/Vechain-Asset-Bridge.git
+    cd Vechain-Asset-Bridge/validationnode
 ```
 
-_See code: [src/commands/hello.ts](https://github.com/mongelly/validationnode/blob/v1.0.0/src/commands/hello.ts)_
 
-## `validationnode help [COMMAND]`
+### Building
 
-display help for validationnode
+- Building Docker
 
-```
-USAGE
-  $ validationnode help [COMMAND]
-
-ARGUMENTS
-  COMMAND  command to show help for
-
-OPTIONS
-  --all  see all commands in CLI
+``` shell
+    docker build ./ -t vechain/asset-bridge-validatornode:latest
 ```
 
-_See code: [@oclif/plugin-help](https://github.com/oclif/plugin-help/blob/v3.2.2/src/commands/help.ts)_
-<!-- commandsstop -->
+### Docker
+
+``` sh
+    docker run -d\
+    -v {path-to-data-directory}:/data\
+    -v {path-to-config-directory}:/config\
+    vechain/asset-bridge-validatornode:latest
+```
+
+- `path-to-data-directory` directory for data.
+- `path-to-config-directory` directory for config, the `config.json` in the directory. The `node master key` save in `config/.config/node.key`.
+
+
+### ValidtorNode Config Example
+
+``` Json
+{
+    "appid":"0x33cf902a9699da29f36cc8fc6284b34871f20ad5383804bfbdc7a8032265cb38",
+    "packstep":200,
+    "vechain": {
+      "nodeHost": "http://47.57.94.244:8680",
+        "chainName": "vechain",
+        "chainId": "0xf6",
+        "startBlockNum": 10201,
+        "confirmHeight": 12,
+        "expiration": 180,
+        "contracts": {
+            "bridgeCore": "0xceb97b5843c81cb9ea4088488dd81bc1a18c739f",
+            "bridgeValidator": "0x1e6ad0211d968e9bd96eac5b9b0acb0de4457ff8",
+            "ftBridge": "0x10849efb7bb74d5276abec08e33af0f6086dac44"
+        }
+    },
+    "ethereum": {
+      "nodeHost": "http://47.57.94.244:28545",
+        "chainName": "ethereum",
+        "chainId": "1337",
+        "startBlockNum": 3433,
+        "confirmHeight": 3,
+        "expiration": 24,
+        "contracts": {
+            "bridgeCore": "0xe1115c43990061d59c80DDeAb83a276005BC23ec",
+            "bridgeValidator": "0x3735E8Ab0618212BbDaB6Dc18263edF654cD320F",
+            "ftBridge": "0x852F8620Bc97937327FC152F343ABE77a1361ad2"
+        }
+    }
+}
+```
