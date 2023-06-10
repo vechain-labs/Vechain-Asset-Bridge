@@ -7,45 +7,62 @@
         {
             "type": "node",
             "request": "launch",
-            "name": "Launch API Service",
-            "skipFiles": [
-                "<node_internals>/**"
+            "name": "Launch API Serve",
+            "args": [
+                "${workspaceFolder}/apiserve/src/commands/index.ts",
+                "--config",
+                "/Users/moglu/Developer/VeChainDevelop/Vechain-Asset-Bridge/apiserve/config/config_api.json",
+                "--datadir",
+                "/Users/moglu/Developer/dataCenter/vechain_bridge/test/api"
             ],
-            "program": "${workspaceFolder}/apiserve/src/index.ts",
-            "outFiles": [
-                "${workspaceFolder}/**/**/*.js"
-            ]
+            "runtimeArgs": [
+                "-r",
+                "${workspaceFolder}/apiserve/node_modules/ts-node/register"
+            ],
+            "cwd": "${workspaceRoot}/apiserve",
+            "internalConsoleOptions": "neverOpen",
+            "console":"integratedTerminal",
+            "sourceMaps": true
         },
         {
             "type": "node",
             "request": "launch",
-            "name": "Launch API Backend Service",
-            "skipFiles": [
-                "<node_internals>/**"
+            "name": "Launch API Backend",
+            "args": [
+                "${workspaceFolder}/apibackend/src/commands/index.ts",
+                "--config",
+                "/Users/moglu/Developer/VeChainDevelop/Vechain-Asset-Bridge/apibackend/config/config_api_bg.json",
+                "--datadir",
+                "/Users/moglu/Developer/dataCenter/vechain_bridge/test/api"
             ],
-            "program": "${workspaceFolder}/apibackend/src/index.ts",
-            "outFiles": [
-                "${workspaceFolder}/**/**/*.js"
-            ]
+            "runtimeArgs": [
+                "-r",
+                "${workspaceFolder}/apibackend/node_modules/ts-node/register"
+            ],
+            "cwd": "${workspaceRoot}/apibackend",
+            "internalConsoleOptions": "neverOpen",
+            "console":"integratedTerminal",
+            "sourceMaps": true
         },
         {
             "type": "node",
             "request": "launch",
             "name": "Launch Bridge Node",
-            "skipFiles": [
-                "<node_internals>/**"
-            ],
-            "program": "${workspaceFolder}/validationnode/bin/run",
             "args": [
-                "node",
+                "${workspaceFolder}/validationnode/src/commands/index.ts",
                 "--config",
                 "/Users/moglu/Developer/VeChainDevelop/Vechain-Asset-Bridge/validationnode/config/config_node.json",
                 "--datadir",
-                "/Users/moglu/Developer/dataCenter/vechainassetbridgenode/node_01",
-                "--keystore",
-                "/Users/moglu/Developer/VeChainDevelop/Vechain-Asset-Bridge/validationnode/config/keystore_1.json"
+                "/Users/moglu/Developer/dataCenter/vechainassetbridgenode/node_01"
             ],
-            "console": "integratedTerminal"
+            "runtimeArgs": [
+                "-r",
+                "${workspaceFolder}/validationnode/node_modules/ts-node/register"
+            ],
+            "cwd": "${workspaceRoot}/validationnode",
+            "internalConsoleOptions": "neverOpen",
+            "console":"integratedTerminal",
+            "sourceMaps": true
         },
         {
             "type": "node",
@@ -84,6 +101,6 @@
             "protocol": "inspector",
             "sourceMaps": true,
             "trace": true
-        },
+        }
     ]
 }

@@ -1,5 +1,3 @@
-import { Framework } from "@vechain/connex-framework";
-import Web3 from "web3";
 import { EthereumBridgeCore } from "./common/ethereum/ethereumBridgeCore";
 import { SnapshootModel } from "./common/model/snapshootModel";
 import BridgeStorage from "./common/utils/bridgeStorage";

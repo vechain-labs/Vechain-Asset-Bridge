@@ -2,54 +2,34 @@
   "name": "validationnode",
   "version": "1.0.0",
   "author": "mog.lu@vechain.org",
-  "bin": {
-    "validationnode": "./bin/run"
-  },
+  "bin": {},
   "bugs": "https://github.com/mongelly/validationnode/issues",
   "devDependencies": {
-    "@oclif/dev-cli": "^1.26.0",
     "@types/mocha": "^9.0.0",
     "@types/node": "^10.17.60",
     "@types/node-schedule": "^1.3.2",
     "@types/readline-sync": "^1.4.4",
+    "@types/yargs": "^17.0.24",
     "globby": "^10.0.2",
-    "ts-node": "^10.7.0",
-    "typescript": "^4.6.4"
+    "ts-node": "^10.9.1",
+    "typescript": "^4.7.4"
   },
   "engines": {
     "node": ">=8.0.0"
   },
   "files": [
-    "/bin",
     "/lib",
-    "/npm-shrinkwrap.json",
-    "/oclif.manifest.json"
+    "/npm-shrinkwrap.json"
   ],
   "homepage": "https://github.com/mongelly/validationnode",
-  "keywords": [
-    "oclif"
-  ],
   "license": "MIT",
   "main": "lib/index.js",
-  "oclif": {
-    "commands": "./lib/commands",
-    "bin": "validationnode",
-    "plugins": [
-      "@oclif/plugin-help"
-    ]
-  },
   "repository": "mongelly/validationnode",
   "scripts": {
-    "postpack": "rm -f oclif.manifest.json",
-    "prepack": "rm -rf lib && tsc -b && oclif-dev manifest && oclif-dev readme",
-    "test": "echo NO TESTS",
-    "version": "oclif-dev readme && git add README.md"
+    "test": "echo NO TESTS"
   },
   "types": "lib/index.d.ts",
   "dependencies": {
-    "@oclif/command": "^1.8.0",
-    "@oclif/config": "^1.17.0",
-    "@oclif/plugin-help": "^3.2.2",
     "@vechain/connex-framework": "^2.0.10",
     "log4js": "^6.4.6",
     "myvetools": "^1.4.1",
@@ -59,6 +39,7 @@
     "sort-array": "^4.1.5",
     "sqlite3": "^5.0.6",
     "typeorm": "^0.3.6",
-    "web3": "^1.7.3"
+    "web3": "^1.7.3",
+    "yargs": "^17.7.2"
   }
 }

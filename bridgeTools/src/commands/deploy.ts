@@ -1,7 +1,7 @@
 import { Command, flags } from '@oclif/command';
 import { Contract as VContract } from 'myvetools';
 import { Contract as EContract, ContractSendMethod } from 'web3-eth-contract';
-const path = require('path');
+import path from 'path';
 import * as fileIO from 'fs';
 import * as ReadlineSync from 'readline-sync';
 import { abi, address, Keystore, RLP, secp256k1 } from 'thor-devkit';
@@ -10,7 +10,7 @@ import { Framework } from '@vechain/connex-framework';
 import Web3 from 'web3';
 import { compileContract } from 'myvetools/dist/utils';
 import { getReceipt } from 'myvetools/dist/connexUtils';
-var randomBytes = require('randombytes');
+import randomBytes from 'randombytes';
 
 export default class Deploy extends Command {
   static description = '';
@@ -663,6 +663,12 @@ export default class Deploy extends Command {
   }
 
   private async deployTokenToVeChain(): Promise<any> {
+
+    const nfTokenFilePath = path.join(this.environment.contractdir, '/common/Contract_NativeFungibleToken.sol');
+    const nfTokenAbi = JSON.parse(compileContract(nfTokenFilePath, 'NativeFungibleToken', 'abi'));
+    const nfTokenBin = compileContract(nfTokenFilePath, 'NativeFungibleToken', 'bytecode');
+    let nfTokenContract = new VContract({ abi: nfTokenAbi, connex: this.environment.connex, bytecode: nfTokenBin });
+
     const fTokenFilePath = path.join(this.environment.contractdir, '/common/Contract_FungibleToken.sol');
     const fTokenAbi = JSON.parse(compileContract(fTokenFilePath, 'FungibleToken', 'abi'));
     const fTokenBin = compileContract(fTokenFilePath, 'FungibleToken', 'bytecode');
@@ -764,7 +770,13 @@ export default class Deploy extends Command {
       console.info(`address: ${bridgeWrappedTokenInfo.address}`);
       console.info(`name: ${bridgeWrappedTokenInfo.name} symbol: ${bridgeWrappedTokenInfo.symbol} decimals: ${bridgeWrappedTokenInfo.decimals}`);
 
-      const next = ReadlineSync.question('Continue to deploy & register the token (y/n)').trim().toLocaleLowerCase();
+      let comfirmMsg:string = "";
+      if(!this.isAddress(originTokenInfo.address) && originTokenInfo.nativeCoin == true){
+        comfirmMsg = "WARNNING:Mainnet and Testnet already exists NativeFungibleToken Contract, Continue to deploy & register the token? (y/n)";
+      } else {
+        comfirmMsg = "Continue to deploy & register the token? (y/n)";
+      }
+      const next = ReadlineSync.question(comfirmMsg).trim().toLocaleLowerCase();
       if (next == 'n') {
         console.info('Quit deploy');
         return;
@@ -772,7 +784,12 @@ export default class Deploy extends Command {
 
       if (!this.isAddress(originTokenInfo.address)) {
         console.info(`--> deploy ${originTokenInfo.symbol} token to VeChain.`);
-        const clause1 = fTokenContract.deploy(0, originTokenInfo.name, originTokenInfo.symbol, originTokenInfo.decimals);
+        let clause1;
+        if(originTokenInfo.nativeCoin == true){
+          clause1 = nfTokenContract.deploy(0, originTokenInfo.name, originTokenInfo.symbol, originTokenInfo.decimals);
+        } else {
+          clause1 = fTokenContract.deploy(0, originTokenInfo.name, originTokenInfo.symbol, originTokenInfo.decimals);
+        }
         const txrep1 = await (this.environment.connex as Framework).vendor.sign('tx', [clause1])
           .signer((this.environment.wallet as SimpleWallet).list[0].address)
           .request();
@@ -842,6 +859,12 @@ export default class Deploy extends Command {
   }
 
   private async deployTokenToEthereum(): Promise<any> {
+
+    const nfTokenFilePath = path.join(this.environment.contractdir, '/common/Contract_NativeFungibleToken.sol');
+    const nfTokenAbi = JSON.parse(compileContract(nfTokenFilePath, 'NativeFungibleToken', 'abi'));
+    const nfTokenBin = compileContract(nfTokenFilePath, 'NativeFungibleToken', 'bytecode');
+    let nfTokenContract = new (this.environment.web3 as Web3).eth.Contract(nfTokenAbi);
+
     const fTokenFilePath = path.join(this.environment.contractdir, '/common/Contract_FungibleToken.sol');
     const fTokenAbi = JSON.parse(compileContract(fTokenFilePath, 'FungibleToken', 'abi'));
     const fTokenBin = compileContract(fTokenFilePath, 'FungibleToken', 'bytecode');
@@ -920,8 +943,8 @@ export default class Deploy extends Command {
       const reward = ReadlineSync.question('Set token reward (0 - 1000):').trim();
       originTokenInfo.reward = Number(reward);
 
-      let wname = ReadlineSync.question(`Ethereum bridge wrapped token name (default ${'Bridge Wrapped ' + originTokenInfo.name}):`).trim();
-      let wsymbol = ReadlineSync.question(`Ethereum bridge wrapped token symbol (default ${'V' + originTokenInfo.symbol.substring(1)}):`).trim();
+      let wname = ReadlineSync.question(`VeChain bridge wrapped token name (default ${'Bridge Wrapped ' + originTokenInfo.name}):`).trim();
+      let wsymbol = ReadlineSync.question(`VeChain bridge wrapped token symbol (default ${'V' + originTokenInfo.symbol.substring(1)}):`).trim();
 
       bridgeWrappedTokenInfo = {
         address: '',
@@ -943,7 +966,13 @@ export default class Deploy extends Command {
       console.info(`address: ${bridgeWrappedTokenInfo.address}`);
       console.info(`name: ${bridgeWrappedTokenInfo.name} symbol: ${bridgeWrappedTokenInfo.symbol} decimals: ${bridgeWrappedTokenInfo.decimals}`);
 
-      const next = ReadlineSync.question('Continue to deploy & register token (y/n)').trim().toLocaleLowerCase();
+      let comfirmMsg:string = "";
+      if(!this.isAddress(originTokenInfo.address) && originTokenInfo.nativeCoin == true){
+        comfirmMsg = "WARNNING:Mainnet and Testnet already exists NativeFungibleToken Contract, Continue to deploy & register the token? (y/n)";
+      } else {
+        comfirmMsg = "Continue to deploy & register the token? (y/n)";
+      }
+      const next = ReadlineSync.question(comfirmMsg).trim().toLocaleLowerCase();
       if (next == 'n') {
         console.info('Quit deploy');
         return;
@@ -952,7 +981,12 @@ export default class Deploy extends Command {
 
       if (!this.isAddress(originTokenInfo.address)) {
         console.log(`--> deploy ${originTokenInfo.symbol} token to Ethereum.`);
-        const deployMethod = fTokenContract.deploy({ data: fTokenBin, arguments: [originTokenInfo.name, originTokenInfo.symbol, originTokenInfo.decimals] });
+        let deployMethod;
+        if(originTokenInfo.nativeCoin == true){
+          deployMethod = nfTokenContract.deploy({ data: nfTokenBin, arguments: [originTokenInfo.name, originTokenInfo.symbol, originTokenInfo.decimals] })
+        } else {
+          deployMethod = fTokenContract.deploy({ data: fTokenBin, arguments: [originTokenInfo.name, originTokenInfo.symbol, originTokenInfo.decimals] });
+        }
         const deployGas = await deployMethod.estimateGas({
           from: this.environment.master
         });

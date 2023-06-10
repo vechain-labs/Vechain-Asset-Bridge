@@ -1,6 +1,6 @@
 import Koa from 'koa';
 import bodyParser from "koa-bodyparser"
-import cors = require('koa2-cors');
+import cors from 'koa2-cors';
 import HttpLoggerMiddleware from './middleware/logMiddleware';
 import { URLCodeMiddleware } from './middleware/uricodeMiddleware';
 import RootRouter from './rootRouter';

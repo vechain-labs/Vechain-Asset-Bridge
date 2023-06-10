@@ -1,5 +1,4 @@
 import Router from "koa-router";
-import { type } from "os";
 import BridgeTxModel from "../../common/model/bridgeTxModel";
 import { SnapshootModel } from "../../common/model/snapshootModel";
 import TokenInfoModel from "../../common/model/tokenInfoModel";

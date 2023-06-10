@@ -1,5 +1,4 @@
-import { Framework } from "@vechain/connex-framework";
-import schedule = require("node-schedule");
+import schedule from "node-schedule";
 import { BridgePackTask } from "./bridgePackTask";
 import { BridgeSyncTask } from "./bridgeSyncTask";
 
