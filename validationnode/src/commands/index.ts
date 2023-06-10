@@ -108,7 +108,7 @@ async function loadNodeKey(argv:any):Promise<string> {
       process.exit();
     }
   } else if(fileIO.existsSync(path.join(environment.keypath,"node.key"))){
-    const key = fileIO.readFileSync(path.join(environment.keypath,"node.key")).toString('utf8').toLocaleLowerCase();
+    const key = fileIO.readFileSync(path.join(environment.keypath,"node.key")).toString('utf8').trim().toLocaleLowerCase();
     if(key.length == 64 && /^[0-9a-f]*$/i.test(key)){
       return key;
     } else {
