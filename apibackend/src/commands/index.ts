@@ -13,6 +13,7 @@ import { FTSnapshootScanner } from "../ftSnapshootScanner";
 import { compileContract } from "myvetools/dist/utils";
 import { Contract as VContract } from 'myvetools';
 import { Contract as EContract } from 'web3-eth-contract';
+import { BridgeSnapshoot } from '../common/utils/types/bridgeSnapshoot';
 
 class BridgeApiBackend{
     constructor(env:any){
