@@ -76,6 +76,7 @@ async function run(argv:any) {
     initEnv(argv);
     await initBlockChain(argv);
     await initDatabase(argv);
+    environment.genesisSnapshoot = genesisSnapshoot();
 
     console.info(`
     ******************** VeChain Asset Bridge API Backend ********************
@@ -192,6 +193,23 @@ async function initDatabase(argv:any) {
       console.error(`Init database ${databastPath} faild, error: ${error}`);
       process.exit();
     }
+}
+
+function genesisSnapshoot():BridgeSnapshoot {
+  return {
+    merkleRoot:"0x0000000000000000000000000000000000000000000000000000000000000001",
+    chains:[{
+      chainName:environment.config.vechain.chainName,
+      chainId:environment.config.vechain.chainId,
+      beginBlockNum:environment.config.vechain.startBlockNum,
+      endBlockNum:environment.config.vechain.startBlockNum
+    },{
+      chainName:environment.config.ethereum.chainName,
+      chainId:environment.config.ethereum.chainId,
+      beginBlockNum:environment.config.ethereum.startBlockNum,
+      endBlockNum:environment.config.ethereum.startBlockNum
+    }]
+  }
 }
 
 run(argv);
