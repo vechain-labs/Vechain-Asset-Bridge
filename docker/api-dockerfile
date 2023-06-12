@@ -15,7 +15,7 @@ WORKDIR /data
 WORKDIR /config
 
 WORKDIR /app/apibackend
-COPY ["/apibackend/package.json","../apibackend/tsconfig.json","./"]
+COPY ["/apibackend/package.json","/apibackend/tsconfig.json","./"]
 COPY "/apibackend/src" "./src"
 RUN npm install
 
