@@ -26,13 +26,16 @@
   "main": "lib/index.js",
   "repository": "mongelly/validationnode",
   "scripts": {
-    "test": "echo NO TESTS"
+    "test": "echo NO TESTS",
+    "build": "rm -rf ./dist && tsc -p ./ && cp -r ./src/common/contracts ./dist/common/contracts"
+
   },
   "types": "lib/index.d.ts",
   "dependencies": {
     "@vechain/connex-framework": "^2.0.10",
     "log4js": "^6.4.6",
     "myvetools": "^1.4.1",
+    "node-gyp": "^9.4.0",
     "node-schedule": "^2.1.0",
     "object-copy": "^1.0.0",
     "readline-sync": "^1.4.10",
