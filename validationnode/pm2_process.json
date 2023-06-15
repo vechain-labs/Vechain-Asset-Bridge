@@ -2,7 +2,7 @@
   "apps": [
     {
       "name": "VeChain Assets Bridge Node",
-      "script": "ts-node /app/src/commands/index.ts --config='/config/config.json' --datadir='/data'",
+      "script": "node /app/dist/commands/index.js --config='/config/config.json' --datadir='/data'",
       "exec_mode": "fork",
       "autorestart":true,
       "max_memory_restart":"1G"
