@@ -11,7 +11,7 @@
             "args": [
                 "${workspaceFolder}/apiserve/src/commands/index.ts",
                 "--config",
-                "/Users/moglu/Developer/VeChainDevelop/Vechain-Asset-Bridge/apiserve/config/config_api.json",
+                "/Users/moglu/Developer/dataCenter/vechain_bridge/test/api/config.json",
                 "--datadir",
                 "/Users/moglu/Developer/dataCenter/vechain_bridge/test/api"
             ],
@@ -53,7 +53,9 @@
                 "--config",
                 "/Users/moglu/Developer/VeChainDevelop/Vechain-Asset-Bridge/validationnode/config/config.json",
                 "--datadir",
-                "/Users/moglu/Developer/dataCenter/vechainassetbridgenode/node_01"
+                "/Users/moglu/Developer/dataCenter/vechainassetbridgenode/node_05",
+                "--keystore",
+                "/Users/moglu/Developer/VeChainDevelop/Vechain-Asset-Bridge/validationnode/config/keystore_05.json"
             ],
             "runtimeArgs": [
                 "-r",
@@ -71,15 +73,21 @@
             "skipFiles": [
                 "<node_internals>/**"
             ],
-            "program": "${workspaceFolder}/bridgeTools/bin/run",
             "args": [
-                "deploy",
-                "--keystore",
-                "/Users/moglu/Developer/VeChainDevelop/Vechain-Asset-Bridge/bridgeTools/config/keystore.json",
+                "${workspaceFolder}/bridgeTools/src/commands/index.ts",
                 "--config",
-                "/Users/moglu/Developer/VeChainDevelop/Vechain-Asset-Bridge/bridgeTools/config/config_tools_solo.json"
+                "/Users/moglu/Developer/VeChainDevelop/Vechain-Asset-Bridge/bridgeTools/config/config.json",
+                "--keystore",
+                "/Users/moglu/Developer/VeChainDevelop/Vechain-Asset-Bridge/bridgeTools/config/keystore.json"
             ],
-            "console": "integratedTerminal"
+            "runtimeArgs": [
+                "-r",
+                "${workspaceFolder}/bridgeTools/node_modules/ts-node/register"
+            ],
+            "cwd": "${workspaceRoot}/bridgeTools",
+            "internalConsoleOptions": "neverOpen",
+            "console":"integratedTerminal",
+            "sourceMaps": true
         },
         {
             "type": "node",

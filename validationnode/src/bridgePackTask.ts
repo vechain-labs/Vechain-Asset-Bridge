@@ -154,14 +154,14 @@ export class BridgePackTask {
                 case STATUS.Finished:
                     console.debug(`Bridge update merkelroot process end at ${(new Date()).getTime()} (${(new Date()).toString()})`);
                     return result;
-                
+
             }
             if(processResult.error){
                 console.warn(`process error: ${processResult.error}`);
                 await sleep(this.loopsleep);
             }
         }
-        
+
         return result;
     }
 
@@ -169,7 +169,7 @@ export class BridgePackTask {
         let result = new ActionResult();
         this.txCache = new TxStatusCache();
         this.bridgeStatusCache = new BridgeStatusCache();
-        
+
         const parentMerklerootResult = await this.vechainBridgeCore.getLastSnapshoot();
         if(parentMerklerootResult.error){
             result.error = parentMerklerootResult.error;
@@ -494,7 +494,7 @@ export class BridgePackTask {
         const ethereumLastSnInfo = (promiseResult.data!.succeed[1] as ActionData<{ sn: BridgeSnapshoot; txid: string; blocknum: number; }>).data;
         this.bridgeStatusCache.vechainMerkleroot = vechainLastSnInfo?.sn.merkleRoot || "";
         this.bridgeStatusCache.ethereumMerkleroot = ethereumLastSnInfo?.sn.merkleRoot || "";
-        
+
         if(this.txCache.vechainUpdateRootTx.txid == ""){
             this.txCache.vechainUpdateRootTx.txid = vechainLastSnInfo?.txid || "";
             this.txCache.vechainUpdateRootTx.blocknum = vechainLastSnInfo?.blocknum || 0;
@@ -530,7 +530,7 @@ export class BridgePackTask {
             result.error = getParentSnResult.error;
             return result;
         }
-        
+
         if(getParentSnResult.data!.sn.merkleRoot == ZeroRoot()){
             result.error = new Error(`parent root: ${parent} not exists`);
             return result;
@@ -619,7 +619,7 @@ export class BridgePackTask {
         if(ethereumEndNum <= ethereumBeginNum){
             ethereumEndNum = 0;
         }
-    
+
         result.data = {
             vechain:{
                 chainName:this.config.vechain.chainName,
@@ -665,14 +665,23 @@ export class BridgePackTask {
             ]);
             let hash = "0x" + keccak256(data).toString('hex');
             arr.push({addr:validator.validator,hash:hash});
+
         }
         let sortArr = arr.sort((l,r) => {return (BigInt(l.hash) >= BigInt(r.hash)) ? 1 : -1;});
 
+        //DEBUG
+        console.debug("sortArr:" + JSON.stringify(sortArr));
+
         const index = sortArr.findIndex( item => {return item.addr.toLowerCase() == this.wallet.list[0].address.toLocaleLowerCase();});
+        //DEBUG
+        console.debug("The key index is " + index.toString());
+
         if(index == -1){
             return false;
         } else {
             const latestBlock = await this.web3.eth.getBlockNumber();
+            //DEBUG
+            console.debug(`Latest block is ${latestBlock} need range is ${beginBlock + this.wattingBlock * index} - ${beginBlock + this.wattingBlock * (index + 1)}`);
             if((beginBlock + this.wattingBlock * index) <= latestBlock && (beginBlock + this.wattingBlock * (index + 1)) > latestBlock){
                 return true;
             }
