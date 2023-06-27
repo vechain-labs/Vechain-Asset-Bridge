@@ -14,6 +14,7 @@ import { compileContract } from "myvetools/dist/utils";
 import { Contract as VContract } from 'myvetools';
 import { Contract as EContract } from 'web3-eth-contract';
 import { BridgeSnapshoot } from '../common/utils/types/bridgeSnapshoot';
+import { FauectEntity } from '../fauect.entity';
 
 class BridgeApiBackend{
     constructor(env:any){
@@ -184,7 +185,7 @@ async function initDatabase(argv:any) {
         type:"sqlite",
         database:databastPath,
         enableWAL:environment.config.dbconfig && environment.config.dbconfig.enableWAL != undefined ? environment.config.dbconfig.enableWAL : true,
-        entities:[path.join(__dirname,"../common/model/entities/**.entity{.ts,.js}")],
+        entities:[path.join(__dirname,"../common/model/entities/**.entity{.ts,.js}"),FauectEntity],
         synchronize:true
       });
       dataSource = await dataSource.initialize();

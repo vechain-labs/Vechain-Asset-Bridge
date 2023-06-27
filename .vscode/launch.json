@@ -11,9 +11,11 @@
             "args": [
                 "${workspaceFolder}/apiserve/src/commands/index.ts",
                 "--config",
-                "/Users/moglu/Developer/dataCenter/vechain_bridge/test/api/config.json",
+                "/Users/moglu/Developer/VeChainDevelop/Vechain-Asset-Bridge/apiserve/config/config.json",
                 "--datadir",
-                "/Users/moglu/Developer/dataCenter/vechain_bridge/test/api"
+                "/Users/moglu/Developer/dataCenter/vechain_bridge/test/api",
+                "--keystore",
+                "/Users/moglu/Developer/VeChainDevelop/Vechain-Asset-Bridge/apiserve/config/keystore.json"
             ],
             "runtimeArgs": [
                 "-r",
@@ -31,7 +33,7 @@
             "args": [
                 "${workspaceFolder}/apibackend/src/commands/index.ts",
                 "--config",
-                "/Users/moglu/Developer/VeChainDevelop/Vechain-Asset-Bridge/apibackend/config/config_api_bg.json",
+                "/Users/moglu/Developer/VeChainDevelop/Vechain-Asset-Bridge/apibackend/config/config.json",
                 "--datadir",
                 "/Users/moglu/Developer/dataCenter/vechain_bridge/test/api"
             ],

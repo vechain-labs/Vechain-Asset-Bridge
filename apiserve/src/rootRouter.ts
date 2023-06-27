@@ -3,11 +3,13 @@ import { koaSwagger } from 'koa2-swagger-ui';
 import path from "path";
 import yamljs from "yamljs";
 import BridgeRouter from './controllers/bridge/router';
+import FauectRouter from './controllers/fauect/router';
 
 export default class RootRouter extends Router{
     constructor(env:any){
         super();
         new BridgeRouter(env);
+        new FauectRouter(env);
 
         for(const router of env.routerArray){
             if(router.addRootRouter){
