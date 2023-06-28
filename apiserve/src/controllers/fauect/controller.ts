@@ -4,7 +4,7 @@ import { BaseMiddleware } from "../../utils/baseMiddleware";
 import FauectModel from "./fauectModel";
 import ConvertJSONResponeMiddleware from "../../middleware/convertJSONResponeMiddleware";
 import { ParamtsError } from "../../middleware/queryParamtsMiddleware";
-import { ActionResult } from "../../common/utils/components/actionResult";
+import { ActionData, ActionResult } from "../../common/utils/components/actionResult";
 import { VIP180Token } from "../../common/vechain/vip180Token";
 import { Framework } from "@vechain/connex-framework";
 import { SystemDefaultError } from "../../utils/error";
@@ -44,14 +44,14 @@ export default class FauectController extends BaseMiddleware{
                     }
                 }
 
-                var sendResult = new ActionResult();
+                var sendResult = new ActionData<{chainName:string,chainId:string,txid:string}>();
                 if(chainName == this.config.vechain.chainName){
                     sendResult = await this.sendToVechain(receiver,tokenAddr);
                 } else if (chainName == this.config.ethereum.chainName){
                     sendResult = await this.sendToEthereum(receiver,tokenAddr);
                 }
                 if(sendResult.error == undefined){
-                    ConvertJSONResponeMiddleware.bodyToJSONResponce(ctx,{});
+                    ConvertJSONResponeMiddleware.bodyToJSONResponce(ctx,{chainName:sendResult.data?.chainName,chainId:sendResult.data?.chainId,txid:sendResult.data?.txid});
                 } else {
                     ConvertJSONResponeMiddleware.errorJSONResponce(ctx,SystemDefaultError.INTERNALSERVERERROR);
                 }
@@ -66,8 +66,9 @@ export default class FauectController extends BaseMiddleware{
         return value != undefined && typeof (value) == 'string' && value.length == 42 && /^0x[0-9a-fA-f]+/i.test(value.trim());
     }
 
-    private async sendToVechain(receiver:string,tokenAddr?:any):Promise<ActionResult>{
-        let result = new ActionResult();
+    private async sendToVechain(receiver:string,tokenAddr?:any):Promise<ActionData<{chainName:string,chainId:string,txid:string}>>{
+        let result = new ActionData<{chainName:string,chainId:string,txid:string}>();
+        result.data = {chainName:this.config.vechain.chainName,chainId:this.config.vechain.chainId,txid:''};
         try {
             if(this.isAddress(tokenAddr)){
                 const vip180 = new VIP180Token(tokenAddr,this.environment.connex);
@@ -75,15 +76,20 @@ export default class FauectController extends BaseMiddleware{
                 const amount = BigInt(1) * BigInt(10**decimals);
                 const resp = await vip180.transfer(amount,receiver,undefined);
                 await this.fauectModel.saveFauect(this.config.vechain.chainName,this.config.vechain.chainId,tokenAddr,receiver,amount,resp.txid);
+                result.data.txid = resp.txid;
            } else {
             const vetAmount = BigInt(1) * BigInt(10**18);
             const vthoAmount = BigInt(500) * BigInt(10**18);
 
-            const resp1 = await (this.environment.connex as Framework).vendor.sign("tx",[{to:receiver,value:("0x"+ vetAmount.toString(16)) }]).request();
-            await this.fauectModel.saveFauect(this.config.vechain.chainName,this.config.vechain.chainId,"",receiver,vetAmount,resp1.txid);
-            const vthoToken = new VIP180Token("0x0000000000000000000000000000456E65726779",this.environment.connex);
-            const resp2 = await vthoToken.transfer(vthoAmount,receiver,undefined);
-            await this.fauectModel.saveFauect(this.config.vechain.chainName,this.config.vechain.chainId,"0x0000000000000000000000000000456E65726779",receiver,vthoAmount,resp2.txid);
+            const transferMethod = this.environment.connex.thor.account('0x0000000000000000000000000000456E65726779').method(this.transferABI);
+            const energyClause = transferMethod.asClause(receiver, '0x' + vthoAmount.toString(16))
+            const resp = await (this.environment.connex as Framework).vendor.sign("tx",[
+                {to:receiver,value:("0x"+ vetAmount.toString(16)) },
+                energyClause
+            ]).request();
+            await this.fauectModel.saveFauect(this.config.vechain.chainName,this.config.vechain.chainId,"",receiver,vetAmount,resp.txid);
+            await this.fauectModel.saveFauect(this.config.vechain.chainName,this.config.vechain.chainId,"0x0000000000000000000000000000456E65726779",receiver,vthoAmount,resp.txid);
+            result.data.txid = resp.txid;
            }
         } catch (error) {
             result.error = error;
@@ -92,8 +98,9 @@ export default class FauectController extends BaseMiddleware{
         return result;
     }
 
-    private async sendToEthereum(receiver:string,tokenAddr?:any):Promise<ActionResult>{
-        let result = new ActionResult();
+    private async sendToEthereum(receiver:string,tokenAddr?:any):Promise<ActionData<{chainName:string,chainId:string,txid:string}>>{
+        let result = new ActionData<{chainName:string,chainId:string,txid:string}>();
+        result.data = {chainName:this.config.ethereum.chainName,chainId:this.config.ethereum.chainId,txid:''};
         try {
             if(this.isAddress(tokenAddr)){
                 const erc20 = new ERC20Token(tokenAddr,this.environment.web3);
@@ -101,6 +108,7 @@ export default class FauectController extends BaseMiddleware{
                 const amount = BigInt(1) * BigInt(10**decimals);
                 const resp = await erc20.transfer(amount,receiver,undefined);
                 await this.fauectModel.saveFauect(this.config.ethereum.chainName,this.config.ethereum.chainId,tokenAddr,receiver,amount,resp.txid);
+                result.data.txid = resp.txid;
             } else {
                 const amount = BigInt(1) * BigInt(10**18);
                 const priKey = (this.environment.web3 as Web3).eth.accounts.wallet[0].privateKey;
@@ -113,6 +121,7 @@ export default class FauectController extends BaseMiddleware{
                 },priKey);
                 const resp = await (this.environment.web3 as Web3).eth.sendSignedTransaction(signedTx.rawTransaction!);
                 await this.fauectModel.saveFauect(this.config.ethereum.chainName,this.config.ethereum.chainId,"",receiver,amount,resp.transactionHash);
+                result.data.txid = resp.transactionHash;
             }
         } catch (error) {
             result.error = error;
@@ -130,4 +139,5 @@ export default class FauectController extends BaseMiddleware{
     private config:any;
     private tokenInfoModel:TokenInfoModel;
     private fauectModel:FauectModel;
+    private readonly transferABI = {"constant":false,"inputs":[{"name":"_to","type":"address"},{"name":"_amount","type":"uint256"}],"name":"transfer","outputs":[{"name":"success","type":"bool"}],"payable":false,"stateMutability":"nonpayable","type":"function"}
 }

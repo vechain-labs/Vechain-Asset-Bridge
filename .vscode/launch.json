@@ -13,9 +13,7 @@
                 "--config",
                 "/Users/moglu/Developer/VeChainDevelop/Vechain-Asset-Bridge/apiserve/config/config.json",
                 "--datadir",
-                "/Users/moglu/Developer/dataCenter/vechain_bridge/test/api",
-                "--keystore",
-                "/Users/moglu/Developer/VeChainDevelop/Vechain-Asset-Bridge/apiserve/config/keystore.json"
+                "/Users/moglu/Developer/dataCenter/vechain_bridge/test/api"
             ],
             "runtimeArgs": [
                 "-r",
