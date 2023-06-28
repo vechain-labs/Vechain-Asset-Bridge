@@ -1,19 +1,19 @@
 import { DataSource } from "typeorm";
 import { ActionData, ActionResult } from "../../common/utils/components/actionResult";
-import { FauectEntity } from "./fauect.entity";
+import { FaucetEntity } from "./faucet.entity";
 
-export default class FauectModel {
+export default class faucetModel {
     constructor(env:any){
         this.env = env;
         this.config = env.config;
         this.dataSource = env.dataSource;
     }
 
-    public async getFauectHistory(chainName:string,chainId:string,tokenAddr:string,beginTs:number,endTs:number,receiver:string):Promise<ActionData<FauectMeta[]>> {
-        let result = new ActionData<FauectMeta[]>();
-        result.data = new Array<FauectMeta>();
+    public async getfaucetHistory(chainName:string,chainId:string,tokenAddr:string,beginTs:number,endTs:number,receiver:string):Promise<ActionData<faucetMeta[]>> {
+        let result = new ActionData<faucetMeta[]>();
+        result.data = new Array<faucetMeta>();
         
-        const query = this.dataSource.getRepository(FauectEntity)
+        const query = this.dataSource.getRepository(FaucetEntity)
             .createQueryBuilder()
             .where("chainname = :chainname",{chainname:chainName})
             .andWhere("chainid = :chainid",{chainid:chainId})
@@ -25,7 +25,7 @@ export default class FauectModel {
         try {
             const data = await query.getMany();
             for(const entity of data){
-                const fauect:FauectMeta = {
+                const faucet:faucetMeta = {
                     chainName:entity.chainName,
                     chainId:entity.chainId,
                     tokenAddr:entity.tokenAddr,
@@ -33,20 +33,20 @@ export default class FauectModel {
                     amount:BigInt(entity.amount),
                     timestamp:entity.timestamp
                 }
-                result.data.push(fauect);
+                result.data.push(faucet);
             }
         } catch (error) {
-            result.error = new Error(`getFauectHistory faild: ${JSON.stringify(error)}`);
+            result.error = new Error(`getfaucetHistory faild: ${JSON.stringify(error)}`);
         }
 
         return result;
     }
 
-    public async saveFauect(chainName:string,chainId:string,tokenAddr:string,receiver:string,amount:bigint,txid:string):Promise<ActionResult> {
+    public async savefaucet(chainName:string,chainId:string,tokenAddr:string,receiver:string,amount:bigint,txid:string):Promise<ActionResult> {
         let result = new ActionResult();
 
         try {
-            const entity:FauectEntity = {
+            const entity:FaucetEntity = {
                 indexid:"",
                 chainName:chainName,
                 chainId:chainId,
@@ -57,7 +57,7 @@ export default class FauectModel {
             }
             await this.dataSource.createQueryBuilder()
                 .insert()
-                .into(FauectEntity)
+                .into(FaucetEntity)
                 .values(entity)
                 .execute();
         } catch (error) {
@@ -72,7 +72,7 @@ export default class FauectModel {
     private dataSource:DataSource;
 }
 
-export type FauectMeta = {
+export type faucetMeta = {
     chainName:string,
     chainId:string,
     tokenAddr:string,

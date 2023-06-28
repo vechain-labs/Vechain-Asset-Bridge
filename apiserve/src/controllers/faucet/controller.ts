@@ -1,7 +1,7 @@
 import Router from "koa-router";
 import TokenInfoModel from "../../common/model/tokenInfoModel";
 import { BaseMiddleware } from "../../utils/baseMiddleware";
-import FauectModel from "./fauectModel";
+import FaucetModel from "./faucetModel";
 import ConvertJSONResponeMiddleware from "../../middleware/convertJSONResponeMiddleware";
 import { ParamtsError } from "../../middleware/queryParamtsMiddleware";
 import { ActionData, ActionResult } from "../../common/utils/components/actionResult";
@@ -11,24 +11,24 @@ import { SystemDefaultError } from "../../utils/error";
 import Web3 from "web3";
 import { ERC20Token } from "../../common/ethereum/erc20Token";
 
-export default class FauectController extends BaseMiddleware{
+export default class FaucetController extends BaseMiddleware{
 
-    public fauect:Router.IMiddleware;
+    public faucet:Router.IMiddleware;
 
     constructor(env:any){
         super(env);
         this.config = env.config;
         this.tokenInfoModel = new TokenInfoModel(env);
-        this.fauectModel = new FauectModel(env);
+        this.faucetModel = new FaucetModel(env);
 
-        this.fauect = async (ctx:Router.IRouterContext,next: () => Promise<any>) => {
+        this.faucet = async (ctx:Router.IRouterContext,next: () => Promise<any>) => {
             const chainName = (ctx.request.body as any).chainname.trim().toLowerCase();
             const chainId = (ctx.request.body as any).chainid.trim().toLowerCase();
 
             if(this.isAddress((ctx.request.body as any).receiver)){
                 const receiver = (ctx.request.body as any).receiver.trim().toLowerCase();
                 const tokenAddr = ((ctx.request.body as any).token || "").trim().toLowerCase();
-                const limitResult = await this.fauectLimit(chainName,chainId,receiver,tokenAddr);
+                const limitResult = await this.faucetLimit(chainName,chainId,receiver,tokenAddr);
 
                 if(limitResult == false){
                     ConvertJSONResponeMiddleware.errorJSONResponce(ctx,new Error('Limit exceeded.'));
@@ -75,7 +75,7 @@ export default class FauectController extends BaseMiddleware{
                 const decimals = await vip180.decimals();
                 const amount = BigInt(1) * BigInt(10**decimals);
                 const resp = await vip180.transfer(amount,receiver,undefined);
-                await this.fauectModel.saveFauect(this.config.vechain.chainName,this.config.vechain.chainId,tokenAddr,receiver,amount,resp.txid);
+                await this.faucetModel.savefaucet(this.config.vechain.chainName,this.config.vechain.chainId,tokenAddr,receiver,amount,resp.txid);
                 result.data.txid = resp.txid;
            } else {
             const vetAmount = BigInt(1) * BigInt(10**18);
@@ -87,8 +87,8 @@ export default class FauectController extends BaseMiddleware{
                 {to:receiver,value:("0x"+ vetAmount.toString(16)) },
                 energyClause
             ]).request();
-            await this.fauectModel.saveFauect(this.config.vechain.chainName,this.config.vechain.chainId,"",receiver,vetAmount,resp.txid);
-            await this.fauectModel.saveFauect(this.config.vechain.chainName,this.config.vechain.chainId,"0x0000000000000000000000000000456E65726779",receiver,vthoAmount,resp.txid);
+            await this.faucetModel.savefaucet(this.config.vechain.chainName,this.config.vechain.chainId,"",receiver,vetAmount,resp.txid);
+            await this.faucetModel.savefaucet(this.config.vechain.chainName,this.config.vechain.chainId,"0x0000000000000000000000000000456E65726779",receiver,vthoAmount,resp.txid);
             result.data.txid = resp.txid;
            }
         } catch (error) {
@@ -107,7 +107,7 @@ export default class FauectController extends BaseMiddleware{
                 const decimals = await erc20.decimals();
                 const amount = BigInt(1) * BigInt(10**decimals);
                 const resp = await erc20.transfer(amount,receiver,undefined);
-                await this.fauectModel.saveFauect(this.config.ethereum.chainName,this.config.ethereum.chainId,tokenAddr,receiver,amount,resp.txid);
+                await this.faucetModel.savefaucet(this.config.ethereum.chainName,this.config.ethereum.chainId,tokenAddr,receiver,amount,resp.txid);
                 result.data.txid = resp.txid;
             } else {
                 const amount = BigInt(1) * BigInt(10**18);
@@ -120,7 +120,7 @@ export default class FauectController extends BaseMiddleware{
                     gasPrice:gasPrice
                 },priKey);
                 const resp = await (this.environment.web3 as Web3).eth.sendSignedTransaction(signedTx.rawTransaction!);
-                await this.fauectModel.saveFauect(this.config.ethereum.chainName,this.config.ethereum.chainId,"",receiver,amount,resp.transactionHash);
+                await this.faucetModel.savefaucet(this.config.ethereum.chainName,this.config.ethereum.chainId,"",receiver,amount,resp.transactionHash);
                 result.data.txid = resp.transactionHash;
             }
         } catch (error) {
@@ -129,15 +129,15 @@ export default class FauectController extends BaseMiddleware{
         return result;
     }
 
-    private async fauectLimit(chainName:string,chainId:string,receiver:string,tokenAddr:string):Promise<boolean>{
+    private async faucetLimit(chainName:string,chainId:string,receiver:string,tokenAddr:string):Promise<boolean>{
         const endTs = (new Date()).getTime();
         const beginTs = endTs - (1000*36*24);
-        const historyResult = await this.fauectModel.getFauectHistory(chainName,chainId,tokenAddr,beginTs,endTs,receiver);
+        const historyResult = await this.faucetModel.getfaucetHistory(chainName,chainId,tokenAddr,beginTs,endTs,receiver);
         return historyResult.error == undefined && historyResult.data!.length <= 5;
     }
 
     private config:any;
     private tokenInfoModel:TokenInfoModel;
-    private fauectModel:FauectModel;
+    private faucetModel:FaucetModel;
     private readonly transferABI = {"constant":false,"inputs":[{"name":"_to","type":"address"},{"name":"_amount","type":"uint256"}],"name":"transfer","outputs":[{"name":"success","type":"bool"}],"payable":false,"stateMutability":"nonpayable","type":"function"}
 }

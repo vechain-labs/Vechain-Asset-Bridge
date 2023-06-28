@@ -2,7 +2,7 @@ import { Column, Entity, Index, PrimaryColumn, PrimaryGeneratedColumn } from "ty
 
 @Entity("blockindex")
 @Index(["chainName","chainId"])
-export class FauectEntity {
+export class FaucetEntity {
     @PrimaryGeneratedColumn({name:`indexid`})
     public indexid!: string;
 

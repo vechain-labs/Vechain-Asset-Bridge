@@ -9,7 +9,7 @@ import { DataSource } from 'typeorm';
 import ApiServer from '../apiServer';
 import * as ReadlineSync from 'readline-sync';
 import { Keystore, mnemonic } from 'thor-devkit';
-import { FauectEntity } from '../controllers/fauect/fauect.entity';
+import { FaucetEntity } from '../controllers/faucet/faucet.entity';
 
 const argv = Yargs.scriptName('apiserve')
   .usage('<cmd> [args]')
@@ -103,7 +103,7 @@ async function initDatabase(argv: any) {
       type: "sqlite",
       database: databastPath,
       enableWAL: environment.config.dbconfig && environment.config.dbconfig.enableWAL != undefined ? environment.config.dbconfig.enableWAL : true,
-      entities: [path.join(__dirname, "../common/model/entities/**.entity{.ts,.js}"),FauectEntity],
+      entities: [path.join(__dirname, "../common/model/entities/**.entity{.ts,.js}"),FaucetEntity],
       synchronize: true
     });
     dataSource = await dataSource.initialize();
