@@ -22,12 +22,12 @@ export default class FauectController extends BaseMiddleware{
         this.fauectModel = new FauectModel(env);
 
         this.fauect = async (ctx:Router.IRouterContext,next: () => Promise<any>) => {
-            const chainName = String(ctx.request.body.chainname).trim().toLowerCase();
-            const chainId = String(ctx.request.body.chainid).trim().toLowerCase();
+            const chainName = (ctx.request.body as any).chainname.trim().toLowerCase();
+            const chainId = (ctx.request.body as any).chainid.trim().toLowerCase();
 
-            if(this.isAddress(ctx.request.body.receiver)){
-                const receiver = (ctx.request.body.receiver as string).trim().toLowerCase();
-                const tokenAddr = ((ctx.request.body.token || "") as string).trim().toLowerCase();
+            if(this.isAddress((ctx.request.body as any).receiver)){
+                const receiver = (ctx.request.body as any).receiver.trim().toLowerCase();
+                const tokenAddr = ((ctx.request.body as any).token || "").trim().toLowerCase();
                 const limitResult = await this.fauectLimit(chainName,chainId,receiver,tokenAddr);
 
                 if(limitResult == false){
