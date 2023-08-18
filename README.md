@@ -22,21 +22,11 @@ The API service is composed of the API service and the background service. The A
 
 - Front
 
-The front-end page of the cross-chain bridge provides users with a friendly page for operating the cross-chain bridge, supporting [Vechain Sync](https://sync.vecha.in/) wallet and [MetaMask](https://metamask.io /) The wallet operates directly. The front-end page will obtain the required data from the API and the blockchain and provide it to the user. When users need to conduct cross-chain transactions, users can send or receive tokens through the wallet.
+The front-end page of the cross-chain bridge provides users with a friendly page for operating the cross-chain bridge, supporting [Vechain Sync](https://sync.vecha.in/) and [VeWorld](https://www.veworld.net/) wallet, [MetaMask](https://metamask.io/) The wallet operates directly. The front-end page will obtain the required data from the API and the blockchain and provide it to the user. When users need to conduct cross-chain transactions, users can send or receive tokens through the wallet.
 
 ### 2.2 Smart contracts
 
 ![Contracts](https://www.plantuml.com/plantuml/png/SoWkIImgoStCIybDBE3ILd0BSIhAJ4bFvTBMLe2mdFEBW3mWDopLEICnCmyg79QOavcIM99V19PpBSb8BKejpSMGrDM56ncIdvsQLmmK0GgLvgLd9kL0X1GqmZm332qCz5s3d8qCDC4A_19BCijIqPM5kOReXxk6U83LGAqABqeiA4XDmMgIGsfU2jHh0000)
-
-- [BridgeCore.sol](/validationnode/src/common/contracts/common/Contract_BridgeCore.sol)
-- [VeChainBridgeValidator.sol](/validationnode/src/common/contracts/vechain/Contract_VeChainBridgeValidator.sol)
-- [EthereumBridgeValidator.sol](/validationnode/src/common/contracts/ethereum/Contract_EthereumBridgeValidator.sol)
-- [FTBridge.sol](/validationnode/src/common/contracts/common/Contract_FTBridge.sol)
-- [FTBRidgeTokens.sol](/validationnode/src/common/contracts/common/Contract_FTBridgeTokens.sol)
-- [FTBridgeControl.sol](/validationnode/src/common/contracts/common/Contract_FTBridgeControl.sol)
-- [FungibleToken.sol](/validationnode/src/common/contracts/common/Contract_FungibleToken.sol)
-- [NativeFungibleToken.sol](/validationnode/src/common/contracts/common/Contract_NativeFungibleToken.sol)
-- [BridgeWrappedToken.sol](/validationnode/src/common/contracts/common/Contract_BridgeWrappedToken.sol)
 
 ### 2.3 Validator Node
 
@@ -46,7 +36,7 @@ The cross-chain bridge provides cross-chain verification services by multiple ve
 
 - Register as a validator
 
-1. The verification node program is located in the `validationnode` directory under the root directory of the project. Please refer to [README.md](./validationnode/README.md) to configure and run the verification node.
+1. The verification node program is located in the `validationnode` directory under the root directory of the project. Please refer to README.md to configure and run the verification node.
 2. After the verification node is deployed, the `governance` of the verification contract needs to register the address corresponding to the node's private key to the verification contract on the two chains.
 
 - Synchronize blockchains
@@ -180,7 +170,7 @@ Before conducting cross-chain transactions of non-fungible tokens, the issuer or
 1. Cross-chain assets need to comply with the VIP180/ERC20.
 2. Tokens are stable and do not reduce the amount of assets held by holders over time.
 3. The issuer or submitter needs to complete the contract development and testing work of another chain and complete the deployment.
-4. The contract on the other chain needs to conform to the [Interface_TokenExtension.sol](./validationnode/src/common/contracts/common/Interface_TokenExtension.sol) standard, and authorize the `FTBridge` contract to perform `Mint` and `Burn` operations.
+4. The contract on the other chain needs to conform to the Interface_TokenExtension.sol standard, and authorize the `FTBridge` contract to perform `Mint` and `Burn` operations.
 5. After completing the above work, you need to submit the application and related contract information to `governance` of the cross-chain bridge, and `governance` is responsible for registering the relevant information into the contract.
 
 Each Token needs to be registered in the `FTBridge` contract of the two chains, and the following information is included in the registration.
@@ -207,7 +197,7 @@ The termination block height of the cross-chain transaction. After the height is
 
 - reward
 
-The cross-chain transaction fee is determined by `governance` after negotiation with the asset issuer, and the default is 0 handling fee. If a handling fee ratio is set, when a cross-chain transaction is initiated, the contract will deduct the set handling fee from the amount of cross-chain assets submitted by the initiator, and the deducted amount is the amount of assets that the receiver can receive. The deducted assets will be held by the [FTBridge.sol](./docs/contracts/Contract_BridgeCore.md) contract.
+The cross-chain transaction fee is determined by `governance` after negotiation with the asset issuer, and the default is 0 handling fee. If a handling fee ratio is set, when a cross-chain transaction is initiated, the contract will deduct the set handling fee from the amount of cross-chain assets submitted by the initiator, and the deducted amount is the amount of assets that the receiver can receive. The deducted assets will be held by the FTBridge.sol contract.
 
 ### 2.4.2 Cross-chain transaction process
 
@@ -242,6 +232,18 @@ export function bridgeTxId(tx:BaseBridgeTx):string {
 
 7. Call the `FTBridge` contract on the blockchain that receives the asset. If the asset of type `ORIGINTOKEN` is received, call `claimNativeCoin` method, pass in the parameter information obtained from the API, and receive the corresponding asset after sending the transaction. If the asset of type `WRAPPEDTOKEN` is received, call the `claim` method, pass in the parameter information obtained from the API, and receive the corresponding asset after sending the transaction. The `_recipient` parameter in the method needs to be consistent with the address of the recipient passed in by the transaction initiator, and has nothing to do with the address of the initiator receiving the asset transaction.
 
+## Installation
+
+### Getting the source
+
+Clone the Thor repo:
+
+``` script
+git clone https://github.com/mongelly/Vechain-Asset-Bridge
+cd Vechain-Asset-Bridge
+git submodult init
+git submodult update
+```
 ## Disclaimer
 
 Redistributions of source code must retain this list of conditions and the following disclaimer.
