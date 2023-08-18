@@ -13,7 +13,7 @@ import { getReceipt } from 'myvetools/dist/connexUtils';
 import randomBytes from 'randombytes';
 import { ObjectSet } from '../common/utils/objectSet';
 
-const argv = Yargs.scriptName('voting')
+const argv = Yargs.scriptName('tools')
   .usage('<cmd> [args]')
   .command('node [args]', '', (yargs) => {
     yargs.positional('config', {
