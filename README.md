@@ -28,15 +28,15 @@ The front-end page of the cross-chain bridge provides users with a friendly page
 
 ![Contracts](https://www.plantuml.com/plantuml/png/SoWkIImgoStCIybDBE3ILd0BSIhAJ4bFvTBMLe2mdFEBW3mWDopLEICnCmyg79QOavcIM99V19PpBSb8BKejpSMGrDM56ncIdvsQLmmK0GgLvgLd9kL0X1GqmZm332qCz5s3d8qCDC4A_19BCijIqPM5kOReXxk6U83LGAqABqeiA4XDmMgIGsfU2jHh0000)
 
-- [BridgeCore.sol](./validationnode/src/common/contracts/common/Contract_BridgeCore.sol)
-- [VeChainBridgeValidator.sol](./validationnode/src/common/contracts/vechain/Contract_VeChainBridgeValidator.sol)
-- [EthereumBridgeValidator.sol](./validationnode/src/common/contracts/ethereum/Contract_EthereumBridgeValidator.sol)
-- [FTBridge.sol](./validationnode/src/common/contracts/common/Contract_FTBridge.sol)
-- [FTBRidgeTokens.sol](./validationnode/src/common/contracts/common/Contract_FTBridgeTokens.sol)
-- [FTBridgeControl.sol](./validationnode/src/common/contracts/common/Contract_FTBridgeControl.sol)
-- [FungibleToken.sol](./validationnode/src/common/contracts/common/Contract_FungibleToken.sol)
-- [NativeFungibleToken.sol](./validationnode/src/common/contracts/common/Contract_NativeFungibleToken.sol)
-- [BridgeWrappedToken.sol](./validationnode/src/common/contracts/common/Contract_BridgeWrappedToken.sol)
+- [BridgeCore.sol](/validationnode/src/common/contracts/common/Contract_BridgeCore.sol)
+- [VeChainBridgeValidator.sol](/validationnode/src/common/contracts/vechain/Contract_VeChainBridgeValidator.sol)
+- [EthereumBridgeValidator.sol](/validationnode/src/common/contracts/ethereum/Contract_EthereumBridgeValidator.sol)
+- [FTBridge.sol](/validationnode/src/common/contracts/common/Contract_FTBridge.sol)
+- [FTBRidgeTokens.sol](/validationnode/src/common/contracts/common/Contract_FTBridgeTokens.sol)
+- [FTBridgeControl.sol](/validationnode/src/common/contracts/common/Contract_FTBridgeControl.sol)
+- [FungibleToken.sol](/validationnode/src/common/contracts/common/Contract_FungibleToken.sol)
+- [NativeFungibleToken.sol](/validationnode/src/common/contracts/common/Contract_NativeFungibleToken.sol)
+- [BridgeWrappedToken.sol](/validationnode/src/common/contracts/common/Contract_BridgeWrappedToken.sol)
 
 ### 2.3 Validator Node
 
