@@ -7,7 +7,7 @@
     "build": "rm -rf ./dist && tsc -p ./ && cp -r ./src/common/contracts ./dist/common/contracts",
     "serve": "rm -rf ./dist && tsc -p ./ &&node ./dist/index.js"
   },
-  "author": "mog.lu@vechain.org",
+  "author": "vechain.org",
   "license": "GPL-3.0-or-later",
   "dependencies": {
     "@types/yargs": "^17.0.24",

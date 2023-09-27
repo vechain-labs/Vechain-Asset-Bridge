@@ -1,7 +1,7 @@
 {
   "name": "validationnode",
   "version": "1.0.0",
-  "author": "mog.lu@vechain.org",
+  "author": "vechain.org",
   "bin": {},
   "bugs": "https://github.com/mongelly/validationnode/issues",
   "devDependencies": {

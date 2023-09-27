@@ -1,7 +1,7 @@
 {
   "name": "bridgeTools",
   "version": "1.0.0",
-  "author": "mog.lu@vechain.org",
+  "author": "vechain.org",
   "bin": {
     "bridgeTools": "./bin/run"
   },
